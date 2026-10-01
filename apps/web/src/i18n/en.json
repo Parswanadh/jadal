@@ -533,6 +533,7 @@
     "start": "Start demo",
     "runAll": "Run all steps",
     "reset": "Reset",
+    "resetQuestion": "Reset the demo? Everything you have run so far is cleared.",
     "runStep": "Run this step",
     "seeIt": "See it",
     "stepOf": "Step {n} of {total}",

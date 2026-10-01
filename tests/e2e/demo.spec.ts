@@ -70,6 +70,8 @@ test('the demo reset button returns the walkthrough to step 0', async ({ page })
   await expect(progress).toHaveAttribute('value', '1');
 
   await page.getByRole('button', { name: en.demo.reset }).click();
+  // Reset is destructive, so it asks first: confirm before the walkthrough clears.
+  await page.locator('.confirm-inline').getByRole('button', { name: en.demo.reset }).click();
   await expect(progress).toHaveAttribute('value', '0');
   await expect(page.getByRole('button', { name: en.demo.start })).toBeVisible();
 });

@@ -5,6 +5,7 @@ import type { TVars } from "../i18n/I18nContext";
 import { useFormat } from "../lib/useFormat";
 import type { Formatter } from "../lib/useFormat";
 import PageHeader from "../components/PageHeader";
+import ConfirmAction from "../components/ConfirmAction";
 import { DEMO_STEPS, SIM_CLOCK_START, formatElapsed } from "./demoScript";
 import {
   compareRosters,
@@ -273,9 +274,14 @@ export default function DemoMode() {
                 {t("demo.runAll")}
               </button>
             )}
-            <button type="button" className="btn" onClick={handleReset} disabled={busy}>
-              {t("demo.reset")}
-            </button>
+            <ConfirmAction
+              variant="danger"
+              label={t("demo.reset")}
+              question={t("demo.resetQuestion")}
+              confirmLabel={t("demo.reset")}
+              onConfirm={handleReset}
+              disabled={busy}
+            />
           </div>
         </div>
         <progress className="bar" value={completed} max={DEMO_STEPS.length} aria-label={t("demo.progressLabel")}>
