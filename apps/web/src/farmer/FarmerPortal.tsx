@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Outlet } from "@jadal/contracts";
 import { api as sharedApi } from "../api";
 import { useI18n } from "../i18n/I18nContext";
-import { useTheme } from "../theme/ThemeContext";
+import PageHeader from "../components/PageHeader";
 import type { FarmerApi, FarmerDirectoryEntry } from "./farmerApi";
 import { createFarmerApi } from "./farmerApi";
 import RegistrationForm from "./RegistrationForm";
@@ -16,7 +16,6 @@ const TABS: Tab[] = ["register", "mywater", "urgent", "buffer"];
 
 function Portal() {
   const { t } = useI18n();
-  const { theme } = useTheme();
   const api: FarmerApi = useMemo(() => createFarmerApi(), []);
   const [directory, setDirectory] = useState<FarmerDirectoryEntry[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -63,16 +62,20 @@ function Portal() {
   const farmerName = (id: string) => directory?.find((e) => e.farmer.id === id)?.farmer.name ?? id;
 
   return (
-    <div className="farmer-portal" data-theme={theme}>
+    <div className="farmer-portal">
       <div className="fp-container">
-        <header className="fp-header">
-          <h1>{t("app.title")}</h1>
-          <p>{t("app.subtitle")}</p>
-          <p className="fp-source" aria-live="polite">
-            {api.source === "mock" ? t("app.offlineNote") : t("app.liveNote")}
-          </p>
-        </header>
+        <PageHeader
+          eyebrow={t("page.farmer.eyebrow")}
+          title={t("page.farmer.title")}
+          lead={t("page.farmer.lead")}
+          actions={
+            <span className={`chip ${api.source === "mock" ? "chip-warn" : "chip-ok"}`} aria-live="polite">
+              {api.source === "mock" ? t("app.offlineNote") : t("app.liveNote")}
+            </span>
+          }
+        />
 
+        <div className="fp-body">
         {failed && (
           <div className="fp-errors" role="alert">
             {t("app.error")}{" "}
@@ -93,7 +96,7 @@ function Portal() {
           </select>
         </div>
 
-        <nav className="fp-tabs" aria-label={t("app.title")}>
+        <nav className="fp-tabs" aria-label={t("page.farmer.title")}>
           {TABS.map((tb) => (
             <button key={tb} type="button" className="fp-tab" aria-selected={tab === tb} onClick={() => setTab(tb)}>
               {t(`tab.${tb}`)}
@@ -109,6 +112,7 @@ function Portal() {
           )}
           {tab === "buffer" && <BufferBoard api={api} farmerName={farmerName} refreshKey={refreshKey} />}
         </main>
+        </div>
       </div>
     </div>
   );

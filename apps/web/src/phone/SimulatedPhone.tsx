@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useI18n } from "../i18n/I18nContext";
-import { useTheme } from "../theme/ThemeContext";
+import PageHeader from "../components/PageHeader";
 import "./SimulatedPhone.css";
 import { fetchContacts, postPhoneReply } from "./api";
 import {
@@ -126,8 +126,7 @@ function pickWhatsApp(contacts: PhoneContact[]): PhoneContact[] {
 
 export default function SimulatedPhone() {
   const [phase, setPhase] = useState<CallPhase>("ringing");
-  const { lang } = useI18n();
-  const { theme } = useTheme();
+  const { lang, t: tr } = useI18n();
   const [contacts, setContacts] = useState<PhoneContact[]>([]);
   const [source, setSource] = useState<"api" | "mock">("mock");
   const [loading, setLoading] = useState(false);
@@ -282,9 +281,14 @@ export default function SimulatedPhone() {
   };
 
   return (
+    <>
+    <PageHeader
+      eyebrow={tr("page.phone.eyebrow")}
+      title={tr("page.phone.title")}
+      lead={tr("page.phone.lead")}
+    />
     <div
       className="jadal-phone"
-      data-theme={theme}
       data-testid="simulated-phone"
     >
       <div className="jadal-phone__bar">
@@ -532,5 +536,6 @@ export default function SimulatedPhone() {
         </section>
       )}
     </div>
+    </>
   );
 }

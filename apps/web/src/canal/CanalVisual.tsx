@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "../i18n/I18nContext";
-import { useTheme } from "../theme/ThemeContext";
+import PageHeader from "../components/PageHeader";
 import { getNeedMet, getOverrunCase, loadCanalVisual, outletById } from "./api";
 import type { DataSource } from "./api";
 import { STR } from "./strings";
@@ -10,9 +10,9 @@ import "./canal.css";
 /* Display-only geometry. These map a SUPPLIED flow (m3/s from data) to pixels;
    they never create water numbers. */
 const SVG_W = 800;
-const SVG_H = 300;
+const SVG_H = 185;
 const PAD_X = 50;
-const CENTER_Y = 118;
+const CENTER_Y = 70;
 const BASE_HALF_H = 12;
 const PX_PER_M3S = 34;
 
@@ -62,8 +62,7 @@ export default function CanalVisual({ initial }: CanalVisualProps) {
 }
 
 function CanalVisualView({ data, source }: { data: CanalVisualData; source: DataSource }) {
-  const { lang } = useI18n();
-  const { theme } = useTheme();
+  const { lang, t: tr } = useI18n();
   const [mode, setMode] = useState<RosterMode>("equal_hours");
   const [overrunOutlet, setOverrunOutlet] = useState<string>(data.outlets[0]?.id ?? "o1");
   const [stepIdx, setStepIdx] = useState(0);
@@ -90,14 +89,13 @@ function CanalVisualView({ data, source }: { data: CanalVisualData; source: Data
   const downstreamIds = new Set((overrunCase?.losses ?? []).map(([id]) => id));
 
   return (
-    <section className="canal-hero" data-theme={theme} aria-labelledby="canal-title">
-      <header className="canal-head">
-        <div>
-          <p className="canal-kicker">Jadal · {bi(data.canal.name, data.canal.name_te)}</p>
-          <h2 id="canal-title">{t.title}</h2>
-          <p className="canal-sub">{t.subtitle}</p>
-        </div>
-      </header>
+    <section className="canal-hero" aria-labelledby="canal-title">
+      <PageHeader
+        eyebrow={`${tr("page.canal.eyebrow")} · ${bi(data.canal.name, data.canal.name_te)}`}
+        title={tr("page.canal.title")}
+        lead={tr("page.canal.lead")}
+        titleId="canal-title"
+      />
 
       <div className="canal-svg-wrap">
         <svg
@@ -110,12 +108,6 @@ function CanalVisualView({ data, source }: { data: CanalVisualData; source: Data
             {t.subtitle} {t.head}: {data.canal.head_discharge_m3s} m³/s.{" "}
             {data.flows.map((f) => `${f.outlet_id}: ${f.flow_m3s}`).join(", ")}
           </desc>
-          <defs>
-            <linearGradient id="canalGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stopColor="var(--canal-from)" />
-              <stop offset="1" stopColor="var(--canal-to)" />
-            </linearGradient>
-          </defs>
           <polygon points={`${top} ${bottom}`} className="canal-water" />
           {[0.25, 0.5, 0.75].map((f) => {
             const x = PAD_X + f * (SVG_W - PAD_X * 2);
@@ -136,7 +128,7 @@ function CanalVisualView({ data, source }: { data: CanalVisualData; source: Data
           >
             {t.tail}
           </text>
-          {data.flows.map((f) => {
+          {data.flows.map((f, idx) => {
             const x = xForChainage(f.chainage_m, data.canal.length_m);
             const cls = [
               "canal-outlet",
@@ -152,7 +144,7 @@ function CanalVisualView({ data, source }: { data: CanalVisualData; source: Data
                 <text x={x} y={CENTER_Y + halfH(f.flow_m3s) + 37} textAnchor="middle" className="canal-outlet-n">
                   {f.outlet_id.replace("o", "")}
                 </text>
-                <text x={x} y={SVG_H - 8} textAnchor="middle" className="canal-chainage">
+                <text x={x} y={CENTER_Y + halfH(f.flow_m3s) + (idx % 2 === 0 ? 62 : 82)} textAnchor="middle" className="canal-chainage">
                   {(f.chainage_m / 1000).toFixed(1)} {t.kmUnit} · {f.flow_m3s} m³/s
                 </text>
               </g>
@@ -202,7 +194,7 @@ function CanalVisualView({ data, source }: { data: CanalVisualData; source: Data
               />
             </span>
             <span className="canal-pct" aria-live="polite">
-              {r.pct}% {t.needMet}
+              {r.pct}% {t.needMet.replace("%", "").trim()}
             </span>
           </li>
         ))}

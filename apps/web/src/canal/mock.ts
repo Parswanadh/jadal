@@ -12,6 +12,8 @@ import seed from "./seed.json";
 import type { OutletFlow, OverrunCase } from "./types";
 
 export interface CanalSeed {
+  /** Provenance note: marks the bundle as ASSUMED / illustrative, precomputed offline. */
+  _note?: string;
   /** Telugu display names of outlets, keyed by outlet id (the contract has no Telugu names). */
   outlet_name_te: Record<string, string>;
   flows: OutletFlow[];
@@ -19,5 +21,7 @@ export interface CanalSeed {
   overrun: Record<string, Record<string, OverrunCase>>;
 }
 
-// ASSUMED: precomputed core results for the demo scenario; replaced by live hydraulics once an API route serves them.
+// ASSUMED / illustrative: seed.json was precomputed offline by @jadal/core from
+// packages/contracts/fixtures/demo-scenario.json (see its _note field). It is not live data;
+// replace it with live hydraulics once an API route serves them.
 export const CANAL_SEED: CanalSeed = seed as unknown as CanalSeed;

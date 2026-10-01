@@ -8,6 +8,8 @@ type HealthState =
   | { status: 'ok'; version: string; operational: boolean }
   | { status: 'error'; message: string };
 
+const FLOW_STEPS = ['step1', 'step2', 'step3', 'step4', 'step5', 'step6'] as const;
+
 export default function HomePage() {
   const { t } = useI18n();
   const [health, setHealth] = useState<HealthState>({ status: 'loading' });
@@ -33,38 +35,69 @@ export default function HomePage() {
 
   return (
     <div>
-      <h1 className="page-title">{t('home.title')}</h1>
-      <p className="page-lead">{t('home.subtitle')}</p>
-
-      <section className="panel" aria-live="polite" aria-label={t('home.healthTitle')}>
-        <h2>{t('home.healthTitle')}</h2>
-        {health.status === 'loading' && <p>{t('home.healthChecking')}</p>}
-        {health.status === 'ok' && (
-          <p>
-            <span className={health.operational ? 'status-ok' : 'status-bad'}>
-              {health.operational ? t('home.healthOperational') : t('home.healthDegraded')}
-            </span>{' '}
-            · {t('home.versionLabel')}: {health.version}
-          </p>
-        )}
-        {health.status === 'error' && (
-          <p>
-            <span className="status-bad">{t('home.healthUnreachable')}</span> ({health.message})
-          </p>
-        )}
+      <section className="hero">
+        <p className="eyebrow">{t('home.eyebrow')}</p>
+        <h1>{t('home.title')}</h1>
+        <p>{t('home.subtitle')}</p>
       </section>
 
-      <h2 style={{ marginTop: '2rem' }}>{t('home.portalsTitle')}</h2>
-      <div className="card-grid">
-        {cards.map((card) => (
-          <article key={card.to} className="card">
-            <h3>{card.title}</h3>
-            <p>{card.body}</p>
-            <Link className="card-link" to={card.to}>
-              {card.title} →
+      <section className="home-section" aria-labelledby="home-flow">
+        <h2 className="section-label" id="home-flow">
+          {t('home.flowTitle')}
+        </h2>
+        <ol className="flow">
+          {FLOW_STEPS.map((key, i) => (
+            <li key={key} className="flow-step">
+              <span className="flow-num" aria-hidden="true">
+                {i + 1}
+              </span>
+              <span>{t(`home.${key}`)}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="loop" aria-hidden="true">
+          <span>{t('home.loopLabel')}</span>
+        </div>
+        <p className="loop-note">{t('home.loopLabel')}</p>
+      </section>
+
+      <section className="home-section" aria-labelledby="home-screens">
+        <h2 className="section-label" id="home-screens">
+          {t('home.portalsTitle')}
+        </h2>
+        <div className="screens">
+          {cards.map((card) => (
+            <Link key={card.to} className="screen-card" to={card.to}>
+              <span className="screen-card-path">{card.to}</span>
+              <h3>{card.title}</h3>
+              <p>{card.body}</p>
+              <span className="screen-card-open">{t('home.openLabel')} →</span>
             </Link>
-          </article>
-        ))}
+          ))}
+        </div>
+      </section>
+
+      <p className="principle">{t('home.principle')}</p>
+
+      <div className="health" aria-live="polite" aria-label={t('home.healthTitle')}>
+        <span className="health-label">{t('home.healthTitle')}</span>
+        {health.status === 'loading' && <span>{t('home.healthChecking')}</span>}
+        {health.status === 'ok' && (
+          <>
+            <span className={`chip ${health.operational ? 'chip-ok' : 'chip-critical'}`}>
+              {health.operational ? t('home.healthOperational') : t('home.healthDegraded')}
+            </span>
+            <span>
+              {t('home.versionLabel')}: <span className="num">{health.version}</span>
+            </span>
+          </>
+        )}
+        {health.status === 'error' && (
+          <>
+            <span className="chip chip-critical">{t('home.healthUnreachable')}</span>
+            <span className="num">{health.message}</span>
+          </>
+        )}
       </div>
     </div>
   );

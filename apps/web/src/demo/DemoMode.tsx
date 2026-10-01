@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n/I18nContext";
-import { useTheme } from "../theme/ThemeContext";
+import PageHeader from "../components/PageHeader";
 import {
   DEMO_BUDGET_SECS,
   DEMO_STEPS,
@@ -62,8 +62,7 @@ function describeResult(step: number, payload: unknown): string {
 }
 
 export default function DemoMode() {
-  const { lang } = useI18n();
-  const { theme } = useTheme();
+  const { lang, t: tr } = useI18n();
   const [completed, setCompleted] = useState(0); // 0..6
   const [started, setStarted] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -210,22 +209,22 @@ export default function DemoMode() {
   const overBudget = elapsed > budget;
 
   return (
-    <section className="demo" data-theme={theme} aria-labelledby="demo-title">
-      <header className="demo__header">
-        <div>
-          <p className="demo__kicker">Jadal · Demo mode · డెమో</p>
-          <h1 id="demo-title" tabIndex={-1} ref={stepHeadingRef}>
-            {show(lang, "Canal demo walkthrough (6 steps)", "కాలువ డెమో నడక (6 దశలు)")}
-          </h1>
-          <p className="demo__sub">
-            {show(
-              lang,
-              `Seed: Kondaveedu Minor near Guntur. Budget: start → finish under 4:00. Script estimate ${formatElapsed(estimate)}.`,
-              `సీడ్: గుంటూరు దగ్గర కొండవీడు మైనర్. బడ్జెట్: ప్రారంభం → ముగింపు 4:00 లోపు. అంచనా ${formatElapsed(estimate)}.`,
-            )}
-          </p>
-        </div>
-      </header>
+    <section className="demo" aria-labelledby="demo-title">
+      <PageHeader
+        eyebrow={tr("page.demo.eyebrow")}
+        title={tr("page.demo.title")}
+        lead={tr("page.demo.lead")}
+        titleId="demo-title"
+        titleRef={stepHeadingRef}
+        focusable
+      />
+      <p className="demo__sub">
+        {show(
+          lang,
+          `Seed: Kondaveedu Minor near Guntur. Budget: start → finish under 4:00. Script estimate ${formatElapsed(estimate)}.`,
+          `సీడ్: గుంటూరు దగ్గర కొండవీడు మైనర్. బడ్జెట్: ప్రారంభం → ముగింపు 4:00 లోపు. అంచనా ${formatElapsed(estimate)}.`,
+        )}
+      </p>
 
       <div className="demo__statusbar" role="status" aria-live="polite">
         <span>{status}</span>
@@ -272,21 +271,9 @@ export default function DemoMode() {
         </button>
       </div>
 
-      <section className="demo__clock" aria-labelledby="demo-clock">
-        <h2 id="demo-clock">{show(lang, "Simulated clock", "అనుకరణ గడియారం")}</h2>
-        <p>
-          <time dateTime={simNow}>{simNow}</time>
-        </p>
-        <div className="demo__actions" role="group" aria-label="Advance clock">
-          {[1, 6, 24].map((h) => (
-            <button key={h} type="button" onClick={() => advanceClock(h)} disabled={busy || !started}>
-              {show(lang, `Advance +${h}h`, `+${h}గం ముందుకు`)}
-            </button>
-          ))}
-        </div>
-        <p className="demo__hint">{show(lang, "Calls POST /api/demo/advance.", "POST /api/demo/advance ను పిలుస్తుంది.")}</p>
-      </section>
 
+      <div className="demo__cols">
+        <div className="demo__col">
       <section className="demo__script" aria-labelledby="demo-script">
         <h2 id="demo-script">{show(lang, "Guided walkthrough", "మార్గదర్శక నడక")}</h2>
         <ol>
@@ -314,6 +301,22 @@ export default function DemoMode() {
             );
           })}
         </ol>
+      </section>
+        </div>
+        <div className="demo__col">
+      <section className="demo__clock" aria-labelledby="demo-clock">
+        <h2 id="demo-clock">{show(lang, "Simulated clock", "అనుకరణ గడియారం")}</h2>
+        <p>
+          <time dateTime={simNow}>{simNow}</time>
+        </p>
+        <div className="demo__actions" role="group" aria-label="Advance clock">
+          {[1, 6, 24].map((h) => (
+            <button key={h} type="button" onClick={() => advanceClock(h)} disabled={busy || !started}>
+              {show(lang, `Advance +${h}h`, `+${h}గం ముందుకు`)}
+            </button>
+          ))}
+        </div>
+        <p className="demo__hint">{show(lang, "Calls POST /api/demo/advance.", "POST /api/demo/advance ను పిలుస్తుంది.")}</p>
       </section>
 
       {audit && (
@@ -360,6 +363,8 @@ export default function DemoMode() {
         )}
         <p className="demo__hint">GET /api/events</p>
       </section>
+        </div>
+      </div>
     </section>
   );
 }

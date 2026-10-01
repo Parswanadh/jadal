@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext';
+import PageHeader from '../components/PageHeader';
 
 interface PlaceholderProps {
   titleKey: string;
@@ -11,11 +12,7 @@ export default function PlaceholderPage({ titleKey, bodyKey, noteKey }: Placehol
   const { t } = useI18n();
   return (
     <div>
-      <p>
-        <span className="badge">{t('common.comingSoon')}</span>
-      </p>
-      <h1 className="page-title">{t(titleKey)}</h1>
-      <p className="page-lead">{t(bodyKey)}</p>
+      <PageHeader eyebrow={t('common.comingSoon')} title={t(titleKey)} lead={t(bodyKey)} />
       <div className="panel">
         <p>{t('common.placeholderDetail')}</p>
       </div>

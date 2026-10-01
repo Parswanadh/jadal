@@ -44,28 +44,41 @@
     "switchToEnglish": "EN",
     "themeLabel": "Theme",
     "themeLight": "Light",
-    "themeDark": "Dark"
+    "themeDark": "Dark",
+    "langOptionEn": "EN",
+    "langOptionTe": "తెలుగు"
   },
   "home": {
-    "title": "Whose turn is it to irrigate?",
-    "subtitle": "One shared schedule for the whole canal: crop needs, release windows, requests and deliveries, all recorded by volume.",
+    "title": "Canal water shared by volume, not by hours.",
+    "subtitle": "Jadal plans every farm's share in cubic metres, turns it into a turn time with simple physics, and phones each farmer in Telugu. A coordinator approves every step.",
     "healthTitle": "System health",
     "healthChecking": "Checking /api/health…",
     "healthOperational": "Operational",
     "healthDegraded": "Degraded",
     "healthUnreachable": "API unreachable — showing app shell only",
     "versionLabel": "Version",
-    "portalsTitle": "Portals",
-    "farmerCardTitle": "Farmer portal",
-    "farmerCardBody": "Registration, crop plans, quota and requests. Values come from the API.",
-    "coordinatorCardTitle": "Coordinator portal",
-    "coordinatorCardBody": "Verify farmers, approve entitlements and rosters, decide requests.",
-    "canalCardTitle": "Canal view",
-    "canalCardBody": "Outlets along the canal and the weekly roster. No water maths in the browser.",
-    "phoneCardTitle": "Simulated phone",
-    "phoneCardBody": "Browser fallback for the Telugu voice call flow.",
-    "demoCardTitle": "Demo controls",
-    "demoCardBody": "Reset the seeded scenario and replay the event log."
+    "portalsTitle": "The screens",
+    "farmerCardTitle": "Farmer",
+    "farmerCardBody": "Register, see your next turn and ask for extra water.",
+    "coordinatorCardTitle": "Coordinator",
+    "coordinatorCardBody": "Verify farmers, approve plans and decide requests.",
+    "canalCardTitle": "Canal",
+    "canalCardBody": "See how far the water travels along the canal.",
+    "phoneCardTitle": "Phone",
+    "phoneCardBody": "Try the Telugu voice call a farmer receives.",
+    "demoCardTitle": "Demo",
+    "demoCardBody": "Run the six-step walkthrough in under four minutes.",
+    "eyebrow": "Overview",
+    "flowTitle": "How it works",
+    "step1": "Farmers register",
+    "step2": "AI estimates need (FAO-56, weather, rain)",
+    "step3": "Coordinator approves",
+    "step4": "Physics turns volume into turn time",
+    "step5": "Caller agent phones every farmer",
+    "step6": "Ledger records every m³",
+    "loopLabel": "Urgent requests, rain and harvest re-plan the schedule",
+    "openLabel": "Open",
+    "principle": "LLMs propose · the deterministic core computes · the coordinator approves"
   },
   "farmer": {
     "title": "Farmer portal",
@@ -205,5 +218,32 @@
     "confirmed": "Confirmed",
     "cancelled": "Cancelled",
     "expired": "Expired"
+  },
+  "page": {
+    "farmer": {
+      "eyebrow": "Farmer",
+      "title": "My water",
+      "lead": "Register, check your next turn and ask for more water when a crop needs it."
+    },
+    "coordinator": {
+      "eyebrow": "Coordinator",
+      "title": "Coordinator console",
+      "lead": "Review what the AI proposed and approve each step before anything reaches a farmer."
+    },
+    "canal": {
+      "eyebrow": "Canal",
+      "title": "Canal water map",
+      "lead": "See how far the water travels and who gets how much along the way."
+    },
+    "phone": {
+      "eyebrow": "Phone",
+      "title": "Simulated phone call",
+      "lead": "The Telugu call a farmer receives, shown in the browser for when real telephony is unavailable."
+    },
+    "demo": {
+      "eyebrow": "Demo",
+      "title": "Demo walkthrough",
+      "lead": "Run the six-step story from registration to ledger in under four minutes."
+    }
   }
 }

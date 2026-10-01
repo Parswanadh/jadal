@@ -1,68 +1,24 @@
 /* C6 — Simulated phone. 360px frame, light/dark, accessible. */
 
 .jadal-phone {
-  --phone-bg: #ffffff;
-  --phone-fg: #111827;
-  --phone-muted: #6b7280;
-  --phone-line: #e5e7eb;
-  --phone-accent: #0e7c3a;
-  --phone-accent-fg: #ffffff;
-  --phone-danger: #b42318;
-  --phone-bubble-in: #f1f5f9;
-  --phone-bubble-out: #dcf8c6;
-  --phone-wa-header: #075e54;
-  --phone-wa-bg: #ece5dd;
-  --phone-badge-wait-bg: #fef3c7;
-  --phone-badge-wait-fg: #92400e;
-  --phone-badge-ok-bg: #d1fae5;
-  --phone-badge-ok-fg: #065f46;
-  --phone-badge-bad-bg: #fee2e2;
-  --phone-badge-bad-fg: #991b1b;
-  color-scheme: light;
-}
-
-.jadal-phone[data-theme="dark"] {
-  --phone-bg: #111827;
-  --phone-fg: #f9fafb;
-  --phone-muted: #9ca3af;
-  --phone-line: #374151;
-  --phone-accent: #34d399;
-  --phone-accent-fg: #062e1d;
-  --phone-danger: #f87171;
-  --phone-bubble-in: #1f2937;
-  --phone-bubble-out: #064e3b;
-  --phone-wa-header: #064e3b;
-  --phone-wa-bg: #0b141a;
-  --phone-badge-wait-bg: #453003;
-  --phone-badge-wait-fg: #fcd34d;
-  --phone-badge-ok-bg: #064e3b;
-  --phone-badge-ok-fg: #a7f3d0;
-  --phone-badge-bad-bg: #450a0a;
-  --phone-badge-bad-fg: #fca5a5;
-  color-scheme: dark;
-}
-
-@media (prefers-color-scheme: dark) {
-  .jadal-phone:not([data-theme="light"]) {
-    --phone-bg: #111827;
-    --phone-fg: #f9fafb;
-    --phone-muted: #9ca3af;
-    --phone-line: #374151;
-    --phone-accent: #34d399;
-    --phone-accent-fg: #062e1d;
-    --phone-danger: #f87171;
-    --phone-bubble-in: #1f2937;
-    --phone-bubble-out: #064e3b;
-    --phone-wa-header: #064e3b;
-    --phone-wa-bg: #0b141a;
-    --phone-badge-wait-bg: #453003;
-    --phone-badge-wait-fg: #fcd34d;
-    --phone-badge-ok-bg: #064e3b;
-    --phone-badge-ok-fg: #a7f3d0;
-    --phone-badge-bad-bg: #450a0a;
-    --phone-badge-bad-fg: #fca5a5;
-    color-scheme: dark;
-  }
+  /* Local names alias the global design tokens (styles.css). */
+  --phone-bg: var(--surface);
+  --phone-fg: var(--ink);
+  --phone-muted: var(--muted);
+  --phone-line: var(--rule);
+  --phone-accent: var(--accent);
+  --phone-accent-fg: var(--on-accent);
+  --phone-danger: var(--critical);
+  --phone-bubble-in: var(--surface-alt);
+  --phone-bubble-out: var(--accent-subtle);
+  --phone-wa-header: var(--surface-alt);
+  --phone-wa-bg: var(--bg);
+  --phone-badge-wait-bg: var(--warn-subtle);
+  --phone-badge-wait-fg: var(--warn);
+  --phone-badge-ok-bg: var(--ok-subtle);
+  --phone-badge-ok-fg: var(--ok);
+  --phone-badge-bad-bg: var(--critical-subtle);
+  --phone-badge-bad-fg: var(--critical);
 }
 
 .jadal-phone {
@@ -71,10 +27,9 @@
   background: var(--phone-bg);
   color: var(--phone-fg);
   border: 1px solid var(--phone-line);
-  border-radius: 2rem;
+  border-radius: 1.5rem;
   overflow: hidden;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  font-family: var(--font-body);
 }
 
 .jadal-phone__bar {
@@ -170,6 +125,7 @@
 
 .jadal-phone__number,
 .jadal-phone__source {
+  font-family: var(--font-mono);
   color: var(--phone-muted);
   font-size: 0.8rem;
   margin: 0.25rem 0 0;
@@ -189,10 +145,10 @@
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #fff;
+  color: var(--on-accent);
 }
 
-.jadal-phone__btn--accept { background: #16a34a; }
+.jadal-phone__btn--accept { background: var(--ok); }
 .jadal-phone__btn--decline { background: var(--phone-danger); }
 
 .jadal-phone__btn-label {
@@ -266,6 +222,7 @@
 }
 
 .jadal-phone__turn-meta {
+  font-family: var(--font-mono);
   font-size: 0.7rem;
   color: var(--phone-muted);
   margin-bottom: 0.25rem;
@@ -353,7 +310,8 @@
   align-items: center;
   justify-content: space-between;
   background: var(--phone-wa-header);
-  color: #fff;
+  color: var(--phone-fg);
+  border-bottom: 1px solid var(--phone-line);
   padding: 0.5rem 0.75rem;
   font-size: 0.85rem;
   font-weight: 700;
@@ -361,8 +319,8 @@
 
 .jadal-phone__drawer-close {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  color: #fff;
+  border: 1px solid var(--phone-line);
+  color: var(--phone-fg);
   border-radius: 0.5rem;
   padding: 0.15rem 0.6rem;
   cursor: pointer;
@@ -388,10 +346,11 @@
   border-radius: 0.5rem;
   padding: 0.5rem 0.6rem;
   font-size: 0.85rem;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--phone-line);
 }
 
 .jadal-phone__msg-time {
+  font-family: var(--font-mono);
   display: block;
   text-align: right;
   font-size: 0.65rem;
