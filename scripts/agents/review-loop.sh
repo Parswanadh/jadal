@@ -9,7 +9,8 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 WORK="$REPO_ROOT/.ref/review"
 WT="$WORK/worktree"
 STATE="$WORK/reviewed.txt"
-MODEL="${REVIEW_MODEL:-gemini-3.8-flash-high}"
+CLI="${REVIEW_CLI:-opencode}"   # opencode (default, space-bunny-free) or agy
+MODEL="${REVIEW_MODEL:-}"
 mkdir -p "$WORK/runs" && touch "$STATE"
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
@@ -44,10 +45,15 @@ review_pr() {
   local checks=$?
   echo "EXIT CODE: $checks" >>"$run/checks.log"
 
-  ( cd "$WT" && agy -p "$(cat "$REPO_ROOT/scripts/agents/review-prompt.md")
+  local msg
+  msg="$(cat "$REPO_ROOT/scripts/agents/review-prompt.md")
 
-Run inputs for this review: $run/pr.json, $run/issue.md, $run/diff.patch, $run/checks.log. Write the decision JSON to $run/decision.json" \
-      --model "$MODEL" --dangerously-skip-permissions >"$run/agy.log" 2>&1 )
+Run inputs for this review: $run/pr.json, $run/issue.md, $run/diff.patch, $run/checks.log. Write the decision JSON to $run/decision.json"
+  if [ "$CLI" = "agy" ]; then
+    ( cd "$WT" && agy -p "$msg" --model "${MODEL:-gemini-3.8-flash-high}" --dangerously-skip-permissions >"$run/agent.log" 2>&1 )
+  else
+    ( cd "$WT" && opencode run -m "${MODEL:-opencode/space-bunny-free}" "$msg" >"$run/agent.log" 2>&1 )
+  fi
 
   if ! jq -e . "$run/decision.json" >/dev/null 2>&1; then
     log "PR #$n: no valid decision written; will retry next cycle"; return
@@ -75,7 +81,7 @@ Run inputs for this review: $run/pr.json, $run/issue.md, $run/diff.patch, $run/c
   echo "$n $sha" >>"$STATE"
 }
 
-log "review loop started (interval ${INTERVAL}s, model $MODEL)"
+log "review loop started (interval ${INTERVAL}s, cli $CLI ${MODEL})"
 while true; do
   git -C "$REPO_ROOT" fetch -q origin
   gh pr list --state open --json number,headRefOid,isDraft -q '.[] | select(.isDraft|not) | "\(.number) \(.headRefOid)"' 2>/dev/null |

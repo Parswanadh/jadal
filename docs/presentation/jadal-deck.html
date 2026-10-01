@@ -1,0 +1,579 @@
+<title>Jadal Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+Telugu:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one continuous page; sticky top bar (.bar); each .sec is a section with generous vertical padding and a centred .wrap (max 1160px); sized for 1280-1600px laptops. */
+:root {
+  color-scheme: light;
+  /* colour tokens (single light theme, deliberate) */
+  --bg: #FFFCF5;
+  --surface: #FFFFFF;
+  --ink: #1E1B16;
+  --muted: #6E675C;
+  --rule: #ECE5D6;
+  --rule-strong: #D8CDB6;
+  --sun: #E8A100;
+  --sun-ink: #9A6700;
+  --sun-tint: #FFF4D6;
+  --sun-glow: rgba(232, 161, 0, 0.08);
+  --water: #3F7CA6;
+  --water-tint: #E4EEF5;
+  --veil: rgba(255, 252, 245, 0.94);
+  --shadow: 0 1px 2px rgba(30, 27, 22, 0.04), 0 8px 24px rgba(30, 27, 22, 0.04);
+  /* type tokens */
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-te: "Noto Sans Telugu", "Plus Jakarta Sans", "Nirmala UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --fs-hero: clamp(72px, 17vw, 184px);
+  --fs-title: clamp(28px, 4vw, 48px);
+  --fs-lead: clamp(17px, 1.7vw, 21px);
+  --fs-body: clamp(16px, 1.4vw, 18px);
+  --fs-small: 14px;
+  --fs-label: 12px;
+  /* shape + spacing */
+  --r: 14px;
+  --gutter: clamp(16px, 5vw, 64px);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-padding-top: 72px; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  font-weight: 400;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3, p, ul, ol, figure { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+svg { display: block; max-width: 100%; height: auto; }
+svg text { font-family: var(--font-sans); }
+:focus-visible { outline: 2px solid var(--sun-ink); outline-offset: 3px; border-radius: 4px; }
+
+/* ---------- page + sections ---------- */
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+.bar {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--veil); border-bottom: 1px solid var(--rule); padding-inline: var(--gutter);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.bar .in {
+  max-width: 1160px; margin-inline: auto;
+  height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -0.03em; color: var(--ink); text-decoration: none; }
+.brand::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--sun); }
+.nav { display: flex; gap: 6px; flex-wrap: wrap; }
+.nav a {
+  font-size: 14px; font-weight: 500; color: var(--muted); text-decoration: none;
+  padding: 6px 12px; border-radius: 999px; border: 1px solid transparent;
+}
+.nav a:hover { color: var(--ink); border-color: var(--rule-strong); }
+.nav a[aria-current="true"] { color: var(--sun-ink); border-color: var(--rule-strong); background: var(--surface); }
+.sec { position: relative; padding: clamp(72px, 9vw, 120px) var(--gutter); }
+.sec + .sec { border-top: 1px solid var(--rule); }
+.wrap { width: 100%; max-width: 1160px; margin-inline: auto; position: relative; }
+
+/* ---------- type ---------- */
+.title {
+  font-size: var(--fs-title);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  text-wrap: balance;
+  max-width: 22em;
+}
+.lead { font-size: var(--fs-lead); color: var(--muted); max-width: 40em; margin-top: 14px; text-wrap: pretty; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--font-mono); font-size: var(--fs-label); font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--sun-ink);
+  margin-bottom: 18px;
+}
+.eyebrow::before { content: ""; width: 8px; height: 8px; background: var(--sun); border-radius: 2px; }
+.mono { font-family: var(--font-mono); }
+.gloss { font-size: var(--fs-small); color: var(--muted); margin-top: 22px; max-width: 46em; }
+.gloss b { font-weight: 600; color: var(--ink); }
+
+.points { display: grid; gap: 12px; margin-top: 22px; }
+.points li { position: relative; padding-left: 22px; max-width: 34em; }
+.points li::before { content: ""; position: absolute; left: 0; top: 0.7em; width: 8px; height: 8px; border-radius: 2px; background: var(--sun); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font-size: 13px; font-weight: 500; line-height: 1; white-space: nowrap;
+  padding: 8px 12px; border-radius: 999px;
+  background: var(--bg); border: 1px solid var(--rule-strong); color: var(--ink);
+}
+
+/* hairline blocks (no card chrome) */
+.blocks { display: grid; gap: 28px 36px; grid-template-columns: repeat(3, 1fr); margin-top: 36px; }
+.block { position: relative; border-top: 1px solid var(--rule-strong); padding-top: 18px; }
+.block::before { content: ""; position: absolute; top: -2px; left: 0; width: 32px; height: 3px; background: var(--sun); border-radius: 2px; }
+.block h3 { font-size: 19px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.25; }
+.block p, .block li { color: var(--muted); font-size: 15px; line-height: 1.5; }
+.block ul { margin-top: 8px; display: grid; gap: 4px; }
+.block .te { font-family: var(--font-te); font-size: 30px; font-weight: 600; color: var(--ink); line-height: 1.3; margin-top: 4px; }
+
+/* cards (used sparingly: system overview, trust tiles) */
+.card {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r);
+  box-shadow: var(--shadow); padding: 28px;
+}
+
+/* ---------- section 1 ---------- */
+.s-title { overflow: hidden; padding-top: clamp(96px, 13vw, 168px); padding-bottom: clamp(96px, 13vw, 168px); }
+.s-title::before {
+  content: ""; position: absolute; top: -18vmax; right: -18vmax; width: 60vmax; height: 60vmax;
+  background: radial-gradient(closest-side, var(--sun-glow), transparent); pointer-events: none;
+}
+.mark { width: 56px; height: 56px; margin-bottom: 28px; }
+.hero { font-size: var(--fs-hero); font-weight: 700; letter-spacing: -0.05em; line-height: 0.95; }
+.hero span { color: var(--sun); }
+.tagline { font-size: clamp(20px, 2.6vw, 32px); font-weight: 500; letter-spacing: -0.02em; margin-top: 24px; max-width: 24em; text-wrap: balance; }
+.subtitle { font-family: var(--font-mono); font-size: var(--fs-label); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-top: 28px; }
+
+/* ---------- diagrams ---------- */
+.scroll { margin-top: 36px; }
+.scroll svg { width: 100%; }
+.fig { margin-top: 40px; }
+
+.caption { font-size: clamp(22px, 2.6vw, 32px); font-weight: 700; letter-spacing: -0.025em; margin-top: 14px; }
+.caption em { font-style: normal; color: var(--sun-ink); }
+.note { font-size: var(--fs-small); color: var(--muted); margin-top: 6px; }
+
+.cols3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 36px; }
+.cols3 .points { margin-top: 0; }
+
+/* ---------- section 4 ---------- */
+.three { display: grid; grid-template-columns: 1fr 88px 1fr 88px 1fr; align-items: stretch; margin-top: 36px; }
+.layer { display: flex; flex-direction: column; position: relative; min-height: 300px; }
+.layer .num { position: absolute; top: 18px; right: 24px; font-family: var(--font-mono); font-size: 28px; font-weight: 500; color: var(--rule-strong); }
+.layer .eyebrow { margin-bottom: 16px; }
+.layer h3 { font-size: clamp(19px, 1.9vw, 23px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.3; text-wrap: balance; }
+.layer .chips { margin-top: auto; padding-top: 26px; }
+.layer .rule { height: 1px; background: var(--rule); margin-top: 26px; }
+.link { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; color: var(--muted); text-align: center; }
+.link svg { width: 40px; height: 12px; }
+.principle {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; margin-top: 28px;
+  font-size: var(--fs-small); font-weight: 600; color: var(--ink);
+}
+.principle span { display: inline-flex; align-items: center; gap: 22px; }
+.principle span + span::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--sun); margin-right: 0; }
+
+/* ---------- section 6 ---------- */
+.split { display: grid; grid-template-columns: 1.7fr 1fr; gap: 40px; margin-top: 32px; align-items: start; }
+.stack { display: grid; gap: 10px; }
+.tier { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); padding: 18px 22px; }
+.tier.base { background: var(--sun-tint); border-color: var(--sun); }
+.tier .row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+.tier h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.015em; }
+.tier .never { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.02em; }
+.tier .desc { font-size: 14px; color: var(--muted); margin-top: 2px; }
+.tier .chips { margin-top: 12px; }
+.tier.base .chip { background: var(--surface); }
+.stack-cap { font-size: var(--fs-small); color: var(--muted); margin-top: 12px; }
+.side { display: grid; gap: 28px; }
+
+/* ---------- section 7 ---------- */
+.worker { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); box-shadow: var(--shadow); padding: 24px 28px 28px; margin-top: 30px; }
+.worker header { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; }
+.worker header h3 { font-size: 19px; font-weight: 600; letter-spacing: -0.015em; }
+.worker header p { color: var(--muted); font-size: 15px; }
+.worker .blocks { margin-top: 22px; gap: 22px 32px; }
+.cicd { margin-top: 28px; }
+.label { font-family: var(--font-mono); font-size: var(--fs-label); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+
+/* ---------- section 8 ---------- */
+
+
+/* ---------- section 9 ---------- */
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 36px; }
+.tile { display: flex; flex-direction: column; gap: 12px; min-height: 260px; }
+.tile .n { font-family: var(--font-mono); font-size: var(--fs-label); letter-spacing: 0.14em; color: var(--sun-ink); font-weight: 500; }
+.tile h3 { font-size: clamp(20px, 2vw, 24px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.2; text-wrap: balance; }
+.tile p { color: var(--muted); font-size: 15px; }
+.eq { margin-top: auto; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; background: var(--sun-tint); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; color: var(--ink); }
+
+/* ---------- section 10 ---------- */
+.lane { padding-top: 18px; }
+.lane .letter { font-family: var(--font-mono); font-size: 40px; font-weight: 500; color: var(--sun-ink); line-height: 1; margin-bottom: 10px; }
+.reviewer {
+  margin-top: 28px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center;
+  border: 1px dashed var(--rule-strong); border-radius: 10px; padding: 12px 16px; font-size: 15px;
+}
+.reviewer b { font-weight: 600; }
+.reviewer span { color: var(--muted); }
+.tl-wrap { margin-top: 32px; }
+.tl { display: flex; height: 46px; border: 1px solid var(--rule-strong); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.tl div { flex: var(--h) 1 0; display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; font-family: var(--font-mono); font-size: 12px; font-weight: 500; border-left: 1px solid var(--rule-strong); min-width: 0; }
+.tl div:first-child { border-left: 0; }
+.tl .hot { background: var(--sun); color: var(--ink); }
+.ticks { position: relative; height: 22px; margin-top: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.ticks span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+.ticks span:first-child { transform: none; }
+.ticks span:last-child { transform: translateX(-100%); }
+.legend { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px 16px; margin-top: 10px; font-size: 13px; }
+.legend li b { display: block; font-weight: 600; color: var(--ink); }
+.legend li span { color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+
+/* ---------- section 11 ---------- */
+.closer { font-size: clamp(44px, 9vw, 112px); font-weight: 700; letter-spacing: -0.045em; line-height: 1; text-wrap: balance; }
+.closer u { text-decoration-color: var(--sun); text-decoration-thickness: 0.07em; text-underline-offset: 0.12em; }
+.impact { font-size: clamp(18px, 2vw, 24px); color: var(--muted); margin-top: 28px; max-width: 30em; text-wrap: balance; }
+.sign { font-family: var(--font-mono); font-size: var(--fs-label); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-top: 40px; }
+
+/* ---------- motion ---------- */
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.in-view .rise { animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 80ms); }
+@media (prefers-reduced-motion: reduce) {
+  .in-view .rise { animation: none; }
+}
+
+/* ---------- responsive (narrow windows only avoid breakage; deck is shown on laptops) ---------- */
+@media (max-width: 960px) {
+  .three { grid-template-columns: 1fr; }
+  .link { flex-direction: row; padding: 8px 0; justify-content: center; }
+  .link svg { transform: rotate(90deg); width: 32px; height: 12px; }
+  .layer { min-height: 0; }
+  .split { grid-template-columns: 1fr; }
+  .blocks, .cols3, .tiles { grid-template-columns: repeat(2, 1fr); }
+  .legend { grid-template-columns: repeat(3, 1fr); }
+  .scroll { overflow-x: auto; }
+  .scroll svg { min-width: 760px; }
+  .hv-h { overflow-x: auto; }
+  .hv-h svg { min-width: 760px; }
+  .nav a { padding: 6px 8px; }
+}
+</style>
+
+<header class="bar">
+  <div class="in">
+    <a class="brand" href="#top">Jadal</a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#problem">Overview</a>
+      <a href="#frontend">Frontend</a>
+      <a href="#backend">Backend</a>
+      <a href="#server">Server</a>
+      <a href="#flow">Flow</a>
+      <a href="#trust">Trust</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page" id="top">
+
+<!-- Title -->
+<section class="sec s-title in-view" id="title" aria-label="Title">
+  <div class="wrap">
+    <svg class="mark rise" viewBox="0 0 56 56" role="img" aria-labelledby="mk-t" style="--i:0">
+      <title id="mk-t">Jadal mark: a sun above water</title>
+      <circle cx="28" cy="20" r="13" fill="var(--sun)"/>
+      <path d="M4 38 Q10 33 16 38 T28 38 T40 38 T52 38" fill="none" stroke="var(--water)" stroke-width="3" stroke-linecap="round"/>
+      <path d="M4 47 Q10 42 16 47 T28 47 T40 47 T52 47" fill="none" stroke="var(--water)" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+    <h1 class="hero rise" style="--i:1">Jadal<span>.</span></h1>
+    <p class="tagline rise" style="--i:2">Canal water shared by volume, not by hours.</p>
+    <p class="subtitle rise" style="--i:3">IEEE-CIS hackathon · LLMs + Agentic AI</p>
+  </div>
+</section>
+
+<!-- 02 Problem -->
+<section class="sec" id="problem" aria-label="The problem">
+  <div class="wrap">
+    <h2 class="title rise" style="--i:0">Warabandi shares hours, not water.</h2>
+    <p class="lead rise" style="--i:1">Each farmer gets fixed hours on a weekly roster.</p>
+    <div class="scroll rise" style="--i:2">
+      <svg viewBox="0 0 990 346" width="100%" role="img" aria-labelledby="cn-t"><title id="cn-t">A canal from head to tail with eight outlets. Every outlet gets the same one-hour turn, but the water delivered shrinks toward the tail.</title><rect x="60" y="98" width="900" height="44" rx="6" fill="var(--water-tint)" stroke="var(--rule-strong)" stroke-width="1"/><polygon points="60,103 960,115 960,125 60,137" fill="var(--water)"/><text x="60" y="80" font-family="var(--font-mono)" font-size="14" font-weight="500" fill="var(--muted)" letter-spacing="1.5">HEAD</text><text x="960" y="80" text-anchor="end" font-family="var(--font-mono)" font-size="14" font-weight="500" fill="var(--muted)" letter-spacing="1.5">TAIL</text><text x="510" y="80" text-anchor="middle" font-size="15" fill="var(--muted)">flow thins as water seeps and is drawn off</text><text x="0" y="195" font-family="var(--font-mono)" font-size="14" font-weight="500" fill="var(--muted)" letter-spacing="1.5">OUTLET</text><text x="0" y="244" font-family="var(--font-mono)" font-size="14" font-weight="500" fill="var(--muted)" letter-spacing="1.5">HOURS</text><text x="0" y="324" font-family="var(--font-mono)" font-size="14" font-weight="500" fill="var(--muted)" letter-spacing="1.5">WATER</text><line x1="100" y1="334" x2="960" y2="334" stroke="var(--rule-strong)" stroke-width="1"/><line x1="194" y1="142" x2="194" y2="178" stroke="var(--rule-strong)" stroke-width="1.5"/><circle cx="194" cy="190" r="13" fill="var(--sun)"/><text x="194" y="195" text-anchor="middle" font-family="var(--font-mono)" font-size="15" font-weight="600" fill="var(--ink)">1</text><rect x="170" y="224" width="48" height="30" rx="8" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="194" y="244" text-anchor="middle" font-family="var(--font-mono)" font-size="16" font-weight="500" fill="var(--ink)">1 h</text><rect x="170" y="260" width="48" height="74" rx="4" fill="var(--water)"/><line x1="292" y1="142" x2="292" y2="178" stroke="var(--rule-strong)" stroke-width="1.5"/><circle cx="292" cy="190" r="13" fill="var(--sun)"/><text x="292" y="195" text-anchor="middle" font-family="var(--font-mono)" font-size="15" font-weight="600" fill="var(--ink)">2</text><rect x="268" y="224" width="48" height="30" rx="8" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="292" y="244" text-anchor="middle" font-family="var(--font-mono)" font-size="16" font-weight="500" fill="var(--ink)">1 h</text><rect x="268" y="268" width="48" height="66" rx="4" fill="var(--water)"/><line x1="390" y1="142" x2="390" y2="178" stroke="var(--rule-strong)" stroke-width="1.5"/><circle cx="390" cy="190" r="13" fill="var(--sun)"/><text x="390" y="195" text-anchor="middle" font-family="var(--font-mono)" font-size="15" font-weight="600" fill="var(--ink)">3</text><rect x="366" y="224" width="48" height="30" rx="8" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="390" y="244" text-anchor="middle" font-family="var(--font-mono)" font-size="16" font-weight="500" fill="var(--ink)">1 h</text><rect x="366" y="276" width="48" height="58" rx="4" fill="var(--water)"/><line x1="502" y1="142" x2="502" y2="178" stroke="var(--rule-strong)" stroke-width="1.5"/><circle cx="502" cy="190" r="13" fill="var(--sun)"/><text x="502" y="195" text-anchor="middle" font-family="var(--font-mono)" font-size="15" font-weight="600" fill="var(--ink)">4</text><rect x="478" y="224" width="48" height="30" rx="8" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="502" y="244" text-anchor="middle" font-family="var(--font-mono)" font-size="16" font-weight="500" fill="var(--ink)">1 h</text><rect x="478" y="284" width="48" height="50" rx="4" fill="var(--water)"/><line x1="614" y1="142" x2="614" y2="178" stroke="var(--rule-strong)" stroke-width="1.5"/><circle cx="614" cy="190" r="13" fill="var(--sun)"/><text x="614" y="195" text-anchor="middle" font-family="var(--font-mono)" font-size="15" font-weight="600" fill="var(--ink)">5</text><rect x="590" y="224" width="48" height="30" rx="8" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="614" y="244" text-anchor="middle" font-family="var(--font-mono)" font-size="16" font-weight="500" fill="var(--ink)">1 h</text><rect x="590" y="291" width="48" height="43" rx="4" fill="var(--water)"/><line x1="726" y1="142" x2="726" y2="178" stroke="var(--rule-strong)" stroke-width="1.5"/><circle cx="726" cy="190" r="13" fill="var(--sun)"/><text x="726" y="195" text-anchor="middle" font-family="var(--font-mono)" font-size="15" font-weight="600" fill="var(--ink)">6</text><rect x="702" y="224" width="48" height="30" rx="8" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="726" y="244" text-anchor="middle" font-family="var(--font-mono)" font-size="16" font-weight="500" fill="var(--ink)">1 h</text><rect x="702" y="298" width="48" height="36" rx="4" fill="var(--water)"/><line x1="824" y1="142" x2="824" y2="178" stroke="var(--rule-strong)" stroke-width="1.5"/><circle cx="824" cy="190" r="13" fill="var(--sun)"/><text x="824" y="195" text-anchor="middle" font-family="var(--font-mono)" font-size="15" font-weight="600" fill="var(--ink)">7</text><rect x="800" y="224" width="48" height="30" rx="8" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="824" y="244" text-anchor="middle" font-family="var(--font-mono)" font-size="16" font-weight="500" fill="var(--ink)">1 h</text><rect x="800" y="303" width="48" height="31" rx="4" fill="var(--water)"/><line x1="922" y1="142" x2="922" y2="178" stroke="var(--rule-strong)" stroke-width="1.5"/><circle cx="922" cy="190" r="13" fill="var(--sun)"/><text x="922" y="195" text-anchor="middle" font-family="var(--font-mono)" font-size="15" font-weight="600" fill="var(--ink)">8</text><rect x="898" y="224" width="48" height="30" rx="8" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="922" y="244" text-anchor="middle" font-family="var(--font-mono)" font-size="16" font-weight="500" fill="var(--ink)">1 h</text><rect x="898" y="308" width="48" height="26" rx="4" fill="var(--water)"/></svg>
+    </div>
+    <p class="note">Illustrative: eight outlets, equal one-hour turns.</p>
+    <p class="caption rise" style="--i:3">Equal hours. <em>Unequal water.</em></p>
+    <ul class="points cols3 rise" style="--i:4">
+      <li>Upstream turns overrun and cut the flow below.</li>
+      <li>Seepage and lag leave tail-end flow weak and late.</li>
+      <li>Schedule changes miss farmers outside the chat group.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 03 What Jadal does -->
+<section class="sec" id="solution" aria-label="What Jadal does">
+  <div class="wrap">
+    <h2 class="title rise" style="--i:0">Jadal plans by volume, then turns it into time.</h2>
+    <div class="fig rise" style="--i:1">
+      <div class="hv-h"><svg viewBox="0 0 1006 189" width="100%" role="img" aria-labelledby="f3h-t"><title id="f3h-t">Six steps from registration to the ledger, with a loop back for urgent requests, rain and harvest.</title><defs><marker id="f3h-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9 z" fill="var(--muted)"/></marker><marker id="f3h-as" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9 z" fill="var(--sun-ink)"/></marker></defs><rect x="3" y="3" width="140" height="119" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="19" y="29" font-family="var(--font-mono)" font-size="13" font-weight="500" fill="var(--sun-ink)">01</text><text x="19" y="57" font-size="17" font-weight="600" fill="var(--ink)">Register</text><text x="19" y="104" font-size="13" fill="var(--muted)">crops + position</text><rect x="175" y="3" width="140" height="119" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="191" y="29" font-family="var(--font-mono)" font-size="13" font-weight="500" fill="var(--sun-ink)">02</text><text x="191" y="57" font-size="17" font-weight="600" fill="var(--ink)">Estimate</text><text x="191" y="78" font-size="17" font-weight="600" fill="var(--ink)">need</text><text x="191" y="104" font-size="13" fill="var(--muted)">FAO-56 crop need</text><rect x="347" y="3" width="140" height="119" rx="12" fill="var(--sun-tint)" stroke="var(--sun)" stroke-width="2"/><text x="363" y="29" font-family="var(--font-mono)" font-size="13" font-weight="500" fill="var(--sun-ink)">03</text><text x="363" y="57" font-size="17" font-weight="600" fill="var(--ink)">Approve</text><text x="363" y="104" font-size="13" fill="var(--muted)">coordinator</text><rect x="519" y="3" width="140" height="119" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="535" y="29" font-family="var(--font-mono)" font-size="13" font-weight="500" fill="var(--sun-ink)">04</text><text x="535" y="57" font-size="17" font-weight="600" fill="var(--ink)">Turn time</text><text x="535" y="78" font-size="17" font-weight="600" fill="var(--ink)">from physics</text><text x="535" y="104" font-size="13" fill="var(--muted)">tail gets longer</text><rect x="691" y="3" width="140" height="119" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="707" y="29" font-family="var(--font-mono)" font-size="13" font-weight="500" fill="var(--sun-ink)">05</text><text x="707" y="57" font-size="17" font-weight="600" fill="var(--ink)">Call</text><text x="707" y="78" font-size="17" font-weight="600" fill="var(--ink)">farmers</text><text x="707" y="104" font-size="13" fill="var(--muted)">Telugu + ack</text><rect x="863" y="3" width="140" height="119" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="879" y="29" font-family="var(--font-mono)" font-size="13" font-weight="500" fill="var(--sun-ink)">06</text><text x="879" y="57" font-size="17" font-weight="600" fill="var(--ink)">Record in</text><text x="879" y="78" font-size="17" font-weight="600" fill="var(--ink)">ledger</text><text x="879" y="104" font-size="13" fill="var(--muted)">every m³</text><line x1="147" y1="62.5" x2="170" y2="62.5" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#f3h-ah)"/><line x1="319" y1="62.5" x2="342" y2="62.5" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#f3h-ah)"/><line x1="491" y1="62.5" x2="514" y2="62.5" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#f3h-ah)"/><line x1="663" y1="62.5" x2="686" y2="62.5" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#f3h-ah)"/><line x1="835" y1="62.5" x2="858" y2="62.5" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#f3h-ah)"/><path d="M933.0 126 V158 Q933.0 174 917.0 174 H89.0 Q73.0 174 73.0 158 V131" fill="none" stroke="var(--sun-ink)" stroke-width="1.5" stroke-dasharray="5 5" marker-end="url(#f3h-as)"/><rect x="310.70000000000005" y="160" width="384.59999999999997" height="28" rx="14" fill="var(--bg)" stroke="var(--rule-strong)"/><text x="503.0" y="179" text-anchor="middle" font-size="14" font-weight="500" fill="var(--ink)">Urgent requests, rain and harvest re-plan</text></svg></div>
+      </div>
+    <p class="gloss rise" style="--i:2"><b>FAO-56</b> is the UN's standard method for estimating crop water need. The amber step is the human gate: nothing is allocated without the coordinator.</p>
+  </div>
+</section>
+
+<!-- 04 System at a glance -->
+<section class="sec" id="glance" aria-label="System at a glance">
+  <div class="wrap">
+    <h2 class="title rise" style="--i:0">Three layers, one principle.</h2>
+    <div class="three rise" style="--i:1">
+      <article class="card layer">
+        <span class="num" aria-hidden="true">01</span>
+        <div class="eyebrow">Frontend</div>
+        <h3>What farmers and the coordinator see, in Telugu and English.</h3>
+        <div class="chips">
+          <span class="chip">Farmer portal</span>
+          <span class="chip">Coordinator console</span>
+          <span class="chip">Canal view</span>
+          <span class="chip">Simulated phone</span>
+        </div>
+      </article>
+      <div class="link" aria-hidden="true">
+        <svg viewBox="0 0 40 12" role="presentation"><defs><marker id="l1-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 1 L9 5 L1 9 z" fill="var(--sun-ink)"/></marker></defs><line x1="1" y1="6" x2="36" y2="6" stroke="var(--sun-ink)" stroke-width="1.5" marker-end="url(#l1-ah)"/></svg>
+        <span>typed API</span>
+      </div>
+      <article class="card layer">
+        <span class="num" aria-hidden="true">02</span>
+        <div class="eyebrow">Backend</div>
+        <h3>Where every number is computed and every decision is proposed.</h3>
+        <div class="chips">
+          <span class="chip">Hono API</span>
+          <span class="chip">Deterministic core</span>
+          <span class="chip">AI agents</span>
+          <span class="chip">Telugu voice</span>
+        </div>
+      </article>
+      <div class="link" aria-hidden="true">
+        <svg viewBox="0 0 40 12" role="presentation"><defs><marker id="l2-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 1 L9 5 L1 9 z" fill="var(--sun-ink)"/></marker></defs><line x1="1" y1="6" x2="36" y2="6" stroke="var(--sun-ink)" stroke-width="1.5" marker-end="url(#l2-ah)"/></svg>
+        <span>runs on</span>
+      </div>
+      <article class="card layer">
+        <span class="num" aria-hidden="true">03</span>
+        <div class="eyebrow">Server</div>
+        <h3>One Cloudflare Worker, shipped by GitHub Actions.</h3>
+        <div class="chips">
+          <span class="chip">Worker</span>
+          <span class="chip">D1 + KV</span>
+          <span class="chip">Queues + Workflows</span>
+          <span class="chip">AI Gateway</span>
+        </div>
+      </article>
+    </div>
+    <p class="principle rise" style="--i:2"><span>LLMs propose</span><span>The core computes</span><span>The coordinator approves</span></p>
+  </div>
+</section>
+
+<!-- 05 Frontend -->
+<section class="sec" id="frontend" aria-label="Frontend">
+  <div class="wrap">
+    <div class="eyebrow rise" style="--i:0">Frontend</div>
+    <h2 class="title rise" style="--i:0">What people see and touch.</h2>
+    <div class="blocks rise" style="--i:1">
+      <div class="block">
+        <h3>Farmer portal</h3>
+        <ul><li>Register land and crops</li><li>My water</li><li>Urgent request</li><li>Public buffer board</li></ul>
+      </div>
+      <div class="block">
+        <h3>Coordinator console</h3>
+        <ul><li>Approve crop need</li><li>Equal hours vs equal water</li><li>Decide requests</li><li>Ledger</li></ul>
+      </div>
+      <div class="block">
+        <h3>Canal view</h3>
+        <ul><li>Flow thins from head to tail</li><li>Overrun slider shows loss downstream</li></ul>
+      </div>
+      <div class="block">
+        <h3>Simulated phone</h3>
+        <ul><li>Incoming Telugu call</li><li>WhatsApp-style alert</li></ul>
+      </div>
+      <div class="block">
+        <h3>Demo mode</h3>
+        <ul><li>Guided six-step scenario</li><li>Replay of the event log</li><li>Reset button</li></ul>
+      </div>
+      <div class="block">
+        <h3>Telugu + English</h3>
+        <p class="te" lang="te">తెలుగు</p>
+        <ul><li>One toggle, every screen</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 Backend -->
+<section class="sec" id="backend" aria-label="Backend">
+  <div class="wrap">
+    <div class="eyebrow rise" style="--i:0">Backend</div>
+    <h2 class="title rise" style="--i:0">The brains: LLMs propose, the core computes.</h2>
+    <div class="split rise" style="--i:1">
+      <div>
+        <div class="stack">
+          <div class="tier">
+            <div class="row"><h3>Agents · System 2</h3><span class="never">never compute volumes</span></div>
+            <p class="desc">Slower, reasoning LLMs that plan and explain.</p>
+            <div class="chips"><span class="chip">Need</span><span class="chip">Scheduler</span><span class="chip">Request assessor</span><span class="chip">Caller</span><span class="chip">Auditor</span></div>
+          </div>
+          <div class="tier">
+            <div class="row"><h3>Fast models · System 1</h3><span class="never">never change state</span></div>
+            <p class="desc">Small, quick models that read intent and urgency.</p>
+            <div class="chips"><span class="chip">Jev</span><span class="chip">Laya</span></div>
+          </div>
+          <div class="tier base">
+            <div class="row"><h3>Deterministic core</h3><span class="never">never calls an LLM</span></div>
+            <p class="desc">Tested pure functions: same input, same output.</p>
+            <div class="chips"><span class="chip">FAO-56 crop need</span><span class="chip">Canal hydraulics</span><span class="chip">Roster</span><span class="chip">Ledger + policy</span></div>
+          </div>
+        </div>
+        <p class="stack-cap">Agents reach the core only through typed tools.</p>
+      </div>
+      <div class="side">
+        <div class="block">
+          <h3>API · Hono</h3>
+          <p>One route per action. Every change is appended as an event.</p>
+        </div>
+        <div class="block">
+          <h3>Voice · Sarvam</h3>
+          <p>Telugu speech to text, and text back to speech.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 07 Server -->
+<section class="sec" id="server" aria-label="Server">
+  <div class="wrap">
+    <div class="eyebrow rise" style="--i:0">Server</div>
+    <h2 class="title rise" style="--i:0">One Worker runs the API and the website.</h2>
+    <div class="worker rise" style="--i:1">
+      <header><h3>Cloudflare Worker</h3><p>API and website in one deploy.</p></header>
+      <div class="blocks">
+        <div class="block"><h3>D1 database</h3><p>Event log and ledger.</p></div>
+        <div class="block"><h3>KV cache</h3><p>Crop tables and weather.</p></div>
+        <div class="block"><h3>Queues</h3><p>Outbound calls and messages.</p></div>
+        <div class="block"><h3>Workflows</h3><p>Call retries and request lifecycle.</p></div>
+        <div class="block"><h3>Cron</h3><p>Daily 06:00 IST rain re-plan.</p></div>
+        <div class="block"><h3>AI Gateway</h3><p>Logs, caching and cost for model calls.</p></div>
+      </div>
+    </div>
+    <div class="cicd rise" style="--i:2">
+      <div class="label">CI/CD</div>
+      <div class="hv-h"><svg viewBox="0 0 1026 104" width="100%" role="img" aria-labelledby="f7h-t"><title id="f7h-t">CI/CD: GitHub, then GitHub Actions running typecheck, test and build, then deploy.</title><defs><marker id="f7h-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9 z" fill="var(--muted)"/></marker><marker id="f7h-as" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9 z" fill="var(--sun-ink)"/></marker></defs><rect x="3" y="3" width="300" height="98" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="19" y="29" font-family="var(--font-mono)" font-size="13" font-weight="500" fill="var(--sun-ink)">01 · PUSH</text><text x="19" y="57" font-size="18" font-weight="600" fill="var(--ink)">GitHub</text><text x="19" y="83" font-size="13" fill="var(--muted)">code and pull requests</text><rect x="363" y="3" width="300" height="98" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="379" y="29" font-family="var(--font-mono)" font-size="13" font-weight="500" fill="var(--sun-ink)">02 · CHECK</text><text x="379" y="57" font-size="18" font-weight="600" fill="var(--ink)">Actions</text><text x="379" y="83" font-size="13" fill="var(--muted)">typecheck · test · build</text><rect x="723" y="3" width="300" height="98" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="739" y="29" font-family="var(--font-mono)" font-size="13" font-weight="500" fill="var(--sun-ink)">03 · SHIP</text><text x="739" y="57" font-size="18" font-weight="600" fill="var(--ink)">Deploy</text><text x="739" y="83" font-size="13" fill="var(--muted)">Cloudflare Worker</text><line x1="307" y1="52.0" x2="358" y2="52.0" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#f7h-ah)"/><line x1="667" y1="52.0" x2="718" y2="52.0" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#f7h-ah)"/></svg></div>
+      </div>
+  </div>
+</section>
+
+<!-- 08 End to end -->
+<section class="sec" id="flow" aria-label="One request, end to end">
+  <div class="wrap">
+    <h2 class="title rise" style="--i:0">One urgent request, end to end.</h2>
+    <div class="fig fig8 rise" style="--i:1">
+      <div class="hv-h"><svg viewBox="0 0 996 264" width="100%" role="img" aria-labelledby="f8h-t"><title id="f8h-t">One urgent request in eight steps, from a Telugu voice request to farmer acknowledgement.</title><defs><marker id="f8h-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9 z" fill="var(--muted)"/></marker><marker id="f8h-as" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9 z" fill="var(--sun-ink)"/></marker></defs><rect x="3" y="3" width="210" height="97" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="19" y="29" font-family="var(--font-mono)" font-size="12" font-weight="500" fill="var(--sun-ink)">01 · FARMER</text><text x="19" y="57" font-size="17" font-weight="600" fill="var(--ink)">Speaks in Telugu</text><rect x="263" y="3" width="210" height="97" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="279" y="29" font-family="var(--font-mono)" font-size="12" font-weight="500" fill="var(--sun-ink)">02 · SARVAM</text><text x="279" y="57" font-size="17" font-weight="600" fill="var(--ink)">Speech becomes</text><text x="279" y="78" font-size="17" font-weight="600" fill="var(--ink)">text</text><rect x="523" y="3" width="210" height="97" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="539" y="29" font-family="var(--font-mono)" font-size="12" font-weight="500" fill="var(--sun-ink)">03 · SYSTEM 1</text><text x="539" y="57" font-size="17" font-weight="600" fill="var(--ink)">Urgency</text><text x="539" y="78" font-size="17" font-weight="600" fill="var(--ink)">score</text><rect x="783" y="3" width="210" height="97" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="799" y="29" font-family="var(--font-mono)" font-size="12" font-weight="500" fill="var(--sun-ink)">04 · SYSTEM 2</text><text x="799" y="57" font-size="17" font-weight="600" fill="var(--ink)">Agent</text><text x="799" y="78" font-size="17" font-weight="600" fill="var(--ink)">recommends</text><rect x="3" y="164" width="210" height="97" rx="12" fill="var(--sun-tint)" stroke="var(--sun)" stroke-width="2"/><text x="19" y="190" font-family="var(--font-mono)" font-size="12" font-weight="500" fill="var(--sun-ink)">05 · COORDINATOR</text><text x="19" y="218" font-size="17" font-weight="600" fill="var(--ink)">Approves</text><rect x="263" y="164" width="210" height="97" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="279" y="190" font-family="var(--font-mono)" font-size="12" font-weight="500" fill="var(--sun-ink)">06 · CORE</text><text x="279" y="218" font-size="17" font-weight="600" fill="var(--ink)">Quota deducted,</text><text x="279" y="239" font-size="17" font-weight="600" fill="var(--ink)">schedule re-planned</text><rect x="523" y="164" width="210" height="97" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="539" y="190" font-family="var(--font-mono)" font-size="12" font-weight="500" fill="var(--sun-ink)">07 · CALLER AGENT</text><text x="539" y="218" font-size="17" font-weight="600" fill="var(--ink)">Affected farmers</text><text x="539" y="239" font-size="17" font-weight="600" fill="var(--ink)">called</text><rect x="783" y="164" width="210" height="97" rx="12" fill="var(--surface)" stroke="var(--rule-strong)" stroke-width="1"/><text x="799" y="190" font-family="var(--font-mono)" font-size="12" font-weight="500" fill="var(--sun-ink)">08 · FARMER</text><text x="799" y="218" font-size="17" font-weight="600" fill="var(--ink)">Acknowledges</text><line x1="217" y1="51.5" x2="258" y2="51.5" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#f8h-ah)"/><line x1="477" y1="51.5" x2="518" y2="51.5" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#f8h-ah)"/><line x1="737" y1="51.5" x2="778" y2="51.5" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#f8h-ah)"/><path d="M888.0 104 V132.0 H108.0 V158" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#f8h-ah)"/><line x1="217" y1="212.5" x2="258" y2="212.5" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#f8h-ah)"/><line x1="477" y1="212.5" x2="518" y2="212.5" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#f8h-ah)"/><line x1="737" y1="212.5" x2="778" y2="212.5" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#f8h-ah)"/></svg></div>
+      </div>
+    <p class="gloss rise" style="--i:2"><b>System 1</b> is a fast model that scores urgency. <b>System 2</b> is a reasoning agent that recommends. The amber step is the human gate.</p>
+  </div>
+</section>
+
+<!-- 09 Trust -->
+<section class="sec" id="trust" aria-label="Why it can be trusted">
+  <div class="wrap">
+    <h2 class="title rise" style="--i:0">Why it can be trusted.</h2>
+    <div class="tiles rise" style="--i:1">
+      <article class="card tile">
+        <span class="n">01</span>
+        <h3>Every number comes from tested code, not the LLM.</h3>
+        <p>Crop need, flow, turn times and the ledger are pure functions with unit tests.</p>
+      </article>
+      <article class="card tile">
+        <span class="n">02</span>
+        <h3>A human approves every allocation.</h3>
+        <p>Agents only propose. The coordinator decides, and every step is logged.</p>
+      </article>
+      <article class="card tile">
+        <span class="n">03</span>
+        <h3>The ledger always balances.</h3>
+        <p>An auditor agent checks the rule daily and on demand.</p>
+        <div class="eq">supply = quotas + buffer<br>+ delivered + losses</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- 10 Build -->
+<section class="sec" id="build" aria-label="How we built it in 12 hours">
+  <div class="wrap">
+    <h2 class="title rise" style="--i:0">Built in 12 hours, in three parallel tasks.</h2>
+    <div class="blocks rise" style="--i:1">
+      <div class="block lane"><div class="letter">A</div><h3>Deterministic core</h3><p>Crop need, canal physics, roster, ledger.</p></div>
+      <div class="block lane"><div class="letter">B</div><h3>Backend, agents, voice</h3><p>API, agents, Telugu calls.</p></div>
+      <div class="block lane"><div class="letter">C</div><h3>Frontend, demo, showcase</h3><p>Portals, canal view, phone, replay.</p></div>
+    </div>
+    <p class="reviewer rise" style="--i:2"><b>Reviewer agent</b><span>checks and merges each pull request into main.</span></p>
+    <div class="tl-wrap rise" style="--i:3">
+      <div class="tl" role="img" aria-label="12-hour timeline: contracts 0 to 1 hours, parallel build 1 to 6, integration 6 to 8.5, showcase 8.5 to 10.5, freeze 10.5 to 12">
+        <div style="--h:1">P0</div>
+        <div class="hot" style="--h:5">P1<span class="lg">&nbsp;· three tasks in parallel</span></div>
+        <div style="--h:2.5">P2</div>
+        <div style="--h:2">P3</div>
+        <div style="--h:1.5">P4</div>
+      </div>
+      <div class="ticks" aria-hidden="true"><span style="left:0">0 h</span><span style="left:25%">3 h</span><span style="left:50%">6 h</span><span style="left:75%">9 h</span><span style="left:100%">12 h</span></div>
+      <ul class="legend">
+        <li><b>P0 Contracts</b><span>0 to 1 h</span></li>
+        <li><b>P1 Parallel build</b><span>1 to 6 h</span></li>
+        <li><b>P2 Integration</b><span>6 to 8:30</span></li>
+        <li><b>P3 Showcase</b><span>8:30 to 10:30</span></li>
+        <li><b>P4 Freeze</b><span>10:30 to 12 h</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 11 Close -->
+<section class="sec" id="close" aria-label="Close">
+  <div class="wrap">
+    <h2 class="closer rise" style="--i:0">Hours are <u>not water.</u></h2>
+    <p class="impact rise" style="--i:1">Tail-end and small farmers get usable water, and disputes are settled by evidence.</p>
+    <p class="sign rise" style="--i:2">Jadal · IEEE-CIS hackathon</p>
+  </div>
+</section>
+
+</main>
+
+<script>
+(function () {
+  var secs = Array.prototype.slice.call(document.querySelectorAll(".sec"));
+  var links = Array.prototype.slice.call(document.querySelectorAll(".nav a"));
+  var ticking = false;
+
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add("in-view"); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.12 });
+    secs.forEach(function (s) { if (!s.classList.contains("in-view")) io.observe(s); });
+  } else {
+    secs.forEach(function (s) { s.classList.add("in-view"); });
+  }
+
+  function spy() {
+    ticking = false;
+    var y = 120, active = null;
+    links.forEach(function (a) {
+      var el = document.querySelector(a.getAttribute("href"));
+      if (el && el.getBoundingClientRect().top <= y) active = a;
+    });
+    links.forEach(function (a) {
+      if (a === active) a.setAttribute("aria-current", "true");
+      else a.removeAttribute("aria-current");
+    });
+  }
+  function onScroll() {
+    if (!ticking) { ticking = true; window.requestAnimationFrame(spy); }
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll);
+  spy();
+})();
+</script>
