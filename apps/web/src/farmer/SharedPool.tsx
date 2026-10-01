@@ -50,7 +50,7 @@ export default function SharedPool({
       {!error && !requests && <p className="muted" role="status">{t("common.loading")}</p>}
       {requests && requests.length === 0 && <EmptyState title={t("pool.emptyTitle")} body={t("pool.emptyBody")} />}
       {requests && requests.length > 0 && (
-        <ul className="grid grid-halves pool-list">
+        <ul className="pool-list">
           {requests.map((r) => {
             const decided = r.coordinator_decision;
             return (
