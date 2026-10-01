@@ -40,7 +40,7 @@ import {
   WaterRequest,
   WeatherDay,
 } from "@jadal/contracts/entities";
-import type { DbEnv } from "./store";
+import { resultRows, type DbEnv } from "./store";
 
 // ---------------------------------------------------------------------------
 // Record shapes
@@ -641,11 +641,11 @@ export async function getCanal(env: DbEnv, canalId: string): Promise<Canal | nul
  */
 export async function listOutlets(env: DbEnv, canalId?: string): Promise<Outlet[]> {
   const where = eq(emptyWhere(), "canal_id", canalId);
-  const rows = await env.DB.prepare(
-    `SELECT * FROM outlet${where.sql} ORDER BY chainage_m ASC, id ASC`,
-  )
-    .bind(...where.bindings)
-    .all<OutletRow>();
+  const rows = resultRows(
+    await env.DB.prepare(`SELECT * FROM outlet${where.sql} ORDER BY chainage_m ASC, id ASC`)
+      .bind(...where.bindings)
+      .all<OutletRow>(),
+  );
   return rows.map(toOutlet);
 }
 
@@ -665,25 +665,27 @@ export async function listOutlets(env: DbEnv, canalId?: string): Promise<Outlet[
  * same number of round trips.
  */
 export async function listFarmers(env: DbEnv): Promise<FarmerRecord[]> {
-  const farmerRows = await env.DB.prepare("SELECT * FROM farmer ORDER BY name ASC, id ASC").all<FarmerRow>();
+  const farmerRows = resultRows(
+    await env.DB.prepare("SELECT * FROM farmer ORDER BY name ASC, id ASC").all<FarmerRow>(),
+  );
   if (farmerRows.length === 0) return [];
 
   const ids = farmerRows.map((row) => row.id);
   const plotWhere = inList(emptyWhere(), "farmer_id", ids);
-  const plotRows = await env.DB.prepare(
-    `SELECT * FROM plot${plotWhere.sql} ORDER BY farmer_id ASC, id ASC`,
-  )
-    .bind(...plotWhere.bindings)
-    .all<PlotRow>();
+  const plotRows = resultRows(
+    await env.DB.prepare(`SELECT * FROM plot${plotWhere.sql} ORDER BY farmer_id ASC, id ASC`)
+      .bind(...plotWhere.bindings)
+      .all<PlotRow>(),
+  );
 
   // Crop plans hang off plots, so the plot ids — not the farmer ids — are what filters them.
   const plotIds = plotRows.map((row) => row.id);
   const planWhere = inList(emptyWhere(), "plot_id", plotIds);
-  const planRows = await env.DB.prepare(
-    `SELECT * FROM crop_plan${planWhere.sql} ORDER BY plot_id ASC, id ASC`,
-  )
-    .bind(...planWhere.bindings)
-    .all<CropPlanRow>();
+  const planRows = resultRows(
+    await env.DB.prepare(`SELECT * FROM crop_plan${planWhere.sql} ORDER BY plot_id ASC, id ASC`)
+      .bind(...planWhere.bindings)
+      .all<CropPlanRow>(),
+  );
 
   const plotsByFarmer = new Map<string, Plot[]>();
   for (const row of plotRows) {
@@ -716,17 +718,21 @@ export async function getFarmer(env: DbEnv, farmerId: string): Promise<FarmerRec
   const row = await env.DB.prepare("SELECT * FROM farmer WHERE id = ?").bind(farmerId).first<FarmerRow>();
   if (row === null) return null;
 
-  const plotRows = await env.DB.prepare("SELECT * FROM plot WHERE farmer_id = ? ORDER BY id ASC")
-    .bind(farmerId)
-    .all<PlotRow>();
-  const planRows = await env.DB.prepare(
-    `SELECT cp.* FROM crop_plan cp
-     JOIN plot p ON p.id = cp.plot_id
-     WHERE p.farmer_id = ?
-     ORDER BY cp.id ASC`,
-  )
-    .bind(farmerId)
-    .all<CropPlanRow>();
+  const plotRows = resultRows(
+    await env.DB.prepare("SELECT * FROM plot WHERE farmer_id = ? ORDER BY id ASC")
+      .bind(farmerId)
+      .all<PlotRow>(),
+  );
+  const planRows = resultRows(
+    await env.DB.prepare(
+      `SELECT cp.* FROM crop_plan cp
+       JOIN plot p ON p.id = cp.plot_id
+       WHERE p.farmer_id = ?
+       ORDER BY cp.id ASC`,
+    )
+      .bind(farmerId)
+      .all<CropPlanRow>(),
+  );
 
   return {
     farmer: toFarmer(row),
@@ -754,14 +760,16 @@ export async function listVerifiedCropPlans(env: DbEnv, farmerId?: string): Prom
     clauses.push("p.farmer_id = ?");
     bindings.push(farmerId);
   }
-  const rows = await env.DB.prepare(
-    `SELECT cp.* FROM crop_plan cp
-     JOIN plot p ON p.id = cp.plot_id
-     WHERE ${clauses.join(" AND ")}
-     ORDER BY cp.sowing_date ASC, cp.id ASC`,
-  )
-    .bind(...bindings)
-    .all<CropPlanRow>();
+  const rows = resultRows(
+    await env.DB.prepare(
+      `SELECT cp.* FROM crop_plan cp
+       JOIN plot p ON p.id = cp.plot_id
+       WHERE ${clauses.join(" AND ")}
+       ORDER BY cp.sowing_date ASC, cp.id ASC`,
+    )
+      .bind(...bindings)
+      .all<CropPlanRow>(),
+  );
   return rows.map(toCropPlan);
 }
 
@@ -785,14 +793,16 @@ export async function listEntitlements(env: DbEnv, filter: EntitlementFilter = {
   where = eq(where, "e.week_start", filter.weekStart);
   where = eq(where, "e.status", filter.status);
 
-  const rows = await env.DB.prepare(
-    `SELECT e.* FROM entitlement e
-     JOIN farmer f ON f.id = e.farmer_id
-     ${where.sql}
-     ORDER BY e.week_start ASC, f.name ASC, e.id ASC`,
-  )
-    .bind(...where.bindings)
-    .all<EntitlementRow>();
+  const rows = resultRows(
+    await env.DB.prepare(
+      `SELECT e.* FROM entitlement e
+       JOIN farmer f ON f.id = e.farmer_id
+       ${where.sql}
+       ORDER BY e.week_start ASC, f.name ASC, e.id ASC`,
+    )
+      .bind(...where.bindings)
+      .all<EntitlementRow>(),
+  );
   return rows.map(toEntitlement);
 }
 
@@ -833,11 +843,11 @@ function withDecision<T extends object>(base: T, decision: unknown): T | (T & { 
  */
 export async function listReleaseWindows(env: DbEnv, canalId?: string): Promise<ReleaseWindow[]> {
   const where = eq(emptyWhere(), "canal_id", canalId);
-  const rows = await env.DB.prepare(
-    `SELECT * FROM release_window${where.sql} ORDER BY start ASC, id ASC`,
-  )
-    .bind(...where.bindings)
-    .all<ReleaseWindowRow>();
+  const rows = resultRows(
+    await env.DB.prepare(`SELECT * FROM release_window${where.sql} ORDER BY start ASC, id ASC`)
+      .bind(...where.bindings)
+      .all<ReleaseWindowRow>(),
+  );
   return rows.map(toReleaseWindow);
 }
 
@@ -861,11 +871,11 @@ async function turnsByRoster(env: DbEnv, rosterIds: readonly string[]): Promise<
   if (rosterIds.length === 0) return grouped;
 
   const where = inList(emptyWhere(), "roster_id", rosterIds);
-  const rows = await env.DB.prepare(
-    `SELECT * FROM turn${where.sql} ORDER BY start ASC, id ASC`,
-  )
-    .bind(...where.bindings)
-    .all<TurnRow>();
+  const rows = resultRows(
+    await env.DB.prepare(`SELECT * FROM turn${where.sql} ORDER BY start ASC, id ASC`)
+      .bind(...where.bindings)
+      .all<TurnRow>(),
+  );
 
   for (const row of rows) {
     const bucket = grouped.get(row.roster_id) ?? [];
@@ -881,11 +891,11 @@ async function rostersWithTurns(env: DbEnv, filter: RosterFilter): Promise<Roste
   where = eq(where, "release_window_id", filter.releaseWindowId);
   where = eq(where, "status", filter.status);
 
-  const rows = await env.DB.prepare(
-    `SELECT * FROM roster${where.sql} ORDER BY created_at ASC, id ASC`,
-  )
-    .bind(...where.bindings)
-    .all<RosterRow>();
+  const rows = resultRows(
+    await env.DB.prepare(`SELECT * FROM roster${where.sql} ORDER BY created_at ASC, id ASC`)
+      .bind(...where.bindings)
+      .all<RosterRow>(),
+  );
   if (rows.length === 0) return [];
 
   const turns = await turnsByRoster(
@@ -935,11 +945,11 @@ export async function listRequests(env: DbEnv, filter: RequestFilter = {}): Prom
   where = eq(where, "type", filter.type);
 
   const limit = limitClause(filter.limit);
-  const rows = await env.DB.prepare(
-    `SELECT * FROM request${where.sql} ORDER BY raised_at ASC, id ASC${limit.sql}`,
-  )
-    .bind(...where.bindings, ...limit.bindings)
-    .all<RequestRow>();
+  const rows = resultRows(
+    await env.DB.prepare(`SELECT * FROM request${where.sql} ORDER BY raised_at ASC, id ASC${limit.sql}`)
+      .bind(...where.bindings, ...limit.bindings)
+      .all<RequestRow>(),
+  );
   return rows.map(toRequest);
 }
 
@@ -965,11 +975,11 @@ export async function listContacts(env: DbEnv, filter: ContactFilter = {}): Prom
   where = eq(where, "channel", filter.channel);
 
   const limit = limitClause(filter.limit);
-  const rows = await env.DB.prepare(
-    `SELECT * FROM contact${where.sql} ORDER BY at ASC, id ASC${limit.sql}`,
-  )
-    .bind(...where.bindings, ...limit.bindings)
-    .all<ContactRow>();
+  const rows = resultRows(
+    await env.DB.prepare(`SELECT * FROM contact${where.sql} ORDER BY at ASC, id ASC${limit.sql}`)
+      .bind(...where.bindings, ...limit.bindings)
+      .all<ContactRow>(),
+  );
   return rows.map(toContact);
 }
 
@@ -1006,11 +1016,11 @@ export async function getLedgerEntries(env: DbEnv, filter: LedgerFilter = {}): P
   }
 
   const limit = limitClause(filter.limit);
-  const rows = await env.DB.prepare(
-    `SELECT * FROM ledger_entry${where.sql} ORDER BY at ASC, id ASC${limit.sql}`,
-  )
-    .bind(...where.bindings, ...limit.bindings)
-    .all<LedgerEntryRow>();
+  const rows = resultRows(
+    await env.DB.prepare(`SELECT * FROM ledger_entry${where.sql} ORDER BY at ASC, id ASC${limit.sql}`)
+      .bind(...where.bindings, ...limit.bindings)
+      .all<LedgerEntryRow>(),
+  );
   return rows.map(toLedgerEntry);
 }
 
@@ -1062,13 +1072,15 @@ export async function getClockNow(env: DbEnv): Promise<string | null> {
 export async function getWeather(env: DbEnv, canalId: string, fromDate: string, days: number): Promise<WeatherDay[]> {
   if (!Number.isFinite(days) || days <= 0) return [];
   const take = Math.floor(days);
-  const rows = await env.DB.prepare(
-    `SELECT * FROM weather_day
-     WHERE canal_id = ? AND date >= ?
-     ORDER BY date ASC
-     LIMIT ?`,
-  )
-    .bind(canalId, fromDate, take)
-    .all<WeatherRow>();
+  const rows = resultRows(
+    await env.DB.prepare(
+      `SELECT * FROM weather_day
+       WHERE canal_id = ? AND date >= ?
+       ORDER BY date ASC
+       LIMIT ?`,
+    )
+      .bind(canalId, fromDate, take)
+      .all<WeatherRow>(),
+  );
   return rows.map(toWeatherDay);
 }

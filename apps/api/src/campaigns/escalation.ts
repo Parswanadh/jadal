@@ -33,6 +33,7 @@ import type { FarmerRecord } from "../db/repo";
 import { appendEvent, isStoreError } from "../db/store";
 import type { Db } from "../db/store";
 import type { ProviderFetch } from "../system1";
+import { placeCallFromCampaign } from "../telephony-deps";
 import { templateForPurpose, type MessageFacts } from "../voice/telugu";
 
 /* ------------------------------------------------------------------ environment */
@@ -68,6 +69,19 @@ export interface CampaignEnv {
   readonly OUTBOUND?: Queue<OutboundMessage> | undefined;
   readonly fetch?: ProviderFetch | undefined;
   readonly CACHE?: KVNamespace | undefined;
+  /**
+   * Twilio/Sarvam bindings (B9). Declared here rather than importing the telephony module's
+   * `TelephonyEnv` so the ladder keeps its structural, dependency-light shape; `placeCallFromCampaign`
+   * accepts the object because it structurally satisfies `TelephonyBindings`.
+   */
+  readonly TWILIO_ACCOUNT_SID?: string | undefined;
+  readonly TWILIO_AUTH_TOKEN?: string | undefined;
+  readonly TWILIO_FROM_NUMBER?: string | undefined;
+  readonly PUBLIC_BASE_URL?: string | undefined;
+  readonly SARVAM_API_KEY?: string | undefined;
+  readonly SARVAM_TTS_SPEAKER?: string | undefined;
+  readonly DEEPGRAM_API_KEY?: string | undefined;
+  readonly REAL_TELEPHONY?: string | undefined;
 }
 
 /**
@@ -273,6 +287,47 @@ export async function runEscalation(env: CampaignEnv, contactId: string): Promis
     throw error;
   }
 
+  /**
+   * B9: a voice rung actually places the call when real telephony is configured.
+   *
+   * The three outcomes are deliberately distinct:
+   *
+   *  * `{simulated:true}` — no Twilio env (or `REAL_TELEPHONY` off): the browser simulated phone stays
+   *    the demo vehicle, so the contact keeps the `queued` status it was created with (ADR-003).
+   *  * `{ok:true}` — Twilio accepted the call: the contact is marked `sent`, which is what the
+   *    coordinator's contact list and the `CALL_STATUS_MAP` in `telephony/routes.ts` both expect.
+   *  * `{ok:false}` — a transport error or a Twilio rejection: the contact is marked `failed`. That is
+   *    the counted failed attempt, and the dispatch below still hands the rung on, so the next
+   *    `runEscalation` reads `attempt` and `nextEscalation` retries (15-minute voice retry) or, once
+   *    the attempts are exhausted, escalates to the coordinator.
+   *
+   * `placeCall` never throws and never makes a request without a full credential set, so the offline
+   * demo path is unchanged.
+   */
+  let landed = next;
+  if (decision.channel === "voice") {
+    const placed = await placeCallFromCampaign(env, {
+      contactId: next.id,
+      to: record.farmer.phone,
+      messageTe: next.message_te,
+    });
+    if (!placed.simulated) {
+      landed = { ...next, status: placed.ok ? "sent" : "failed" };
+      try {
+        await appendEvent(env, {
+          id: deterministicId("evt", "contact.updated", landed.id, landed.status),
+          at: scheduledAt,
+          canal_id: canalId,
+          actor: { kind: "agent", id: "caller" },
+          type: "contact.updated",
+          contact: landed,
+        });
+      } catch (error) {
+        if (!(isStoreError(error) && error.kind === "duplicate_event")) throw error;
+      }
+    }
+  }
+
   // Escalation is a coordinator flag, not a dispatch on the farmer's channel.
   if (decision.action !== "escalate") {
     await env.OUTBOUND?.send({
@@ -288,5 +343,5 @@ export async function runEscalation(env: CampaignEnv, contactId: string): Promis
     });
   }
 
-  return next;
+  return landed;
 }

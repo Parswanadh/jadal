@@ -71,8 +71,12 @@ export class ShimStatement {
     return { ...row } as T;
   }
 
-  async all<T = unknown>(): Promise<T[]> {
-    return this.#run().map((row) => ({ ...(row as Row) })) as T[];
+  async all<T = unknown>(): Promise<ShimResult<T>> {
+    return {
+      success: true,
+      meta: { changes: 0 },
+      results: this.#run().map((row) => ({ ...(row as Row) })) as T[],
+    };
   }
 
   async raw<T = unknown>(): Promise<T[]> {

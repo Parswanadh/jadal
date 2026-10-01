@@ -13,6 +13,7 @@ import { createTestDb } from "../test/harness";
 import { ledger } from "./core-shim";
 import { isNightRelease, now } from "./db/clock";
 import { getClockNow, getLedgerEntries, getWeather, listFarmers } from "./db/repo";
+import { resultRows } from "./db/store";
 import {
   advanceDemo,
   DEMO_CANAL_ID,
@@ -31,9 +32,11 @@ async function makeEnv(demoMode = true): Promise<DemoEnv> {
 }
 
 async function eventTypes(env: DemoEnv): Promise<string[]> {
-  // Read the log directly rather than through `store.readEvents`, which currently hands the raw
-  // JSON text to `JadalEvent.parse` without a `JSON.parse` (a bug in a file this task does not own).
-  const rows = await env.DB.prepare("SELECT type FROM events ORDER BY seq ASC").all<{ type: string }>();
+  // Read the log directly rather than through `store.readEvents`. D1 answers `all()` with the
+  // `{ results }` envelope, so unwrap it the same way `store.resultRows` does.
+  const rows = resultRows(
+    await env.DB.prepare("SELECT type FROM events ORDER BY seq ASC").all<{ type: string }>(),
+  );
   return rows.map((row) => row.type);
 }
 

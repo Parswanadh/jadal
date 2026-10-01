@@ -28,7 +28,7 @@ import { projectionsFor } from "./projections";
 export interface DbStatement {
   bind(...values: unknown[]): DbStatement;
   first<T = unknown>(colName?: string): Promise<T | null>;
-  all<T = unknown>(): Promise<T[]>;
+  all<T = unknown>(): Promise<DbResult<T>>;
   run<T = unknown>(): Promise<DbResult<T>>;
 }
 
@@ -37,6 +37,18 @@ export interface DbResult<T = unknown> {
   success: boolean;
   meta: Record<string, unknown>;
   results?: T[];
+}
+
+/**
+ * The rows from a D1 `all()` result.
+ *
+ * D1 answers `all()` with a `{ success, meta, results }` envelope and omits `results` entirely when
+ * the query matched nothing, so `result.results ?? []` is the only correct read. B9 added this after
+ * the first real `wrangler dev` boot 500'd every read route: the ambient type and the test shim had
+ * both modelled `all()` as a bare array, so nothing caught it until the Worker actually ran.
+ */
+export function resultRows<T>(result: { results?: T[] }): T[] {
+  return result.results ?? [];
 }
 
 /** A D1 database, minus the methods the store never touches. */
@@ -327,7 +339,7 @@ export async function readEvents(env: DbEnv, options: ReadEventsOptions = {}): P
     bindings.push(options.limit);
   }
 
-  const rows = await env.DB.prepare(sql).bind(...bindings).all<{ payload: string }>();
+  const rows = resultRows(await env.DB.prepare(sql).bind(...bindings).all<{ payload: string }>());
   return rows.map((row) => JadalEvent.parse(JSON.parse(row.payload)));
 }
 

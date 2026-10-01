@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "dev:live": "wrangler dev --local --port 8788 --ip 127.0.0.1 --assets ./test/live-assets --compatibility-date 2026-07-29 --var DEMO_MODE:1 --var ENVIRONMENT:development --var SKIP_TWILIO_SIGNATURE:1",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
