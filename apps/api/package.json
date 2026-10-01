@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@jadal/contracts": "workspace:*",
+    "@types/node": "^24",
     "typescript": "^5.8.2",
     "vitest": "^3.0.7",
     "web": "workspace:*"
