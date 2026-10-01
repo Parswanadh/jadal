@@ -1,0 +1,295 @@
+[
+  {
+    "crop": "rice",
+    "variant": "flooded",
+    "kc_ini": 1.05,
+    "kc_mid": 1.20,
+    "kc_end": 1.05,
+    "stage_days": {
+      "ini": 30,
+      "dev": 30,
+      "mid": 60,
+      "late": 30
+    },
+    "stage_gdd": {
+      "ini": 255,
+      "dev": 490,
+      "mid": 740,
+      "late": 320
+    },
+    "t_base_c": 10,
+    "t_upper_c": 38,
+    "max_height_m": 1.0,
+    "root_depth_m": {
+      "min": 0.5,
+      "max": 1.0
+    },
+    "depletion_p": 0.20,
+    "percolation_mm_day": 3.5,
+    "source": "FAO-56 (2025) Table 6.2 (p. 170), Table 6.10 (p. 205), Table 6.11 (p. 210), Table 8.2 (p. 260); FAO-56 (1998) Table 11, Table 22"
+  },
+  {
+    "crop": "rice",
+    "variant": "intermittent",
+    "kc_ini": 0.95,
+    "kc_mid": 1.20,
+    "kc_end": 1.00,
+    "stage_days": {
+      "ini": 30,
+      "dev": 30,
+      "mid": 60,
+      "late": 30
+    },
+    "stage_gdd": {
+      "ini": 255,
+      "dev": 490,
+      "mid": 740,
+      "late": 320
+    },
+    "t_base_c": 10,
+    "t_upper_c": 38,
+    "max_height_m": 1.0,
+    "root_depth_m": {
+      "min": 0.5,
+      "max": 0.7
+    },
+    "depletion_p": 0.20,
+    "percolation_mm_day": 2.0,
+    "source": "FAO-56 (2025) Table 6.2 (p. 170), Table 6.10 (p. 205), Table 6.11 (p. 210), Table 8.2 (p. 260); FAO-56 (1998) Table 11, Table 22"
+  },
+  {
+    "crop": "maize",
+    "kc_ini": 0.30,
+    "kc_mid": 1.20,
+    "kc_end": 0.30,
+    "stage_days": {
+      "ini": 20,
+      "dev": 35,
+      "mid": 40,
+      "late": 30
+    },
+    "stage_gdd": {
+      "ini": 250,
+      "dev": 500,
+      "mid": 600,
+      "late": 380
+    },
+    "t_base_c": 8,
+    "t_upper_c": 38,
+    "max_height_m": 2.5,
+    "root_depth_m": {
+      "min": 0.6,
+      "max": 1.5
+    },
+    "depletion_p": 0.50,
+    "source": "FAO-56 (2025) Table 6.2 (p. 169), Table 6.10 (p. 205), Table 6.11 (p. 209), Table 8.2 (p. 260); FAO-56 (1998) Table 11 (p. 105)"
+  },
+  {
+    "crop": "groundnut",
+    "kc_ini": 0.40,
+    "kc_mid": 1.05,
+    "kc_end": 0.60,
+    "stage_days": {
+      "ini": 25,
+      "dev": 35,
+      "mid": 45,
+      "late": 25
+    },
+    "stage_gdd": {
+      "ini": 240,
+      "dev": 470,
+      "mid": 760,
+      "late": 460
+    },
+    "t_base_c": 13,
+    "t_upper_c": 35,
+    "max_height_m": 0.5,
+    "root_depth_m": {
+      "min": 0.5,
+      "max": 1.0
+    },
+    "depletion_p": 0.50,
+    "source": "FAO-56 (2025) Table 6.2 (p. 168), Table 6.10 (p. 205), Table 6.12 (p. 212), Table 8.2 (p. 260); FAO-56 (1998) Table 11"
+  },
+  {
+    "crop": "cotton",
+    "kc_ini": 0.40,
+    "kc_mid": 1.10,
+    "kc_end": 0.50,
+    "stage_days": {
+      "ini": 30,
+      "dev": 50,
+      "mid": 60,
+      "late": 55
+    },
+    "stage_gdd": {
+      "ini": 280,
+      "dev": 520,
+      "mid": 800,
+      "late": 350
+    },
+    "t_base_c": 14,
+    "t_upper_c": 38,
+    "max_height_m": 1.2,
+    "root_depth_m": {
+      "min": 1.0,
+      "max": 1.7
+    },
+    "depletion_p": 0.60,
+    "source": "FAO-56 (2025) Table 6.2 (p. 168), Table 6.10 (p. 205), Table 6.11 (p. 209), Table 8.2 (p. 260); FAO-56 (1998) Table 11"
+  },
+  {
+    "crop": "chilli",
+    "kc_ini": 0.60,
+    "kc_mid": 1.10,
+    "kc_end": 0.80,
+    "stage_days": {
+      "ini": 30,
+      "dev": 40,
+      "mid": 40,
+      "late": 20
+    },
+    "stage_gdd": {
+      "ini": 445,
+      "dev": 1180,
+      "mid": 745,
+      "late": 45
+    },
+    "t_base_c": 10,
+    "t_upper_c": 35,
+    "max_height_m": 0.75,
+    "root_depth_m": {
+      "min": 0.5,
+      "max": 1.2
+    },
+    "depletion_p": 0.40,
+    "source": "FAO-56 (2025) Table 6.1 (p. 166), Table 6.10 (p. 204), Table 6.11 (p. 209), Table 8.1 (p. 258); FAO-56 (1998) Table 11"
+  },
+  {
+    "crop": "sugarcane",
+    "kc_ini": 0.40,
+    "kc_mid": 1.20,
+    "kc_end": 0.80,
+    "stage_days": {
+      "ini": 50,
+      "dev": 70,
+      "mid": 220,
+      "late": 140
+    },
+    "stage_gdd": {
+      "ini": 350,
+      "dev": 810,
+      "mid": 3480,
+      "late": 1510
+    },
+    "t_base_c": 12,
+    "t_upper_c": 38,
+    "max_height_m": 3.0,
+    "root_depth_m": {
+      "min": 1.0,
+      "max": 1.5
+    },
+    "depletion_p": 0.60,
+    "source": "FAO-56 (2025) Table 6.2 (p. 169), Table 6.10 (p. 205), Table 6.12 (p. 212), Table 8.2 (p. 260); FAO-56 (1998) Table 11"
+  },
+  {
+    "crop": "greengram",
+    "kc_ini": 0.40,
+    "kc_mid": 1.10,
+    "kc_end": 0.40,
+    "stage_days": {
+      "ini": 20,
+      "dev": 30,
+      "mid": 30,
+      "late": 20
+    },
+    "stage_gdd": {
+      "ini": 110,
+      "dev": 240,
+      "mid": 420,
+      "late": 200
+    },
+    "t_base_c": 10,
+    "t_upper_c": 38,
+    "max_height_m": 0.6,
+    "root_depth_m": {
+      "min": 0.4,
+      "max": 1.0
+    },
+    "depletion_p": 0.45,
+    "source": "FAO-56 (2025) Table 6.2 (p. 168), Table 6.10 (p. 205), Table 6.12 (p. 211), Table 8.2 (p. 260); FAO-56 (1998) Table 11"
+  },
+  {
+    "crop": "blackgram",
+    "kc_ini": 0.40,
+    "kc_mid": 1.10,
+    "kc_end": 0.35,
+    "stage_days": {
+      "ini": 15,
+      "dev": 25,
+      "mid": 35,
+      "late": 20
+    },
+    "stage_gdd": {
+      "ini": 110,
+      "dev": 240,
+      "mid": 420,
+      "late": 200
+    },
+    "t_base_c": 10,
+    "t_upper_c": 38,
+    "max_height_m": 0.5,
+    "root_depth_m": {
+      "min": 0.6,
+      "max": 1.0
+    },
+    "depletion_p": 0.45,
+    "source": "FAO-56 (2025) Table 6.2 (p. 168), Table 6.10 (p. 205), Table 6.12 (p. 211), Table 8.2 (p. 260); FAO-56 (1998) Table 11"
+  },
+  {
+    "crop": "redgram",
+    "kc_ini": 0.35,
+    "kc_mid": 1.10,
+    "kc_end": 0.40,
+    "stage_days": {
+      "ini": 25,
+      "dev": 35,
+      "mid": 70,
+      "late": 40
+    },
+    "max_height_m": 1.8,
+    "root_depth_m": {
+      "min": 1.0,
+      "max": 1.5
+    },
+    "depletion_p": 0.60,
+    "source": "FAO-56 (1998) Table 11 (dry pulses/lentil 170-day row); FAO-56 (2025) book reference (p. 410, absent from FAO-56, ICRISAT/ANGRAU regional agronomic proxy)"
+  },
+  {
+    "crop": "chickpea",
+    "kc_ini": 0.40,
+    "kc_mid": 1.05,
+    "kc_end": 0.35,
+    "stage_days": {
+      "ini": 20,
+      "dev": 30,
+      "mid": 40,
+      "late": 20
+    },
+    "stage_gdd": {
+      "ini": 80,
+      "dev": 200,
+      "mid": 400,
+      "late": 220
+    },
+    "t_base_c": 8,
+    "t_upper_c": 35,
+    "max_height_m": 0.5,
+    "root_depth_m": {
+      "min": 0.7,
+      "max": 1.0
+    },
+    "depletion_p": 0.45,
+    "source": "FAO-56 (2025) Table 6.2 (p. 168), Table 6.10 (p. 205), Table 6.12 (p. 211), Table 8.2 (p. 260); FAO-56 (1998) Table 11"
+  }
+]
