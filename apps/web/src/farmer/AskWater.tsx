@@ -121,7 +121,7 @@ export default function AskWater({ api, farmerId, cropPlans, refreshKey, onRaise
             <div className="field">
               <label htmlFor="ask-volume">{t("ask.volume")}</label>
               <input id="ask-volume" type="number" min="0" step="10" inputMode="decimal" value={volume} onChange={(e) => setVolume(e.target.value)} />
-              <span className="field-hint">{t("common.m3Help")}</span>
+              <UnitHint />
             </div>
           </div>
           <div className="field">
@@ -158,7 +158,6 @@ export default function AskWater({ api, farmerId, cropPlans, refreshKey, onRaise
             ))}
           </ul>
         )}
-        <UnitHint />
       </section>
     </div>
   );
