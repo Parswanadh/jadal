@@ -1,10 +1,10 @@
 import type { Locator } from '@playwright/test';
 import { expect, settle, test } from './support/app';
-import { STR } from '../../apps/web/src/canal/strings';
+import en from '../../apps/web/src/i18n/en.json';
 
-const t = STR.en;
+const t = en.canal;
 
-/** Read the need-met percentage of every outlet row from its accessible label (`Name — 42% of need met`). */
+/** Read the need-met percentage of every outlet row from its accessible label (`Name, Outlet 7: 42% of need met`). */
 async function needMetPercentages(bars: Locator): Promise<number[]> {
   const labels = await bars.getByRole('listitem').evaluateAll((items) =>
     items.map((item) => item.getAttribute('aria-label') ?? ''),
@@ -18,15 +18,15 @@ async function needMetPercentages(bars: Locator): Promise<number[]> {
 
 test('the canal screen lists all 8 outlets', async ({ page, consoleErrors }) => {
   await page.goto('/canal');
-  const bars = page.getByRole('list', { name: t.needMet });
+  const bars = page.getByRole('list', { name: t.needMetList });
   await expect(bars).toBeVisible();
 
   const rows = bars.getByRole('listitem');
   await expect(rows).toHaveCount(8);
-  // One tagged row per outlet, head (O1) to tail (O8).
-  await expect(bars.getByText(/^O[1-8]$/)).toHaveCount(8);
-  await expect(bars.getByText('O1', { exact: true })).toBeVisible();
-  await expect(bars.getByText('O8', { exact: true })).toBeVisible();
+  // One tagged row per outlet, head (Outlet 1) to tail (Outlet 8).
+  await expect(bars.getByText(/^Outlet [1-8]$/)).toHaveCount(8);
+  await expect(bars.getByText('Outlet 1', { exact: true })).toBeVisible();
+  await expect(bars.getByText('Outlet 8', { exact: true })).toBeVisible();
 
   const percentages = await needMetPercentages(bars);
   expect(percentages).toHaveLength(8);
@@ -47,7 +47,7 @@ test('switching between equal hours and equal water changes the need-met values'
   const group = page.getByRole('radiogroup', { name: t.modeLabel });
   const hours = group.getByRole('radio', { name: new RegExp(t.equalHours) });
   const water = group.getByRole('radio', { name: new RegExp(t.equalWater) });
-  const bars = page.getByRole('list', { name: t.needMet });
+  const bars = page.getByRole('list', { name: t.needMetList });
 
   await expect(hours).toHaveAttribute('aria-checked', 'true');
   await expect(water).toHaveAttribute('aria-checked', 'false');

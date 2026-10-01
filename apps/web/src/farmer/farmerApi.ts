@@ -5,8 +5,8 @@ import type { RegisterBody } from "../api";
 
 /**
  * Farmer-portal view of the shared typed API client (src/api/client.ts).
- * It only reshapes responses for display; the portal never computes water
- * numbers, every volume and percentage comes from the API (or its mock).
+ * It only reshapes responses for display. Every volume and percentage comes
+ * from the API (or its mock) and is passed on as returned.
  */
 
 export type FarmerDirectoryEntry = {
@@ -16,7 +16,7 @@ export type FarmerDirectoryEntry = {
   verified: boolean;
 };
 
-/** Body of POST /api/farmers (see contracts routes.register). */
+/** Body of the register route (see contracts routes.register). */
 export type RegisterInput = RegisterBody;
 
 export type RegisterResult = { farmer: Farmer; plots: Plot[]; crop_plans: CropPlan[] };
@@ -24,19 +24,32 @@ export type RegisterResult = { farmer: Farmer; plots: Plot[]; crop_plans: CropPl
 export type NextTurnView = {
   start: string;
   end: string;
+  /** Water released at the outlet during the turn, as planned by the roster. */
   planned_volume_m3: number;
   outlet_name: string;
+  /** False while the coordinator has not approved the roster yet. */
+  approved: boolean;
+};
+
+/** One crop's share for the week, exactly as the API returned it. */
+export type WeeklyShare = {
+  crop_plan_id: string;
+  crop: string;
+  volume_m3: number;
+  net_irrigation_mm: number;
+  status: "proposed" | "approved" | "edited";
 };
 
 export type MyWaterView = {
   farmer_id: string;
   farmer_name: string;
-  week_start: string;
-  entitlement_m3: number;
-  net_irrigation_mm: number;
+  week_start: string | null;
+  /** Empty until the coordinator has planned this farmer's crops. */
+  shares: WeeklyShare[];
   next_turn: NextTurnView | null;
   delivered_m3: number;
-  quota_m3: number;
+  /** Null when the ledger has no quota for this farmer yet. */
+  quota_m3: number | null;
   need_met_pct: number;
 };
 
@@ -63,13 +76,6 @@ export interface FarmerApi {
   listRequests(): Promise<WaterRequest[]>;
 }
 
-/**
- * Requests raised from the portal in mock mode. The shared mock returns a
- * fixed list, so portal-sent requests are appended locally to show up on the
- * buffer board. Live mode always reads from the server.
- */
-const localRequests: WaterRequest[] = [];
-
 export function createFarmerApi(): FarmerApi {
   return {
     get source(): DataSource {
@@ -91,12 +97,11 @@ export function createFarmerApi(): FarmerApi {
         api.canal(),
         api.ledger(),
       ]);
-      const farmer = farmers.find((e) => e.farmer.id === farmerId)?.farmer;
-      if (!farmer) throw new Error(`Unknown farmer ${farmerId}`);
-      const ent = suggestion.entitlements.find((e) => e.farmer_id === farmerId);
-      if (!ent) throw new Error(`No entitlement for farmer ${farmerId}`);
+      const entry = farmers.find((e) => e.farmer.id === farmerId);
+      if (!entry) throw new Error(`Unknown farmer ${farmerId}`);
+      const cropOf = new Map(entry.crop_plans.map((c) => [c.id, c.crop] as const));
+      const mine = suggestion.entitlements.filter((e) => e.farmer_id === farmerId);
       const bal = ledger.balances.farmers.find((f) => f.farmer_id === farmerId);
-      if (!bal) throw new Error(`No balance for farmer ${farmerId}`);
 
       let nextTurn: NextTurnView | null = null;
       const win = windows[0];
@@ -104,33 +109,36 @@ export function createFarmerApi(): FarmerApi {
         const { roster } = await api.proposeRoster({ release_window_id: win.id, mode: "equal_water" });
         const turn = roster.turns.find((x) => x.farmer_id === farmerId);
         if (turn) {
-          const outletName = canal.outlets.find((o) => o.id === turn.outlet_id)?.name ?? turn.outlet_id;
-          nextTurn = { start: turn.start, end: turn.end, planned_volume_m3: turn.planned_volume_m3, outlet_name: outletName };
+          const outletName = canal.outlets.find((o) => o.id === turn.outlet_id)?.name ?? "";
+          nextTurn = {
+            start: turn.start,
+            end: turn.end,
+            planned_volume_m3: turn.planned_volume_m3,
+            outlet_name: outletName,
+            approved: roster.status === "approved",
+          };
         }
       }
       return {
-        farmer_id: farmer.id,
-        farmer_name: farmer.name,
-        week_start: ent.week_start,
-        entitlement_m3: ent.volume_m3,
-        net_irrigation_mm: ent.net_irrigation_mm,
+        farmer_id: entry.farmer.id,
+        farmer_name: entry.farmer.name,
+        week_start: mine[0]?.week_start ?? null,
+        shares: mine.map((e) => ({
+          crop_plan_id: e.crop_plan_id,
+          crop: cropOf.get(e.crop_plan_id) ?? "",
+          volume_m3: e.volume_m3,
+          net_irrigation_mm: e.net_irrigation_mm,
+          status: e.status,
+        })),
         next_turn: nextTurn,
-        delivered_m3: bal.delivered_m3,
-        quota_m3: bal.quota_m3,
-        need_met_pct: bal.need_met_pct,
+        delivered_m3: bal?.delivered_m3 ?? 0,
+        quota_m3: bal ? bal.quota_m3 : null,
+        need_met_pct: bal?.need_met_pct ?? 0,
       };
     },
 
-    async raiseRequest(input) {
-      const req = await api.raiseRequest(input);
-      if (isMockMode()) localRequests.unshift(req);
-      return req;
-    },
+    raiseRequest: (input) => api.raiseRequest(input),
 
-    async listRequests() {
-      const server = await api.listRequests();
-      if (!isMockMode()) return server;
-      return [...localRequests, ...server];
-    },
+    listRequests: () => api.listRequests(),
   };
 }

@@ -16,11 +16,11 @@ const STATUSES: ContactStatus[] = ["queued", "sent", "delivered", "acknowledged"
 
 describe("phone helpers", () => {
   it("caller ID is the Water Committee", () => {
-    expect(CALLER_ID).toBe("Jadal – Water Committee");
+    expect(CALLER_ID).toBe("Jadal Water Committee");
   });
 
   it("ackLabel covers every status in both languages", () => {
-    expect(ackLabel("acknowledged", "en")).toBe("Acknowledged");
+    expect(ackLabel("acknowledged", "en")).toBe("Confirmed");
     for (const s of STATUSES) {
       expect(ackLabel(s, "en").length).toBeGreaterThan(0);
       expect(ackLabel(s, "te").length).toBeGreaterThan(0);
@@ -56,8 +56,9 @@ describe("phone helpers", () => {
     expect(() => base64ByteLength("ABC")).toThrow(/invalid base64/);
   });
 
-  it("formatTime is deterministic UTC", () => {
-    expect(formatTime("2026-03-15T16:30:00.000Z", "en")).toBe("16:30 UTC");
+  it("formatTime reads as a human date and time in India time", () => {
+    expect(formatTime("2026-03-15T16:30:00.000Z", "en")).toBe("Sun 15 Mar, 10:00 pm");
+    expect(formatTime("2026-03-15T16:30:00.000Z", "te")).toBe("ఆది 15 మార్చి, రాత్రి 10:00");
     expect(formatTime("not-a-date", "en")).toBe("unknown");
   });
 

@@ -133,13 +133,12 @@
 }
 
 .canal-chainage {
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   fill: var(--canal-muted);
 }
 
 .canal-mode {
-  margin-top: 1.5rem;
+  margin-top: 0.25rem;
 }
 
 .canal-mode-label {
@@ -171,8 +170,8 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.2rem;
-  padding: 0.75rem 1rem;
-  background: var(--surface);
+  padding: 0.6rem 0.9rem;
+  background: var(--surface-alt);
   border: 1px solid var(--canal-line);
   border-radius: var(--radius);
 }
@@ -232,15 +231,24 @@
   font-size: 0.9rem;
 }
 
-.canal-overrun {
-  margin-top: 2rem;
-  border-top: 1px solid var(--canal-line);
-  padding-top: 1.5rem;
+.canal-figure {
+  margin: 0 0 1.5rem;
 }
 
-.canal-overrun h3 {
-  margin: 0 0 0.75rem;
-  font-size: var(--text-xl);
+.canal-figure figcaption {
+  margin-top: 0.6rem;
+}
+
+.canal-flows {
+  margin-top: 1.5rem;
+}
+
+.canal-flows .table-wrap {
+  margin-bottom: 0.75rem;
+}
+
+.canal-overrun .table-wrap {
+  margin-top: 0.75rem;
 }
 
 .canal-overrun-ctl {
@@ -266,77 +274,8 @@
   color: var(--canal-muted);
 }
 
-.canal-loss-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 0.6rem;
-  font-size: var(--text-sm);
-}
-
-.canal-loss-table td {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.canal-loss-table caption {
-  text-align: left;
-  font-weight: 600;
-  padding-bottom: 0.3rem;
-}
-
-.canal-loss-table th,
-.canal-loss-table td {
-  text-align: left;
-  padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid var(--canal-line);
-}
-
-.canal-loss-table td:last-child,
-.canal-loss-table th:last-child {
-  text-align: right;
-}
 
 .canal-total th,
 .canal-total td {
-  border-bottom: none;
   font-weight: 700;
-}
-
-.canal-foot {
-  display: flex;
-  gap: 0.5rem;
-  align-items: baseline;
-  flex-wrap: wrap;
-  margin-top: 0.9rem;
-  font-size: 0.8rem;
-  color: var(--canal-muted);
-}
-
-.canal-badge {
-  border: 1px solid var(--canal-line);
-  border-radius: 999px;
-  padding: 0.1rem 0.6rem;
-  white-space: nowrap;
-}
-
-.canal-badge[data-source="api"] {
-  border-color: var(--canal-high);
-}
-
-@media (min-width: 560px) {
-  .canal-bars li {
-    grid-template-columns: minmax(180px, 220px) 1fr auto;
-    align-items: center;
-    gap: 0.6rem;
-  }
-
-  .canal-overrun-ctl {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .canal-fill {
-    transition: none;
-  }
 }

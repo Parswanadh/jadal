@@ -1,242 +1,205 @@
-/* Farmer portal. Reads the global tokens from styles.css. */
+/* Farmer portal. Reads the global tokens from styles.css and the shared blocks from components.css. */
 
-.fp-body {
-  max-width: 44rem;
-}
-
-.fp-tabs {
+.farmer-bar {
   display: flex;
-  gap: 0.25rem;
-  overflow-x: auto;
-  margin: 0 0 1.5rem;
-  border-bottom: 1px solid var(--rule);
-}
-
-.fp-tab {
-  flex: 0 0 auto;
-  min-height: 2.75rem;
-  padding: 0.5rem 1rem;
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--muted);
-  background: transparent;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  cursor: pointer;
-}
-
-.fp-tab:hover {
-  color: var(--ink);
-}
-
-.fp-tab[aria-selected="true"] {
-  color: var(--ink);
-  border-bottom-color: var(--accent);
-}
-
-.fp-card {
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-lg);
-  padding: 1.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.fp-card h2 {
-  margin: 0 0 0.5rem;
-  font-size: var(--text-xl);
-}
-
-.fp-card > p {
-  color: var(--muted);
-}
-
-.fp-field {
-  margin-bottom: 1.25rem;
-}
-
-.fp-field label {
-  display: block;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  margin-bottom: 0.4rem;
-}
-
-.fp-hint {
-  display: block;
-  font-weight: 400;
-  font-size: var(--text-sm);
-  color: var(--muted);
-}
-
-.fp-field input,
-.fp-field select,
-.fp-field textarea {
-  width: 100%;
-  min-height: 2.75rem;
-}
-
-.fp-field textarea {
-  min-height: 5rem;
-  resize: vertical;
-}
-
-.fp-row {
-  display: flex;
-  gap: 0.75rem;
-  align-items: end;
-}
-
-.fp-row > * {
-  flex: 1;
-  min-width: 0;
-}
-
-.fp-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 2.75rem;
-  padding: 0.5rem 1.5rem;
-  font: inherit;
-  font-size: var(--text-base);
-  font-weight: 500;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: var(--on-accent);
-  cursor: pointer;
-}
-
-.fp-btn:hover {
-  filter: brightness(0.94);
-}
-
-.fp-btn-secondary {
-  background: transparent;
-  color: var(--ink);
-  border-color: var(--rule);
-}
-
-.fp-btn-secondary:hover {
-  filter: none;
-  background: var(--surface-alt);
-  border-color: var(--muted);
-}
-
-.fp-btn:disabled {
-  opacity: 0.5;
-  cursor: wait;
-}
-
-.fp-error {
-  color: var(--critical);
-  font-weight: 500;
-}
-
-.fp-errors {
-  background: var(--critical-subtle);
-  color: var(--critical);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  padding: 0.75rem 1rem;
-  margin-bottom: 1.25rem;
-}
-
-.fp-errors ul {
-  margin: 0;
-  padding-left: 1.25rem;
-}
-
-.fp-success {
-  background: var(--ok-subtle);
-  color: var(--ok);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  padding: 0.75rem 1rem;
-  margin-bottom: 1.25rem;
-}
-
-.fp-stat {
-  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 0;
+  gap: 0.75rem 2rem;
+  margin-bottom: 1.75rem;
   border-bottom: 1px solid var(--rule);
 }
 
-.fp-stat:last-child {
-  border-bottom: none;
-}
-
-.fp-stat dt {
-  color: var(--muted);
-}
-
-.fp-stat dd {
+.farmer-bar .tabs {
   margin: 0;
-  text-align: right;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
+  border-bottom: 0;
 }
 
-.fp-req {
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-  background: var(--surface);
-}
-
-.fp-req-head {
+.farmer-picker {
   display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-bottom: 0.5rem;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.farmer-picker select {
+  min-height: 2.5rem;
+  min-width: 14rem;
+}
+
+/* The first thing a farmer sees */
+.turn-card {
+  padding: 2rem;
+  background: var(--water-subtle);
+  border-color: transparent;
+  border-left: 4px solid var(--water);
+}
+
+.turn-line {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-head);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.turn-status {
+  margin: 0 0 0.75rem;
+}
+
+.turn-card .unit-hint {
+  margin-top: 0;
+}
+
+.turn-card .empty-state {
+  background: transparent;
+}
+
+.big-number {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-head);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.small-number {
+  font-size: var(--text-lg);
+}
+
+.plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.plain-list li {
+  display: grid;
+  gap: 0.2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.plain-list li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.row-between {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  align-items: center;
-  flex-wrap: wrap;
 }
 
-.fp-pill {
-  display: inline-block;
-  padding: 0.1rem 0.6rem;
-  border-radius: 999px;
-  font-size: var(--text-xs);
-  font-weight: 500;
-  line-height: 1.6;
+.pool-head {
+  margin-bottom: 1.25rem;
 }
 
-.fp-pill-pending {
-  color: var(--warn);
-  background: var(--warn-subtle);
+.pool-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.fp-pill-ok {
-  color: var(--ok);
-  background: var(--ok-subtle);
+.pool-list .card p {
+  margin: 0.4rem 0 0;
 }
 
-.fp-pill-bad {
-  color: var(--critical);
-  background: var(--critical-subtle);
+/* Form pieces */
+.form-section {
+  margin: 1.5rem 0 0.25rem;
+  font-size: var(--text-lg);
 }
 
-.fp-crop-row {
+.crop-row {
+  margin-bottom: 0.75rem;
+  padding: 1rem 1rem 0.25rem;
+  background: var(--surface-alt);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-  background: var(--surface-alt);
 }
 
-.fp-crop-row input,
-.fp-crop-row select {
+.crop-row .btn {
+  margin-bottom: 1rem;
+}
+
+.crop-row input,
+.crop-row select {
   background: var(--surface);
+}
+
+.field-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 700px) {
+  .field-grid.three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.form-actions {
+  margin-top: 1rem;
+}
+
+.steps-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.choice-group {
+  margin: 0 0 1.25rem;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.choice-group legend {
+  padding: 0;
+}
+
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.choice.selected {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.choice input {
+  margin-top: 0.3rem;
+  accent-color: var(--accent);
+}
+
+.choice span {
+  display: grid;
+  gap: 0.15rem;
 }
 
 @media (max-width: 600px) {
-  .fp-card {
+  .turn-card {
     padding: 1.25rem;
+  }
+
+  .turn-line {
+    font-size: var(--text-2xl);
   }
 }

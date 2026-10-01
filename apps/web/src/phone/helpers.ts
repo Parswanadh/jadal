@@ -1,3 +1,5 @@
+import { formatDateTime } from "../lib/format";
+
 /**
  * C6 - Simulated phone: constants, view types and pure helpers.
  * Contacts and replies come from the shared API client (see api.ts), which
@@ -6,11 +8,8 @@
  */
 
 /** Caller ID shown on the incoming-call screen (required by the demo). */
-export const CALLER_ID = "Jadal \u2013 Water Committee";
-export const CALLER_ID_TE = "\u0C1C\u0C21\u0C32\u0C4D \u2013 \u0C28\u0C40\u0C1F\u0C3F \u0C15\u0C2E\u0C3F\u0C1F\u0C40";
-
-/** Mock sender number. Obviously fake; used only when the API is unreachable. */
-export const MOCK_CALLER_NUMBER = "+91 90000 00000";
+export const CALLER_ID = "Jadal Water Committee";
+export const CALLER_ID_TE = "జాదల్ నీటి కమిటీ";
 
 export type ContactChannel = "voice" | "whatsapp" | "sms" | "portal";
 export type ContactStatus =
@@ -57,15 +56,15 @@ export interface TranscriptTurn {
 /* Pure helpers (unit-tested)                                          */
 /* ------------------------------------------------------------------ */
 
-/** Bilingual acknowledgement label for a contact status. */
+/** Plain-language label for a contact status, in the active language. */
 export function ackLabel(status: ContactStatus, lang: "te" | "en"): string {
   const table: Record<ContactStatus, { te: string; en: string }> = {
-    queued: { te: "\u0C2A\u0C02\u0C2A\u0C28\u0C41 \u0C35\u0C30\u0C41\u0C38\u0C32\u0C4B \u0C09\u0C02\u0C26\u0C3F", en: "Queued" },
-    sent: { te: "\u0C2A\u0C02\u0C2A\u0C3E\u0C30\u0C41", en: "Sent" },
-    delivered: { te: "\u0C1A\u0C47\u0C30\u0C3F\u0C02\u0C26\u0C3F", en: "Delivered" },
-    acknowledged: { te: "\u0C27\u0C43\u0C35\u0C40\u0C15\u0C30\u0C3F\u0C02\u0C1A\u0C3E\u0C30\u0C41", en: "Acknowledged" },
-    failed: { te: "\u0C35\u0C3F\u0C2B\u0C32\u0C02", en: "Failed" },
-    escalated: { te: "\u0C2A\u0C48\u0C15\u0C3F \u0C38\u0C4D\u0C25\u0C3E\u0C2F\u0C3F\u0C15\u0C3F \u0C2A\u0C02\u0C2A\u0C3E\u0C30\u0C41", en: "Escalated" },
+    queued: { te: "పంపడానికి వేచి ఉంది", en: "Waiting" },
+    sent: { te: "పంపాము", en: "Sent" },
+    delivered: { te: "చేరింది", en: "Delivered" },
+    acknowledged: { te: "ధృవీకరించారు", en: "Confirmed" },
+    failed: { te: "చేరలేదు", en: "Failed" },
+    escalated: { te: "సమన్వయకర్తకు పంపాము", en: "Passed to the coordinator" },
   };
   return table[status][lang];
 }
@@ -104,13 +103,11 @@ export function base64ByteLength(b64: string): number {
   return (clean.length / 4) * 3 - padding;
 }
 
-/** Format an ISO timestamp for the phone UI (UTC, deterministic). */
+/** Format an ISO timestamp for the phone UI, for example "Mon 14 Sep, 6:00 am" (India time). */
 export function formatTime(iso: string, lang: "te" | "en"): string {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return lang === "te" ? "\u0C24\u0C46\u0C32\u0C3F\u0C2F\u0C26\u0C41" : "unknown";
-  const hh = String(d.getUTCHours()).padStart(2, "0");
-  const mm = String(d.getUTCMinutes()).padStart(2, "0");
-  return `${hh}:${mm} UTC`;
+  if (Number.isNaN(d.getTime())) return lang === "te" ? "తెలియదు" : "unknown";
+  return formatDateTime(iso, lang);
 }
 
 /**

@@ -1,4 +1,5 @@
 import type { ReactNode, Ref } from 'react';
+import DataBadge from './DataBadge';
 
 interface PageHeaderProps {
   eyebrow: string;
@@ -9,11 +10,11 @@ interface PageHeaderProps {
   /** Optional ref and focusable flag so a screen can move focus to its title. */
   titleRef?: Ref<HTMLHeadingElement>;
   focusable?: boolean;
-  /** Small status chips or buttons shown at the right of the header. */
+  /** Extra items shown at the right of the header, next to the data badge. */
   actions?: ReactNode;
 }
 
-/** The consistent header on every screen: eyebrow, serif title, one plain sentence. */
+/** The header on every screen: eyebrow, serif title, one plain sentence, and the data badge. */
 export default function PageHeader({ eyebrow, title, lead, titleId, titleRef, focusable, actions }: PageHeaderProps) {
   return (
     <header className="page-header">
@@ -24,7 +25,10 @@ export default function PageHeader({ eyebrow, title, lead, titleId, titleRef, fo
         </h1>
         <p className="page-lead">{lead}</p>
       </div>
-      {actions ? <div className="page-actions">{actions}</div> : null}
+      <div className="page-actions">
+        {actions}
+        <DataBadge />
+      </div>
     </header>
   );
 }

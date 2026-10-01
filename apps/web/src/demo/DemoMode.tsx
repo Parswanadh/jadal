@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useI18n } from "../i18n/I18nContext";
+import type { TVars } from "../i18n/I18nContext";
+import { useFormat } from "../lib/useFormat";
+import type { Formatter } from "../lib/useFormat";
 import PageHeader from "../components/PageHeader";
-import {
-  DEMO_BUDGET_SECS,
-  DEMO_STEPS,
-  SIM_CLOCK_START,
-  formatElapsed,
-  totalEstimatedSecs,
-} from "./demoScript";
+import { DEMO_STEPS, SIM_CLOCK_START, formatElapsed } from "./demoScript";
 import {
   compareRosters,
   demoAdvance,
@@ -15,71 +13,99 @@ import {
   fetchAudit,
   fetchEvents,
   fireNightProtocol,
-  mockEvent,
+  localEvent,
   raiseUrgentRequest,
   releaseToBuffer,
   replanAndNotify,
   type ApiResult,
   type AuditResult,
+  type BufferResult,
+  type CompareResult,
   type DemoEvent,
+  type NightProtocolResult,
+  type NotifyResult,
+  type UrgentRequestResult,
 } from "./api";
 import "./DemoMode.css";
 
-type Lang = "en" | "te";
+type Status = { key: string; vars?: TVars };
+type Translate = (path: string, vars?: TVars) => string;
 
-function show(lang: Lang, en: string, te: string): string {
-  return lang === "te" ? te : en;
-}
-
-function describeResult(step: number, payload: unknown): string {
-  try {
-    if (step === 1) {
-      const r = payload as { equalHoursGini: number; equalWaterGini: number; tailBeforePct: number; tailAfterPct: number };
-      return `Gini ${r.equalHoursGini} → ${r.equalWaterGini}; tail o7/o8 ${r.tailBeforePct}% → ${r.tailAfterPct}% need met.`;
+/** The visible outcome of a step, as a sentence in the active language. Every number comes from the API response. */
+function describeOutcome(step: number, data: unknown, t: Translate, f: Formatter): string {
+  switch (step) {
+    case 1: {
+      const r = data as CompareResult;
+      return t("demo.outcome.1", {
+        before: f.pct(r.tailBeforePct),
+        after: f.pct(r.tailAfterPct),
+        giniBefore: f.num(r.equalHoursGini, 2),
+        giniAfter: f.num(r.equalWaterGini, 2),
+      });
     }
-    if (step === 2) {
-      const r = payload as { requestId: string; recommendation: string; decision: string };
-      return `${r.requestId}: ${r.recommendation}; ${r.decision}.`;
+    case 2: {
+      const r = data as UrgentRequestResult;
+      return t(r.approved ? "demo.outcome.2" : "demo.outcome.2no", { name: r.farmerName, asked: f.m3(r.askedM3), granted: f.m3(r.grantedM3) });
     }
-    if (step === 3) {
-      const r = payload as { callsPlaced: number; voiceOnly: string[]; whatsapp: string[] };
-      return `${r.callsPlaced} calls placed. Voice-only: ${r.voiceOnly.join(", ")}. Voice+WhatsApp: ${r.whatsapp.join(", ")}.`;
+    case 3: {
+      const r = data as NotifyResult;
+      return r.voiceOnly.length > 0
+        ? t("demo.outcome.3", { n: r.callsPlaced, names: f.list(r.voiceOnly) })
+        : t("demo.outcome.3all", { n: r.callsPlaced });
     }
-    if (step === 4) {
-      const r = payload as { windowId: string; startsAtIst: string; warningsSent: number };
-      return `${r.windowId} starts ${r.startsAtIst}; ${r.warningsSent} contacts on record for the 1h-before warning.`;
+    case 4: {
+      const r = data as NightProtocolResult;
+      return t("demo.outcome.4", { when: f.dateTime(r.startsAt), n: r.farmersWarned });
     }
-    if (step === 5) {
-      const r = payload as { bufferM3: number; requester: string; requestedM3: number | null };
-      const asked = r.requestedM3 === null ? "" : ` requested ${r.requestedM3} m³`;
-      return `Buffer holds ${r.bufferM3} m³; requester ${r.requester}${asked}.`;
+    case 5: {
+      const r = data as BufferResult;
+      return r.requestedM3 === null
+        ? t("demo.outcome.5none", { pool: f.m3(r.bufferM3) })
+        : t("demo.outcome.5", { pool: f.m3(r.bufferM3), name: r.requester, asked: f.m3(r.requestedM3) });
     }
-    const r = payload as AuditResult;
-    return r.summaryEn;
-  } catch {
-    return "Done.";
+    default: {
+      const r = data as AuditResult;
+      return t(r.conservationOk ? "demo.outcome.6" : "demo.outcome.6bad", {
+        giniBefore: f.num(r.giniBefore, 2),
+        giniAfter: f.num(r.giniAfter, 2),
+      });
+    }
   }
 }
 
+function eventSentence(ev: DemoEvent, t: Translate, f: Formatter): string {
+  if (ev.type === "demo_step") return t("demo.events.demo_step", { n: ev.step ?? 0, title: t(`demo.steps.${ev.step ?? 1}.title`) });
+  if (ev.type === "demo_clock") return t("demo.events.demo_clock", { h: ev.hours ?? 0 });
+  const variant = ev.approved === undefined ? "" : ev.approved ? "_yes" : "_no";
+  const key = `demo.events.${ev.type}${variant}`;
+  const text = t(key, {
+    name: ev.name ?? t("farmer.someone"),
+    m3: f.m3(ev.m3 ?? 0),
+    when: ev.startIso ? f.dateTime(ev.startIso) : "",
+  });
+  return text === key ? t("demo.events.other") : text;
+}
+
 export default function DemoMode() {
-  const { lang, t: tr } = useI18n();
+  const { t, lang } = useI18n();
+  const f = useFormat();
   const [completed, setCompleted] = useState(0); // 0..6
   const [started, setStarted] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState("Ready. Press Start demo. / సిద్ధంగా ఉంది. ప్రారంభించండి.");
+  const [status, setStatus] = useState<Status>({ key: "demo.status.idle" });
   const [simNow, setSimNow] = useState<string>(SIM_CLOCK_START);
   const [events, setEvents] = useState<DemoEvent[]>([]);
   const [replayCount, setReplayCount] = useState(0);
-  const [results, setResults] = useState<Record<number, string>>({});
-  const [offline, setOffline] = useState(false);
+  const [results, setResults] = useState<Record<number, unknown>>({});
+  const [failedStep, setFailedStep] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [audit, setAudit] = useState<AuditResult | null>(null);
-  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const timerRef = useRef<number | null>(null);
   const eventsRef = useRef<DemoEvent[]>([]);
+  const clockRef = useRef<string>(SIM_CLOCK_START);
+  const elapsedRef = useRef(0);
 
-  const budget = DEMO_BUDGET_SECS;
-  const estimate = useMemo(() => totalEstimatedSecs(), []);
   const finished = completed >= DEMO_STEPS.length;
   const visibleEvents = useMemo(() => events.slice(0, replayCount), [events, replayCount]);
 
@@ -98,271 +124,254 @@ export default function DemoMode() {
     setReplayCount(events.length);
   }, [events.length]);
 
-  // Timeline = server events (GET /api/events) plus the markers the walkthrough adds, in time order.
+  useEffect(() => {
+    elapsedRef.current = elapsed;
+  }, [elapsed]);
+
+  const setClock = useCallback((iso: string) => {
+    clockRef.current = iso;
+    setSimNow(iso);
+  }, []);
+
+  // Event log = server events plus the markers the walkthrough adds, in time order.
   const refreshEvents = useCallback(async (local: DemoEvent[]) => {
     const res = await fetchEvents();
     const server = res.data ?? [];
     setEvents([...server, ...local].sort((a, b) => a.at.localeCompare(b.at)));
   }, []);
 
-  const noteOffline = useCallback((mocked: boolean) => {
-    if (mocked) setOffline(true);
-  }, []);
-
   async function handleStart() {
     setBusy(true);
-    setStatus("Resetting to seed scenario… / సీడ్ దృశ్యానికి రీసెట్ చేస్తున్నాం…");
-    const r = await demoReset();
-    noteOffline(r.mocked);
-    setSimNow(SIM_CLOCK_START);
+    setStatus({ key: "demo.status.resetting" });
+    await demoReset();
+    setClock(SIM_CLOCK_START);
     eventsRef.current = [];
     setEvents([]);
     setResults({});
+    setFailedStep(null);
     setAudit(null);
     setCompleted(0);
     setElapsed(0);
     setStarted(true);
     setBusy(false);
-    setStatus("Demo reset. Step 1 of 6 ready. / డెమో రీసెట్ అయింది. 6లో 1వ దశ సిద్ధం.");
-    stepHeadingRef.current?.focus();
+    setStatus({ key: "demo.status.ready", vars: { n: 1 } });
+    titleRef.current?.focus();
   }
 
   async function handleReset() {
     setBusy(true);
-    const r = await demoReset();
-    noteOffline(r.mocked);
+    await demoReset();
     eventsRef.current = [];
     setEvents([]);
     setResults({});
+    setFailedStep(null);
     setAudit(null);
     setCompleted(0);
     setElapsed(0);
     setStarted(false);
-    setSimNow(SIM_CLOCK_START);
+    setClock(SIM_CLOCK_START);
     setBusy(false);
-    setStatus("Reset done. / రీసెట్ పూర్తయింది.");
+    setStatus({ key: "demo.status.idle" });
   }
 
   async function advanceClock(hours: number) {
     setBusy(true);
     const r = await demoAdvance(hours);
-    noteOffline(r.mocked);
-    if (r.data?.now) setSimNow(r.data.now);
-    else setSimNow((prev) => new Date(new Date(prev).getTime() + hours * 3600_000).toISOString());
-    const clockEv = mockEvent("system.clock", `Clock advanced +${hours}h`, `గడియారం +${hours}గం ముందుకు`);
-    const nextLocal = [...eventsRef.current, clockEv];
+    const next = r.data?.now ?? new Date(Date.parse(clockRef.current) + hours * 3600_000).toISOString();
+    setClock(next);
+    const nextLocal = [...eventsRef.current, localEvent("demo_clock", next, { hours })];
     eventsRef.current = nextLocal;
     await refreshEvents(nextLocal);
     setBusy(false);
   }
 
-  async function runStep(stepNum: number): Promise<void> {
+  async function runStep(stepNum: number): Promise<boolean> {
     const step = DEMO_STEPS[stepNum - 1];
-    if (!step) return;
+    if (!step) return false;
     setBusy(true);
-    setStatus(`Running step ${stepNum}… / దశ ${stepNum} నడుస్తోంది…`);
+    setFailedStep(null);
+    setStatus({ key: "demo.status.running", vars: { n: stepNum } });
     let result: ApiResult<unknown>;
     if (step.actionId === "compare") result = await compareRosters();
     else if (step.actionId === "urgent-request") result = await raiseUrgentRequest();
     else if (step.actionId === "replan-calls") result = await replanAndNotify();
     else if (step.actionId === "night-protocol") result = await fireNightProtocol();
-    else if (step.actionId === "harvest-buffer") result = await releaseToBuffer();
+    else if (step.actionId === "harvest-buffer") result = await releaseToBuffer(t("demo.bufferReason"));
     else {
       const r = await fetchAudit();
       if (r.data) setAudit(r.data);
       result = r;
     }
-    const payload = result.data;
-    const mocked = result.mocked;
-    noteOffline(mocked);
-    const text = payload ? describeResult(stepNum, payload) : `Error: ${result.error ?? "no response"}`;
-    const withClock = step.advanceHours ? `${text} Clock +${step.advanceHours}h.` : text;
-    setResults((prev) => ({ ...prev, [stepNum]: withClock }));
+    if (!result.ok || result.data === undefined) {
+      setFailedStep(stepNum);
+      setStatus({ key: "demo.status.failed", vars: { n: stepNum } });
+      setBusy(false);
+      return false;
+    }
+    setResults((prev) => ({ ...prev, [stepNum]: result.data }));
     if (step.advanceHours) {
       const adv = await demoAdvance(step.advanceHours);
-      noteOffline(adv.mocked);
-      if (adv.data?.now) setSimNow(adv.data.now);
+      if (adv.data?.now) setClock(adv.data.now);
     }
-    const ev = mockEvent(`demo.step${stepNum}`, `Step ${stepNum}: ${step.titleEn} — ${text}`, `దశ ${stepNum}: ${step.titleTe} — ${text}`);
-    const next = [...eventsRef.current, ev];
+    const marker = localEvent("demo_step", clockRef.current, { step: stepNum });
+    const next = [...eventsRef.current, marker];
     eventsRef.current = next;
     await refreshEvents(next);
     setCompleted(stepNum);
     setBusy(false);
-    if (stepNum >= DEMO_STEPS.length) {
-      setStatus(`Demo finished in ${formatElapsed(elapsed)}. / డెమో ${formatElapsed(elapsed)}లో ముగిసింది.`);
-    } else {
-      setStatus(`Step ${stepNum} done. Step ${stepNum + 1} of 6 ready. / దశ ${stepNum} పూర్తి. తర్వాత దశ సిద్ధం.`);
-    }
-    stepHeadingRef.current?.focus();
+    setStatus(
+      stepNum >= DEMO_STEPS.length
+        ? { key: "demo.status.finished", vars: { time: formatElapsed(elapsedRef.current) } }
+        : { key: "demo.status.stepDone", vars: { n: stepNum, next: stepNum + 1 } },
+    );
+    titleRef.current?.focus();
+    return true;
   }
 
   async function handleRunAll() {
-    if (!started) await handleStart();
-    for (let n = completed + 1; n <= DEMO_STEPS.length; n += 1) {
+    let from = completed;
+    if (!started) {
+      await handleStart();
+      from = 0;
+    }
+    for (let n = from + 1; n <= DEMO_STEPS.length; n += 1) {
       // eslint-disable-next-line no-await-in-loop
-      await runStep(n);
+      const ok = await runStep(n);
+      if (!ok) break;
     }
   }
 
-  const nextStep = DEMO_STEPS[completed];
-  const overBudget = elapsed > budget;
+  const stepNow = Math.min(completed + 1, DEMO_STEPS.length);
 
   return (
     <section className="demo" aria-labelledby="demo-title">
       <PageHeader
-        eyebrow={tr("page.demo.eyebrow")}
-        title={tr("page.demo.title")}
-        lead={tr("page.demo.lead")}
+        eyebrow={t("page.demo.eyebrow")}
+        title={t("page.demo.title")}
+        lead={t("page.demo.lead")}
         titleId="demo-title"
-        titleRef={stepHeadingRef}
+        titleRef={titleRef}
         focusable
       />
-      <p className="demo__sub">
-        {show(
-          lang,
-          `Seed: Kondaveedu Minor near Guntur. Budget: start → finish under 4:00. Script estimate ${formatElapsed(estimate)}.`,
-          `సీడ్: గుంటూరు దగ్గర కొండవీడు మైనర్. బడ్జెట్: ప్రారంభం → ముగింపు 4:00 లోపు. అంచనా ${formatElapsed(estimate)}.`,
-        )}
-      </p>
 
-      <div className="demo__statusbar" role="status" aria-live="polite">
-        <span>{status}</span>
-        {offline && <span className="demo__badge">mock data · మాక్ డేటా</span>}
-      </div>
-
-      <div className="demo__meta">
-        <div className="demo__timer" aria-label="Elapsed time">
-          <strong>{formatElapsed(elapsed)}</strong>
-          <span> / 4:00</span>
-          {overBudget && <span className="demo__warn"> over budget!</span>}
+      <div className="demo__bar card">
+        <div className="demo__bar-top">
+          <div className="demo__progress-text">
+            <strong>{finished ? t("demo.allDone") : t("demo.stepOf", { n: stepNow, total: DEMO_STEPS.length })}</strong>
+            <span className="muted small" role="status" aria-live="polite">
+              {t(status.key, status.vars)}
+            </span>
+          </div>
+          <div className="btn-row" role="group" aria-label={t("demo.controls")}>
+            {!started && (
+              <button type="button" className="btn btn-primary btn-lg" onClick={handleStart} disabled={busy}>
+                {t("demo.start")}
+              </button>
+            )}
+            {started && !finished && (
+              <button type="button" className="btn" onClick={handleRunAll} disabled={busy}>
+                {t("demo.runAll")}
+              </button>
+            )}
+            <button type="button" className="btn" onClick={handleReset} disabled={busy}>
+              {t("demo.reset")}
+            </button>
+          </div>
         </div>
-        <ol className="demo__steps" aria-label="Demo progress">
-          {DEMO_STEPS.map((s) => (
-            <li key={s.step} className={s.step <= completed ? "done" : s.step === completed + 1 ? "now" : ""} aria-current={s.step === completed + 1 && !finished ? "step" : undefined}>
-              <span aria-hidden="true">{s.step <= completed ? "✓" : s.step}</span>
-              <span className="demo__sr">{`Step ${s.step} ${s.step <= completed ? "done" : "pending"}`}</span>
-            </li>
-          ))}
-        </ol>
-        <progress value={completed} max={DEMO_STEPS.length} aria-label="Steps completed">
+        <progress className="bar" value={completed} max={DEMO_STEPS.length} aria-label={t("demo.progressLabel")}>
           {completed}/{DEMO_STEPS.length}
         </progress>
       </div>
 
-      <div className="demo__actions" role="group" aria-label="Demo run controls">
-        {!started && (
-          <button type="button" onClick={handleStart} disabled={busy}>
-            {show(lang, "Start demo", "డెమో ప్రారంభించండి")}
-          </button>
-        )}
-        {started && !finished && nextStep && (
-          <button type="button" onClick={() => runStep(nextStep.step)} disabled={busy}>
-            {busy ? show(lang, "Working…", "పని జరుగుతోంది…") : show(lang, `Next: ${nextStep.actionLabelEn} (${nextStep.step}/6)`, `${nextStep.actionLabelTe} (${nextStep.step}/6)`)}
-          </button>
-        )}
-        {started && !finished && (
-          <button type="button" onClick={handleRunAll} disabled={busy}>
-            {show(lang, "Run all to finish", "అన్నీ పూర్తి చేయండి")}
-          </button>
-        )}
-        <button type="button" onClick={handleReset} disabled={busy}>
-          {show(lang, "Reset", "రీసెట్")}
-        </button>
-      </div>
-
-
-      <div className="demo__cols">
-        <div className="demo__col">
-      <section className="demo__script" aria-labelledby="demo-script">
-        <h2 id="demo-script">{show(lang, "Guided walkthrough", "మార్గదర్శక నడక")}</h2>
-        <ol>
+      <div className="grid grid-main-side demo__cols">
+        <ol className="demo__steps" aria-label={t("demo.storyLabel")}>
           {DEMO_STEPS.map((s) => {
             const done = s.step <= completed;
             const current = s.step === completed + 1 && started && !finished;
+            const outcome = results[s.step];
             return (
-              <li key={s.step} className={done ? "done" : current ? "now" : ""}>
-                <h3>
-                  {s.step}. {show(lang, s.titleEn, s.titleTe)}
-                </h3>
-                <p>{show(lang, s.whatEn, s.whatTe)}</p>
-                <p className="demo__hint">
-                  <code>{s.apiCalls.join(" · ")}</code>
-                  {s.advanceHours ? ` · +${s.advanceHours}h` : ""} · ~{s.estimatedSecs}s
-                </p>
-                {results[s.step] && <p className="demo__result">{results[s.step]}</p>}
-                {current && (
-                  <button type="button" onClick={() => runStep(s.step)} disabled={busy}>
-                    {show(lang, s.actionLabelEn, s.actionLabelTe)}
-                  </button>
-                )}
-                {done && <p aria-label={`Step ${s.step} done`}>✓</p>}
+              <li key={s.step} className={`demo__step${done ? " done" : current ? " now" : ""}`} aria-current={current ? "step" : undefined}>
+                <span className="demo__num" aria-hidden="true">
+                  {done ? "✓" : s.step}
+                </span>
+                <div className="demo__step-body">
+                  <h2 className="demo__step-title">{t(`demo.steps.${s.step}.title`)}</h2>
+                  <p>{t(`demo.steps.${s.step}.what`)}</p>
+                  {outcome !== undefined && <p className="demo__result">{describeOutcome(s.step, outcome, t, f)}</p>}
+                  {failedStep === s.step && (
+                    <p className="notice notice-crit" role="alert">
+                      {t("demo.stepFailed")}
+                    </p>
+                  )}
+                  <div className="btn-row">
+                    {current && (
+                      <button type="button" className="btn btn-primary" onClick={() => void runStep(s.step)} disabled={busy}>
+                        {busy ? t("common.working") : t("demo.runStep")}
+                      </button>
+                    )}
+                    <Link className="btn" to={s.seeIt}>
+                      {t("demo.seeIt")}
+                    </Link>
+                  </div>
+                </div>
               </li>
             );
           })}
         </ol>
-      </section>
-        </div>
-        <div className="demo__col">
-      <section className="demo__clock" aria-labelledby="demo-clock">
-        <h2 id="demo-clock">{show(lang, "Simulated clock", "అనుకరణ గడియారం")}</h2>
-        <p>
-          <time dateTime={simNow}>{simNow}</time>
-        </p>
-        <div className="demo__actions" role="group" aria-label="Advance clock">
-          {[1, 6, 24].map((h) => (
-            <button key={h} type="button" onClick={() => advanceClock(h)} disabled={busy || !started}>
-              {show(lang, `Advance +${h}h`, `+${h}గం ముందుకు`)}
-            </button>
-          ))}
-        </div>
-        <p className="demo__hint">{show(lang, "Calls POST /api/demo/advance.", "POST /api/demo/advance ను పిలుస్తుంది.")}</p>
-      </section>
 
-      {audit && (
-        <section className="demo__audit" aria-labelledby="demo-audit">
-          <h2 id="demo-audit">{show(lang, "Audit summary", "ఆడిట్ సారాంశం")}</h2>
-          <p>{show(lang, audit.summaryEn, audit.summaryTe)}</p>
-          <dl>
-            <dt>Gini</dt>
-            <dd>
-              {audit.giniBefore} → {audit.giniAfter}
-            </dd>
-            <dt>{show(lang, "Conservation", "పరిరక్షణ")}</dt>
-            <dd>{audit.conservationOk ? "✓ holds / నిలిచింది" : "✗ violated / ఉల్లంఘన"}</dd>
-          </dl>
-        </section>
-      )}
-
-      <section className="demo__timeline" aria-labelledby="demo-events">
-        <h2 id="demo-events">{show(lang, `Event timeline (${events.length})`, `ఘటనల కాలరేఖ (${events.length})`)}</h2>
-        {events.length === 0 ? (
-          <p className="demo__hint">{show(lang, "No events yet. Start the demo to replay the event log.", "ఇంకా ఘటనలు లేవు. డెమో ప్రారంభించి లాగ్ చూడండి.")}</p>
-        ) : (
-          <>
-            <label className="demo__label">
-              {show(lang, `Replay first ${replayCount} of ${events.length}`, `మొదటి ${replayCount}/${events.length} చూపించు`)}
-              <input
-                type="range"
-                min={0}
-                max={events.length}
-                value={replayCount}
-                onChange={(e) => setReplayCount(Number(e.target.value))}
-                aria-valuetext={`${replayCount} of ${events.length} events`}
-              />
-            </label>
-            <ol>
-              {visibleEvents.map((ev) => (
-                <li key={ev.id}>
-                  <span className="demo__etype">{ev.type}</span> <time dateTime={ev.at}>{ev.at}</time>
-                  <p>{show(lang, ev.summaryEn, ev.summaryTe)}</p>
-                </li>
+        <div className="stack demo__side">
+          <section className="card" aria-labelledby="demo-clock">
+            <h2 className="card-title" id="demo-clock">{t("demo.clockTitle")}</h2>
+            <p className="demo__clock">
+              <time dateTime={simNow}>{f.dateTime(simNow)}</time>
+            </p>
+            <p className="muted small">{t("demo.clockHelp")}</p>
+            <div className="btn-row" role="group" aria-label={t("demo.clockTitle")}>
+              {[1, 6, 24].map((h) => (
+                <button key={h} type="button" className="btn" onClick={() => void advanceClock(h)} disabled={busy || !started}>
+                  {t(h === 24 ? "demo.advanceDay" : h === 1 ? "demo.advanceHour" : "demo.advanceHours", { h })}
+                </button>
               ))}
-            </ol>
-          </>
-        )}
-        <p className="demo__hint">GET /api/events</p>
-      </section>
+            </div>
+            {started && <p className="muted small demo__elapsed">{t("demo.elapsed", { time: formatElapsed(elapsed) })}</p>}
+          </section>
+
+          {audit && (
+            <section className="card" aria-labelledby="demo-audit">
+              <h2 className="card-title" id="demo-audit">{t("demo.auditTitle")}</h2>
+              <p>{lang === "te" && audit.summaryTe ? audit.summaryTe : audit.summaryEn}</p>
+            </section>
+          )}
+
+          <details className="disclosure demo__details">
+            <summary>{t("demo.details")}</summary>
+            <h3 className="demo__log-title">{t("demo.logTitle", { n: events.length })}</h3>
+            {events.length === 0 ? (
+              <p className="muted small">{t("demo.logEmpty")}</p>
+            ) : (
+              <>
+                <label className="demo__label">
+                  {t("demo.replay", { shown: replayCount, total: events.length })}
+                  <input
+                    type="range"
+                    min={0}
+                    max={events.length}
+                    value={replayCount}
+                    onChange={(e) => setReplayCount(Number(e.target.value))}
+                    aria-valuetext={t("demo.replayValue", { shown: replayCount, total: events.length })}
+                  />
+                </label>
+                <ol className="demo__log">
+                  {visibleEvents.map((ev) => (
+                    <li key={ev.id}>
+                      <time dateTime={ev.at}>{f.dateTime(ev.at)}</time>
+                      <p>{eventSentence(ev, t, f)}</p>
+                    </li>
+                  ))}
+                </ol>
+              </>
+            )}
+          </details>
         </div>
       </div>
     </section>

@@ -1,14 +1,14 @@
 // View types for the coordinator console. Values come from the shared API client
 // (src/api/client.ts), never from this file.
 
-export interface MockPlot {
+export interface RegPlot {
   id: string;
-  outletId: string;
+  outletName: string;
   areaHa: number;
   soil: string;
 }
 
-export interface MockCropPlan {
+export interface RegCropPlan {
   id: string;
   plotId: string;
   crop: string;
@@ -16,9 +16,9 @@ export interface MockCropPlan {
 }
 
 export interface FarmerRegistration {
-  farmer: { id: string; name: string; phone: string; hasSmartphone: boolean; channels: string[] };
-  plots: MockPlot[];
-  cropPlans: MockCropPlan[];
+  farmer: { id: string; name: string; phone: string; hasSmartphone: boolean };
+  plots: RegPlot[];
+  cropPlans: RegCropPlan[];
   verified: boolean;
 }
 
@@ -26,7 +26,6 @@ export interface EntitlementRow {
   id: string;
   farmerId: string;
   farmerName: string;
-  cropPlanId: string;
   crop: string;
   weekStart: string;
   volumeM3: number;
@@ -36,13 +35,12 @@ export interface EntitlementRow {
 
 export interface TurnRow {
   id: string;
-  outletId: string;
-  farmerId: string;
+  outletName: string;
   farmerName: string;
   start: string;
   end: string;
   plannedVolumeM3: number;
-  expectedFlowM3s: number;
+  /** Turn length in hours, from the turn's own start and end. */
   durationH: number;
   needMetPct: number;
 }
@@ -50,7 +48,9 @@ export interface TurnRow {
 export interface RosterProposal {
   id: string;
   mode: "equal_water" | "equal_hours";
-  releaseWindowId: string;
+  approved: boolean;
+  windowStart: string;
+  windowEnd: string;
   turns: TurnRow[];
   equalHoursGini: number;
   equalWaterGini: number;
@@ -63,11 +63,11 @@ export interface RequestRow {
   type: "urgent" | "buffer" | "release_to_buffer" | "harvest_exit";
   volumeM3: number;
   reason: string;
-  reasonTe: string;
   channel: string;
+  raisedAt: string;
   status: string;
   triageScore: number;
-  recommendation: { decision: "approve" | "reject" | "partial"; volumeM3: number; rationale: string; rationaleTe: string };
+  recommendation?: { decision: "approve" | "reject" | "partial"; volumeM3: number; rationale: string };
   decision?: { decision: "approve" | "reject"; volumeM3: number; note?: string };
 }
 

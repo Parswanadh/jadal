@@ -106,15 +106,21 @@ describe("mock builders echo caller input", () => {
     expect(suggested.entitlements[0]?.week_start).toBe("2026-09-21");
     expect(suggested.season_total_m3).toBeGreaterThan(0);
     const approved = await client.approveEntitlements({ edits: [{ id: "e-x", volume_m3: 10 }] });
-    expect(approved.approved).toBe(1);
+    expect(approved.approved).toBe(suggested.entitlements.length);
   });
 
   it("decideRequest flips status and demoAdvance moves time", async () => {
     vi.stubEnv("VITE_MOCK", "1");
     const decided = await client.decideRequest("req-mock-1", { decision: "reject", volume_m3: 0 });
     expect(decided.status).toBe("rejected");
+    await client.demoReset();
     const advanced = await client.demoAdvance({ hours: 6 });
     expect(advanced.now).toBe(new Date(new Date(MOCK_NOW).getTime() + 6 * 3600 * 1000).toISOString());
+    // The clock keeps going from where it was, and reset puts it back.
+    const later = await client.demoAdvance({ hours: 2 });
+    expect(later.now).toBe(new Date(new Date(MOCK_NOW).getTime() + 8 * 3600 * 1000).toISOString());
+    await client.demoReset();
+    expect((await client.demoAdvance({ hours: 1 })).now).toBe(new Date(new Date(MOCK_NOW).getTime() + 3600 * 1000).toISOString());
   });
 
   it("equal_water meets every outlet above 90%", async () => {

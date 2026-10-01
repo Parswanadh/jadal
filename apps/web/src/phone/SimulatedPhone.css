@@ -21,9 +21,27 @@
   --phone-badge-bad-fg: var(--critical);
 }
 
+.phone-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .phone-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.jadal-phone__heading {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
 .jadal-phone {
-  width: min(360px, 100%);
-  margin: 0 auto;
+  width: min(380px, 100%);
+  margin: 0;
   background: var(--phone-bg);
   color: var(--phone-fg);
   border: 1px solid var(--phone-line);
@@ -123,14 +141,6 @@
   margin: 0.25rem 0 0;
 }
 
-.jadal-phone__number,
-.jadal-phone__source {
-  font-family: var(--font-mono);
-  color: var(--phone-muted);
-  font-size: 0.8rem;
-  margin: 0.25rem 0 0;
-}
-
 .jadal-phone__call-actions {
   display: flex;
   justify-content: center;
@@ -143,7 +153,11 @@
   height: 64px;
   border-radius: 50%;
   border: none;
-  font-size: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  line-height: 1;
   cursor: pointer;
   color: var(--on-accent);
 }
@@ -222,8 +236,7 @@
 }
 
 .jadal-phone__turn-meta {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--phone-muted);
   margin-bottom: 0.25rem;
 }
@@ -350,7 +363,6 @@
 }
 
 .jadal-phone__msg-time {
-  font-family: var(--font-mono);
   display: block;
   text-align: right;
   font-size: 0.65rem;
