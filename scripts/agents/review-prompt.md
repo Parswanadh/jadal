@@ -7,6 +7,8 @@ Inputs (files in the review workspace; paths are given in the run message):
 - checks.log — output of `pnpm install && pnpm -r typecheck && pnpm -r test && pnpm -r build` on the PR head.
 - The PR head is checked out in the current directory; read any file you need.
 
+Sandbox: everything you need is inside the current directory (the PR checkout) and .review/. Use only relative paths. Never cd to a parent directory or an absolute path outside the current directory; such commands are blocked and waste the review.
+
 Also read: AGENTS.md, docs/architecture/overview.md, docs/decisions/ADR-001-004-stack.md, packages/contracts/src/*.
 
 Review against these gates (any FAIL means request_changes):
