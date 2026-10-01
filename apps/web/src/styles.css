@@ -15,7 +15,7 @@
   --rule: #e3e0d6;
 
   /* One accent: clay */
-  --accent: #c96442;
+  --accent: #a84a2b;
   --accent-subtle: #f6e8e1;
   --on-accent: #ffffff;
 
@@ -24,9 +24,9 @@
   --water-subtle: #e6eef3;
 
   /* Status */
-  --ok: #4f7a3a;
+  --ok: #47702f;
   --ok-subtle: #eef3e7;
-  --warn: #a87529;
+  --warn: #8f611d;
   --warn-subtle: #f8f0e1;
   --critical: #b3412e;
   --critical-subtle: #f9e8e4;
