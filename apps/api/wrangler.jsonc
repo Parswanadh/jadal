@@ -41,6 +41,23 @@
       }
     ]
   },
+  "workflows": [
+    {
+      "name": "jadal-urgent-request-workflow",
+      "binding": "URGENT_REQUEST_WORKFLOW",
+      "class_name": "UrgentRequestWorkflow"
+    },
+    {
+      "name": "jadal-call-campaign-workflow",
+      "binding": "CALL_CAMPAIGN_WORKFLOW",
+      "class_name": "CallCampaignWorkflow"
+    }
+  ],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "DEMO_MODE": "true",
+    "REAL_TELEPHONY": "false"
+  },
   "triggers": {
     "crons": [
       "30 0 * * *"

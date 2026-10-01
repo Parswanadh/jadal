@@ -26,3 +26,7 @@ build/
 # Playwright
 test-results/
 playwright-report/
+
+# Local secrets (wrangler dev)
+.dev.vars
+**/.dev.vars

@@ -1,0 +1,40 @@
+# Jadal API — local development variables (example).
+#
+# Copy to `apps/api/.dev.vars` and fill in real values. `apps/api/.dev.vars` is gitignored and must
+# never be committed. Every value below is optional: with an empty file the API runs the full
+# offline demo path (deterministic core, event log, simulated phone) and places no network calls.
+#
+# `DB`, `CACHE`, `OUTBOUND` and `ASSETS` are Wrangler *bindings*, not variables: `wrangler dev`
+# provisions local D1, KV, Queue and static-asset emulation from `wrangler.jsonc`, so they are
+# intentionally not listed here.
+
+# Run the offline demo path (default `true`). Set `false` to opt into live providers.
+DEMO_MODE=true
+
+# Free-form deployment label surfaced in logs/health, e.g. `development`, `preview`, `production`.
+ENVIRONMENT=development
+
+# Cloudflare AI Gateway base URL. When set, provider calls are prefixed with it for caching,
+# logging and rate limits (ADR-001). Example:
+# https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_name>
+AI_GATEWAY_URL=
+
+# OpenRouter key. Powers Jev (System 1) and the System-2 agent prose. Unset => rules only.
+OPENROUTER_API_KEY=
+
+# Sarvam AI key for Telugu speech-to-text (`saaras`) and text-to-speech (`bulbul`).
+# Unset => the simulated phone shows text and skips audio.
+SARVAM_API_KEY=
+
+# Twilio trial credentials. All three are required before real PSTN calls are attempted.
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_FROM=
+
+# Meta WhatsApp Cloud API credentials. Fallback is the in-app WhatsApp drawer.
+META_WHATSAPP_TOKEN=
+META_PHONE_NUMBER_ID=
+
+# Explicit opt-in for real PSTN calls (`true`/`1`). Requires a full Twilio credential set above;
+# otherwise the simulated phone is used. Keep `false` in every demo.
+REAL_TELEPHONY=false

@@ -9,14 +9,19 @@
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "vitest run",
+    "test:watch": "vitest",
+    "migrate:local": "wrangler d1 migrations apply jadal-db --local",
     "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@jadal/contracts": "workspace:*",
     "@jadal/core": "workspace:*",
-    "hono": "^4.7.2"
+    "hono": "^4.7.2",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@jadal/contracts": "workspace:*",
+    "@types/node": "^24",
     "typescript": "^5.8.2",
     "vitest": "^3.0.7",
     "web": "workspace:*"
