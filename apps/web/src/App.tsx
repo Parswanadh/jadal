@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage';
 import { FarmerPortal } from './farmer';
 import { CoordinatorConsole } from './coordinator';
 import { CanalVisual } from './canal';
+import { SimulatedPhone } from './phone';
 import PlaceholderPage from './pages/PlaceholderPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -15,10 +16,7 @@ export default function App() {
         <Route path="/farmer" element={<FarmerPortal />} />
         <Route path="/coordinator" element={<CoordinatorConsole />} />
         <Route path="/canal" element={<CanalVisual />} />
-        <Route
-          path="/phone"
-          element={<PlaceholderPage titleKey="phone.title" bodyKey="phone.body" noteKey="phone.note" />}
-        />
+        <Route path="/phone" element={<SimulatedPhone />} />
         <Route
           path="/demo"
           element={<PlaceholderPage titleKey="demo.title" bodyKey="demo.body" noteKey="demo.note" />}
