@@ -65,6 +65,9 @@ export default function MyWater({ api, farmerId, entry, outlets, onAsk }: Props)
               </span>
             </p>
             <p className="muted">{t("mywater.turnWater", { m3: f.m3(turn.planned_volume_m3) })}</p>
+            <p className="muted">
+              {single ? t("mywater.turnWhyShare", { share: f.m3(single.volume_m3) }) : t("mywater.turnWhyNoShare")}
+            </p>
             <UnitHint />
           </>
         ) : (
