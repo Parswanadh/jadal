@@ -480,21 +480,23 @@ svg text { font-family: var(--font-sans); }
         <span class="lbl">Equal Hours (Warabandi)</span>
         <div class="val">~42%</div>
         <p class="desc">Crop water need met for tail-end outlets (o7/o8). Outlets get equal 1-hour turns despite 29.4% seepage loss.</p>
-        <span class="src">packages/contracts/fixtures/demo-scenario.json</span>
+        <span class="src">apps/web/src/api/mock.ts — modelled</span>
       </div>
       <div class="metric-card accent">
         <span class="lbl">Equal Water (Jadal)</span>
         <div class="val">&gt;90%</div>
         <p class="desc">Crop water need met for tail-end outlets. Turns lengthened deterministically based on local flow velocity.</p>
-        <span class="src">@jadal/core (rosterEngine.ts)</span>
+        <span class="src">apps/web/src/api/mock.ts — modelled</span>
       </div>
       <div class="metric-card">
         <span class="lbl">Inequality (Gini)</span>
         <div class="val">0.31 → 0.05</div>
         <p class="desc">Gini coefficient across farmers falls from severe inequality (0.31) to near-perfect parity (0.05).</p>
-        <span class="src">apps/api/src/e2e.test.ts</span>
+        <span class="src">apps/web/src/api/mock.ts — modelled</span>
       </div>
     </div>
+
+    <p class="note">These need-met figures are <b>modelled</b> from the seed scenario's illustrative comparison in <code>apps/web/src/api/mock.ts</code>, not field measurements. The API end-to-end test verifies the <em>direction</em> with the real core — Gini(equal_water) &lt; Gini(equal_hours) — not these exact values.</p>
 
     <!-- Screenshot: Canal Hero View -->
     <div class="shot-frame rise" style="--i:3">

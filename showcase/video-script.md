@@ -84,7 +84,7 @@
   - **TE:** *దశ 1: సమాన నీరు స్థానిక ప్రవాహాన్ని బట్టి సమయం ఇస్తుంది. తోక రైతులకు అవసరం 42% నుండి >90%కి పెరుగుతుంది (గిని: 0.31 → 0.05).*
 - **Audio Cue:** Crisp UI toggle click, ascending harmonic chime as metrics turn green.
 - **Evidence / Source:**
-  - Gini coefficients `0.31` vs `0.05`: `apps/web/src/api/mock.ts#L195`, `apps/api/src/e2e.test.ts#L121-130`.
+  - Gini coefficients `0.31` vs `0.05` are **modelled** values from `apps/web/src/api/mock.ts#L195`. `apps/api/src/e2e.test.ts#L121-130` verifies only the *ordering* (`equal_water_gini < equal_hours_gini`) against the real core — it does not assert these exact numbers.
   - `rw1` window specifications: `demo-scenario.json#/release_windows[0]`.
   - Roster engine formula $T_i = V_i / Q(x_i)$: `packages/core/README.md §8`.
 
