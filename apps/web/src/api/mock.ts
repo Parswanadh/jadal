@@ -11,6 +11,9 @@
 import { routes } from "@jadal/contracts";
 import type { z } from "zod";
 import scenarioJson from "@jadal/contracts/fixtures/demo-scenario.json";
+import { ApiClientError } from "./errors";
+import { alertBodySchema, alertResponseSchema, updateTurnResponseSchema } from "./extra";
+import type { AlertBody, AlertResponse, UpdateTurnBody, UpdateTurnResponse } from "./extra";
 import { formatDateTime, formatRange } from "../lib/format";
 
 // ASSUMED: illustrative mock values only, used until @jadal/core (Task A) and the intake agent (Task B) supply real numbers.
@@ -32,6 +35,17 @@ export const MOCK_FIXTURE_TEXT = {
   reasonWaterNeeded: "Water needed for my crop.",
   noteTailShort: "Tail end was short last turn.",
 } as const;
+
+/**
+ * Mock-only copy for the audit trail. Like the other audit prose below, it is
+ * the mock standing in for a server message; the console shows audit findings
+ * in English only.
+ */
+export const MOCK_SCHEDULE_CHANGE_TEXT =
+  "A turn time was changed by the coordinator. The new time is in the schedule.";
+
+/** Mock-only detail line for a dispatched alert. */
+export const MOCK_ALERT_DETAIL = "Queued on the practice line.";
 
 // Minimal structural view of the seed fixture (extra keys ignored).
 interface DemoScenario {
@@ -63,6 +77,9 @@ interface MockState {
   entitlementEdits: Map<string, number>;
   entitlementsApproved: boolean;
   approvedRosters: Set<string>;
+  /** Turn times changed by the coordinator, keyed `${rosterId}:${turnId}`. */
+  turnEdits: Map<string, { start: string; end: string }>;
+  alertsSent: number;
   clockHours: number;
   nextId: number;
 }
@@ -76,6 +93,8 @@ function freshState(): MockState {
     entitlementEdits: new Map(),
     entitlementsApproved: false,
     approvedRosters: new Set(),
+    turnEdits: new Map(),
+    alertsSent: 0,
     clockHours: 0,
     nextId: 1,
   };
@@ -240,12 +259,16 @@ export function mockProposeRoster(body: z.input<typeof routes.proposeRoster.body
   const slotMs = Math.floor((endMs - startMs) / outlets.length);
   const rosterId = `r-${window.id}-${input.mode}`;
   const turns = outlets.map((o, i) => {
-    const start = new Date(startMs + i * slotMs).toISOString();
-    const end = new Date(startMs + (i + 1) * slotMs).toISOString();
+    const id = `t-${window.id}-${o.id}`;
+    // A coordinator's time edit wins over the proposed slot. The planned volume
+    // is left alone: this is schedule editing, not water arithmetic.
+    const edit = state.turnEdits.get(`${rosterId}:${id}`);
+    const start = edit?.start ?? new Date(startMs + i * slotMs).toISOString();
+    const end = edit?.end ?? new Date(startMs + (i + 1) * slotMs).toISOString();
     // Attenuate head discharge with the canal's own seepage constant from the fixture.
     const expected_flow_m3s = Math.round(window.discharge_m3s * Math.exp(-scenario.canal.seepage_k_per_m * o.chainage_m) * 1000) / 1000;
     return {
-      id: `t-${window.id}-${o.id}`,
+      id,
       roster_id: rosterId,
       outlet_id: o.id,
       farmer_id: outletFarmerId(o.id),
@@ -281,6 +304,58 @@ export function mockProposeRoster(body: z.input<typeof routes.proposeRoster.body
 export function mockApproveRoster(id: string) {
   state.approvedRosters.add(id);
   return routes.approveRoster.response.parse({ ok: true, contacts_queued: scenario.farmers.length });
+}
+
+/**
+ * Mock of PATCH /api/rosters/:id/turns/:turnId.
+ *
+ * Rejects a backwards or unreadable pair the same way the server does, and
+ * remembers the edit so the next proposal for that roster shows it.
+ */
+export async function mockUpdateTurn(rosterId: string, turnId: string, body: UpdateTurnBody): Promise<UpdateTurnResponse> {
+  const start = Date.parse(body.start);
+  const end = Date.parse(body.end);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    throw new ApiClientError(400, "Enter a valid start and end time.", "bad_times");
+  }
+  if (end <= start) {
+    throw new ApiClientError(400, "The end time must be after the start time.", "backwards_times");
+  }
+
+  const match = /^r-(.+)-(equal_water|equal_hours)$/.exec(rosterId);
+  const windowId = match?.[1];
+  const mode = match?.[2] as "equal_water" | "equal_hours" | undefined;
+  if (!windowId || !mode) throw new ApiClientError(404, "That schedule was not found.", "roster_not_found");
+
+  const proposed = mockProposeRoster({ release_window_id: windowId, mode }).roster;
+  if (!proposed.turns.some((turn) => turn.id === turnId)) {
+    throw new ApiClientError(404, "That turn was not found.", "turn_not_found");
+  }
+
+  state.turnEdits.set(`${rosterId}:${turnId}`, { start: body.start, end: body.end });
+  const saved = mockProposeRoster({ release_window_id: windowId, mode }).roster.turns.find((turn) => turn.id === turnId);
+  if (!saved) throw new ApiClientError(404, "That turn was not found.", "turn_not_found");
+  return updateTurnResponseSchema.parse({ ok: true, turn: saved });
+}
+
+/**
+ * Mock of POST /api/alerts. This build has no telephony, so every alert is
+ * reported as simulated; the UI must say so rather than imply a real send.
+ */
+export async function mockSendAlert(body: AlertBody): Promise<AlertResponse> {
+  const input = alertBodySchema.parse(body);
+  const known =
+    scenario.farmers.some((farmer) => farmer.id === input.farmer_id) ||
+    state.registered.some((entry) => entry.farmer.id === input.farmer_id);
+  if (!known) throw new ApiClientError(404, "That farmer was not found.", "farmer_not_found");
+
+  state.alertsSent += 1;
+  return alertResponseSchema.parse({
+    ok: true,
+    contact_id: `ct-alert-${state.alertsSent}`,
+    simulated: true,
+    detail: MOCK_ALERT_DETAIL,
+  });
 }
 
 export function mockRaiseRequest(body: z.input<typeof routes.raiseRequest.body>) {
@@ -578,6 +653,7 @@ export function mockAudit() {
   return routes.audit.response.parse({
     balances: mockBalances(),
     findings: [
+      ...(state.turnEdits.size > 0 ? [{ severity: "info" as const, text: MOCK_SCHEDULE_CHANGE_TEXT }] : []),
       { severity: "info", text: "The books balance: every cubic metre of canal water is accounted for." },
       { severity: "warn", text: "Farms at the tail end get far less water than farms at the head when turns are the same length. Equal water fixes this." },
     ],

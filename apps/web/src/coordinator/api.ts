@@ -4,7 +4,8 @@
 // into the console's view types. It computes no water numbers, so every figure
 // displayed comes from the API (or its mock).
 
-import { api as client } from "../api";
+import { api as client, sendAlert as clientSendAlert, updateTurn as clientUpdateTurn } from "../api";
+import type { AlertChannel } from "../api/extra";
 import type { AuditView, EntitlementRow, FarmerRegistration, LedgerView, RequestRow, RosterProposal } from "./types";
 
 async function farmerNames(): Promise<Map<string, string>> {
@@ -81,6 +82,19 @@ export const api = {
   async approveRoster(id: string): Promise<number> {
     const res = await client.approveRoster(id);
     return res.contacts_queued;
+  },
+
+  /** Set one turn's start and end. Returns what the API stored. */
+  async updateTurn(rosterId: string, turnId: string, start: string, end: string): Promise<{ start: string; end: string }> {
+    const res = await clientUpdateTurn(rosterId, turnId, { start, end });
+    return { start: res.turn.start, end: res.turn.end };
+  },
+
+  /** Alert one farmer by call, SMS or WhatsApp. `simulated` says whether anything really left. */
+  async sendAlert(farmerId: string, channel: AlertChannel, message?: string): Promise<{ simulated: boolean; detail: string }> {
+    const trimmed = message?.trim();
+    const res = await clientSendAlert({ farmer_id: farmerId, channel, message: trimmed ? trimmed : undefined });
+    return { simulated: res.simulated, detail: res.detail };
   },
 
   async listRequests(): Promise<RequestRow[]> {
