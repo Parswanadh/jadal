@@ -68,11 +68,11 @@ export default function MyWater({ api, farmerId, entry, outlets, onAsk }: Props)
             <p className="muted">
               {single ? t("mywater.turnWhyShare", { share: f.m3(single.volume_m3) }) : t("mywater.turnWhyNoShare")}
             </p>
-            <UnitHint />
           </>
         ) : (
           <EmptyState title={t("mywater.noTurnTitle")} body={t("mywater.noTurnBody")} />
         )}
+        <UnitHint />
       </section>
 
       <div className="grid grid-halves">

@@ -111,7 +111,7 @@ export default function RequestQueue({ rows, onDecided }: Props) {
           })}
         </ul>
       )}
-      {pending.length > 0 && <UnitHint />}
+      {(pending.length > 0 || decided.length > 0) && <UnitHint />}
 
       {decided.length > 0 && (
         <div className="req-decided">
