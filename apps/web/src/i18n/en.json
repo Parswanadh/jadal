@@ -50,6 +50,13 @@
     "notFoundTitle": "Page not found",
     "notFoundBody": "This page does not exist. Use the menu above to continue."
   },
+  "fixture": {
+    "reasonMaizeTasseling": "My maize is tasseling and the leaves are rolling in the heat.",
+    "reasonTailShortTurn": "My field at the tail end got a short turn.",
+    "reasonWaterNeeded": "Water needed for my crop.",
+    "reasonPaddyFlowering": "I need water urgently, my paddy is flowering.",
+    "noteTailShort": "Tail end was short last turn."
+  },
   "crop": {
     "rice": "Rice",
     "maize": "Maize",

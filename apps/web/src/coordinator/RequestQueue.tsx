@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useI18n } from "../i18n/I18nContext";
+import { fixtureText } from "../i18n/fixtureText";
 import { useFormat } from "../lib/useFormat";
 import ConfirmAction from "../components/ConfirmAction";
 import EmptyState from "../components/EmptyState";
@@ -62,7 +63,7 @@ export default function RequestQueue({ rows, onDecided }: Props) {
                   {t("coord.req.asks", { m3: f.m3(r.volumeM3) })}{" "}
                   <span className={`pill ${URGENCY_PILL[level]}`}>{t(`coord.urgency.${level}`)}</span>
                 </p>
-                <p className="req-reason">{t("coord.req.reason", { reason: r.reason })}</p>
+                <p className="req-reason">{t("coord.req.reason", { reason: fixtureText(r.reason, t) })}</p>
                 {r.recommendation && (
                   <div className="req-suggest">
                     <p>

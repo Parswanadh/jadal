@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { WaterRequest } from "@jadal/contracts";
 import { useI18n } from "../i18n/I18nContext";
+import { fixtureText } from "../i18n/fixtureText";
 import { useFormat } from "../lib/useFormat";
 import EmptyState from "../components/EmptyState";
 import UnitHint from "../components/UnitHint";
@@ -61,12 +62,12 @@ export default function SharedPool({
                 </div>
                 <p className="big-number small-number">{t("pool.asked", { m3: f.m3(r.volume_m3) })}</p>
                 <p className="muted small">{f.dateTime(r.raised_at)}</p>
-                <p>{t("pool.reason", { reason: r.reason })}</p>
+                <p>{t("pool.reason", { reason: fixtureText(r.reason, t) })}</p>
                 <p className="small">
                   {decided
                     ? t(decided.decision === "approve" ? "pool.decisionApproved" : "pool.decisionRejected", { m3: f.m3(decided.volume_m3) })
                     : t("pool.waiting")}
-                  {decided?.note ? ` ${t("pool.note", { note: decided.note })}` : ""}
+                  {decided?.note ? ` ${t("pool.note", { note: fixtureText(decided.note, t) })}` : ""}
                 </p>
               </li>
             );
