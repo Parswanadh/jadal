@@ -12,6 +12,13 @@ import { routes } from "@jadal/contracts";
 import type { z } from "zod";
 import scenarioJson from "@jadal/contracts/fixtures/demo-scenario.json";
 
+// ASSUMED: illustrative mock values only, used until @jadal/core (Task A) and the intake agent (Task B) supply real numbers.
+const MOCK_NET_IRRIGATION_MM = 50; // ASSUMED: mock net irrigation depth per cropped fraction
+const MOCK_LAG_H_PER_KM = 0.4; // ASSUMED: mock travel lag per km of canal; core uses lag = x / v (Manning)
+const MOCK_URGENT_VOLUME_M3 = 200; // ASSUMED: mock urgent request volume
+const MOCK_BUFFER_VOLUME_M3 = 120; // ASSUMED: mock buffer request volume
+
+
 // Minimal structural view of the seed fixture (extra keys ignored).
 interface DemoScenario {
   now: string;
@@ -117,7 +124,8 @@ export function mockSuggestEntitlements(body: z.input<typeof routes.suggestEntit
       crop_plan_id: cp.id,
       week_start: weekStart,
       volume_m3,
-      net_irrigation_mm: Math.round(50 * cp.area_fraction * 10) / 10,
+      // ASSUMED: mock net irrigation depth per cropped fraction; illustrative pending the FAO-56 crop engine in @jadal/core
+      net_irrigation_mm: Math.round(MOCK_NET_IRRIGATION_MM * cp.area_fraction * 10) / 10,
       status: "proposed" as const,
       explanation: `Mock weekly share for ${cp.crop} (${plot.area_ha} ha).`,
     };
@@ -163,7 +171,7 @@ export function mockProposeRoster(body: z.input<typeof routes.proposeRoster.body
       end,
       planned_volume_m3: Math.round((expected_flow_m3s * slotMs) / 1000),
       expected_flow_m3s,
-      lag_h: Math.round(((o.chainage_m / 1000) * 0.4 * 10) / 10),
+      lag_h: Math.round(((o.chainage_m / 1000) * MOCK_LAG_H_PER_KM * 10) / 10),
     };
   });
   const roster = {
@@ -209,7 +217,7 @@ export function mockListRequests() {
       farmer_id: "f1",
       crop_plan_id: "cp1",
       type: "urgent",
-      volume_m3: 200,
+      volume_m3: MOCK_URGENT_VOLUME_M3,
       reason: "Rice flowering, needs extra water (mock).",
       channel: "voice",
       status: "raised",
@@ -220,7 +228,7 @@ export function mockListRequests() {
       id: "req-mock-2",
       farmer_id: "f7",
       type: "buffer",
-      volume_m3: 120,
+      volume_m3: MOCK_BUFFER_VOLUME_M3,
       reason: "Buffer request for next week (mock).",
       channel: "portal",
       status: "approved",
@@ -376,7 +384,7 @@ export function mockIntake(body: z.input<typeof routes.intake.body>) {
           id: "req-mock-intake",
           farmer_id: input.farmer_id,
           type: "urgent",
-          volume_m3: 200,
+          volume_m3: MOCK_URGENT_VOLUME_M3,
           reason: text,
           channel: "voice",
           status: "raised",
