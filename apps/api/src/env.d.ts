@@ -13,7 +13,10 @@ declare global {
     bind(...values: unknown[]): D1PreparedStatement;
     first<T = unknown>(colName?: string): Promise<T | null>;
     run<T = unknown>(): Promise<D1Response<T>>;
-    all<T = unknown>(): Promise<D1Response<T>>;
+    // Rows directly, not the `D1Response` envelope. `db/store.ts`'s `DbStatement` and the test D1
+    // shim both read `.all()` as an array, so the fallback mirrors that contract. `run()` and
+    // `batch()` keep the envelope because the store reads their `success`/`meta`.
+    all<T = unknown>(): Promise<T[]>;
     raw<T = unknown>(): Promise<T[]>;
   }
 
