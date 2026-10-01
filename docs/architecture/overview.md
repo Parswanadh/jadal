@@ -104,9 +104,9 @@ The auditor agent checks this invariant and flags violations.
 
 A roster change goes out to everyone affected. Each farmer must acknowledge it. The escalation ladder is: voice call → retry after 15 minutes → WhatsApp/SMS → flag to the coordinator. A release between 18:00 and 06:00 sends a WhatsApp message plus a warning call 1 hour before. Telephony and STT/TTS provider: **[pending research]**. The demo fallback is an in-browser simulated phone.
 
-## 7. Runtime and deployment — [pending research]
+## 7. Runtime and deployment
 
-Working hypothesis: Cloudflare Workers (Hono API) + D1 (event log, ledger, entities) + a Durable Object per canal (single writer, so ledger updates are serialised) + Workflows (durable request and call lifecycles) + Cron Triggers (weekly re-plan, reminders) + static-asset frontend (React + Vite). CI/CD via GitHub → Cloudflare. To be confirmed in `docs/decisions/ADR-001-runtime.md`.
+Decided in `docs/decisions/ADR-001-004-stack.md`: one Hono Worker + static assets, D1 (event log + ledger, atomic `db.batch()` double entries), Workflows, Queues, Cron Triggers, KV, AI Gateway. TypeScript everywhere. CI/CD: GitHub Actions + `wrangler-action`.
 
 ## 8. Showcase
 
