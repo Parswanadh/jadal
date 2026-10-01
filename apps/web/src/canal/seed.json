@@ -1,0 +1,726 @@
+{
+  "canal": {
+    "id": "canal-minor-1",
+    "name": "Minor Canal 7",
+    "name_te": "మైనర్ కాలువ 7",
+    "length_m": 12000,
+    "head_discharge_m3s": 1.2
+  },
+  "outlets": [
+    {
+      "id": "o1",
+      "canal_id": "canal-minor-1",
+      "name": "Outlet 1",
+      "name_te": "ఔట్‌లెట్ 1",
+      "chainage_m": 500,
+      "farmer_id": "f1",
+      "farmer_name": "Ravi",
+      "farmer_name_te": "రవి"
+    },
+    {
+      "id": "o2",
+      "canal_id": "canal-minor-1",
+      "name": "Outlet 2",
+      "name_te": "ఔట్‌లెట్ 2",
+      "chainage_m": 2000,
+      "farmer_id": "f2",
+      "farmer_name": "Lakshmi",
+      "farmer_name_te": "లక్ష్మి"
+    },
+    {
+      "id": "o3",
+      "canal_id": "canal-minor-1",
+      "name": "Outlet 3",
+      "name_te": "ఔట్‌లెట్ 3",
+      "chainage_m": 3500,
+      "farmer_id": "f3",
+      "farmer_name": "Venkatesh",
+      "farmer_name_te": "వెంకటేశ్"
+    },
+    {
+      "id": "o4",
+      "canal_id": "canal-minor-1",
+      "name": "Outlet 4",
+      "name_te": "ఔట్‌లెట్ 4",
+      "chainage_m": 5000,
+      "farmer_id": "f4",
+      "farmer_name": "Anitha",
+      "farmer_name_te": "అనిత"
+    },
+    {
+      "id": "o5",
+      "canal_id": "canal-minor-1",
+      "name": "Outlet 5",
+      "name_te": "ఔట్‌లెట్ 5",
+      "chainage_m": 6500,
+      "farmer_id": "f5",
+      "farmer_name": "Suresh",
+      "farmer_name_te": "సురేష్"
+    },
+    {
+      "id": "o6",
+      "canal_id": "canal-minor-1",
+      "name": "Outlet 6",
+      "name_te": "ఔట్‌లెట్ 6",
+      "chainage_m": 8000,
+      "farmer_id": "f6",
+      "farmer_name": "Padma",
+      "farmer_name_te": "పద్మ"
+    },
+    {
+      "id": "o7",
+      "canal_id": "canal-minor-1",
+      "name": "Outlet 7",
+      "name_te": "ఔట్‌లెట్ 7",
+      "chainage_m": 9500,
+      "farmer_id": "f7",
+      "farmer_name": "Kiran",
+      "farmer_name_te": "కిరణ్"
+    },
+    {
+      "id": "o8",
+      "canal_id": "canal-minor-1",
+      "name": "Outlet 8",
+      "name_te": "ఔట్‌లెట్ 8",
+      "chainage_m": 11000,
+      "farmer_id": "f8",
+      "farmer_name": "Divya",
+      "farmer_name_te": "దివ్య"
+    }
+  ],
+  "flows": [
+    {
+      "outlet_id": "o1",
+      "chainage_m": 500,
+      "flow_m3s": 1.13,
+      "loss_fraction": 0.058
+    },
+    {
+      "outlet_id": "o2",
+      "chainage_m": 2000,
+      "flow_m3s": 0.944,
+      "loss_fraction": 0.213
+    },
+    {
+      "outlet_id": "o3",
+      "chainage_m": 3500,
+      "flow_m3s": 0.788,
+      "loss_fraction": 0.343
+    },
+    {
+      "outlet_id": "o4",
+      "chainage_m": 5000,
+      "flow_m3s": 0.659,
+      "loss_fraction": 0.451
+    },
+    {
+      "outlet_id": "o5",
+      "chainage_m": 6500,
+      "flow_m3s": 0.55,
+      "loss_fraction": 0.542
+    },
+    {
+      "outlet_id": "o6",
+      "chainage_m": 8000,
+      "flow_m3s": 0.459,
+      "loss_fraction": 0.618
+    },
+    {
+      "outlet_id": "o7",
+      "chainage_m": 9500,
+      "flow_m3s": 0.384,
+      "loss_fraction": 0.68
+    },
+    {
+      "outlet_id": "o8",
+      "chainage_m": 11000,
+      "flow_m3s": 0.321,
+      "loss_fraction": 0.732
+    }
+  ],
+  "needMet": {
+    "equal_hours": [
+      {
+        "farmer_id": "f1",
+        "outlet_id": "o1",
+        "farmer_name": "Ravi",
+        "farmer_name_te": "రవి",
+        "pct": 100
+      },
+      {
+        "farmer_id": "f2",
+        "outlet_id": "o2",
+        "farmer_name": "Lakshmi",
+        "farmer_name_te": "లక్ష్మి",
+        "pct": 96
+      },
+      {
+        "farmer_id": "f3",
+        "outlet_id": "o3",
+        "farmer_name": "Venkatesh",
+        "farmer_name_te": "వెంకటేశ్",
+        "pct": 90
+      },
+      {
+        "farmer_id": "f4",
+        "outlet_id": "o4",
+        "farmer_name": "Anitha",
+        "farmer_name_te": "అనిత",
+        "pct": 82
+      },
+      {
+        "farmer_id": "f5",
+        "outlet_id": "o5",
+        "farmer_name": "Suresh",
+        "farmer_name_te": "సురేష్",
+        "pct": 72
+      },
+      {
+        "farmer_id": "f6",
+        "outlet_id": "o6",
+        "farmer_name": "Padma",
+        "farmer_name_te": "పద్మ",
+        "pct": 61
+      },
+      {
+        "farmer_id": "f7",
+        "outlet_id": "o7",
+        "farmer_name": "Kiran",
+        "farmer_name_te": "కిరణ్",
+        "pct": 50
+      },
+      {
+        "farmer_id": "f8",
+        "outlet_id": "o8",
+        "farmer_name": "Divya",
+        "farmer_name_te": "దివ్య",
+        "pct": 41
+      }
+    ],
+    "equal_water": [
+      {
+        "farmer_id": "f1",
+        "outlet_id": "o1",
+        "farmer_name": "Ravi",
+        "farmer_name_te": "రవి",
+        "pct": 98
+      },
+      {
+        "farmer_id": "f2",
+        "outlet_id": "o2",
+        "farmer_name": "Lakshmi",
+        "farmer_name_te": "లక్ష్మి",
+        "pct": 97
+      },
+      {
+        "farmer_id": "f3",
+        "outlet_id": "o3",
+        "farmer_name": "Venkatesh",
+        "farmer_name_te": "వెంకటేశ్",
+        "pct": 98
+      },
+      {
+        "farmer_id": "f4",
+        "outlet_id": "o4",
+        "farmer_name": "Anitha",
+        "farmer_name_te": "అనిత",
+        "pct": 96
+      },
+      {
+        "farmer_id": "f5",
+        "outlet_id": "o5",
+        "farmer_name": "Suresh",
+        "farmer_name_te": "సురేష్",
+        "pct": 97
+      },
+      {
+        "farmer_id": "f6",
+        "outlet_id": "o6",
+        "farmer_name": "Padma",
+        "farmer_name_te": "పద్మ",
+        "pct": 95
+      },
+      {
+        "farmer_id": "f7",
+        "outlet_id": "o7",
+        "farmer_name": "Kiran",
+        "farmer_name_te": "కిరణ్",
+        "pct": 96
+      },
+      {
+        "farmer_id": "f8",
+        "outlet_id": "o8",
+        "farmer_name": "Divya",
+        "farmer_name_te": "దివ్య",
+        "pct": 95
+      }
+    ]
+  },
+  "comparison": {
+    "equal_hours_gini": 0.21,
+    "equal_water_gini": 0.03
+  },
+  "overrunSteps": [
+    0,
+    0.5,
+    1,
+    2
+  ],
+  "overrun": {
+    "o1": {
+      "0.5": {
+        "total_lost_m3": 2037,
+        "losses": [
+          [
+            "o2",
+            291
+          ],
+          [
+            "o3",
+            291
+          ],
+          [
+            "o4",
+            291
+          ],
+          [
+            "o5",
+            291
+          ],
+          [
+            "o6",
+            291
+          ],
+          [
+            "o7",
+            291
+          ],
+          [
+            "o8",
+            291
+          ]
+        ]
+      },
+      "1": {
+        "total_lost_m3": 4067,
+        "losses": [
+          [
+            "o2",
+            581
+          ],
+          [
+            "o3",
+            581
+          ],
+          [
+            "o4",
+            581
+          ],
+          [
+            "o5",
+            581
+          ],
+          [
+            "o6",
+            581
+          ],
+          [
+            "o7",
+            581
+          ],
+          [
+            "o8",
+            581
+          ]
+        ]
+      },
+      "2": {
+        "total_lost_m3": 8134,
+        "losses": [
+          [
+            "o2",
+            1162
+          ],
+          [
+            "o3",
+            1162
+          ],
+          [
+            "o4",
+            1162
+          ],
+          [
+            "o5",
+            1162
+          ],
+          [
+            "o6",
+            1162
+          ],
+          [
+            "o7",
+            1162
+          ],
+          [
+            "o8",
+            1162
+          ]
+        ]
+      }
+    },
+    "o2": {
+      "0.5": {
+        "total_lost_m3": 1698,
+        "losses": [
+          [
+            "o3",
+            283
+          ],
+          [
+            "o4",
+            283
+          ],
+          [
+            "o5",
+            283
+          ],
+          [
+            "o6",
+            283
+          ],
+          [
+            "o7",
+            283
+          ],
+          [
+            "o8",
+            283
+          ]
+        ]
+      },
+      "1": {
+        "total_lost_m3": 3396,
+        "losses": [
+          [
+            "o3",
+            566
+          ],
+          [
+            "o4",
+            566
+          ],
+          [
+            "o5",
+            566
+          ],
+          [
+            "o6",
+            566
+          ],
+          [
+            "o7",
+            566
+          ],
+          [
+            "o8",
+            566
+          ]
+        ]
+      },
+      "2": {
+        "total_lost_m3": 6798,
+        "losses": [
+          [
+            "o3",
+            1133
+          ],
+          [
+            "o4",
+            1133
+          ],
+          [
+            "o5",
+            1133
+          ],
+          [
+            "o6",
+            1133
+          ],
+          [
+            "o7",
+            1133
+          ],
+          [
+            "o8",
+            1133
+          ]
+        ]
+      }
+    },
+    "o3": {
+      "0.5": {
+        "total_lost_m3": 1420,
+        "losses": [
+          [
+            "o4",
+            284
+          ],
+          [
+            "o5",
+            284
+          ],
+          [
+            "o6",
+            284
+          ],
+          [
+            "o7",
+            284
+          ],
+          [
+            "o8",
+            284
+          ]
+        ]
+      },
+      "1": {
+        "total_lost_m3": 2835,
+        "losses": [
+          [
+            "o4",
+            567
+          ],
+          [
+            "o5",
+            567
+          ],
+          [
+            "o6",
+            567
+          ],
+          [
+            "o7",
+            567
+          ],
+          [
+            "o8",
+            567
+          ]
+        ]
+      },
+      "2": {
+        "total_lost_m3": 5675,
+        "losses": [
+          [
+            "o4",
+            1135
+          ],
+          [
+            "o5",
+            1135
+          ],
+          [
+            "o6",
+            1135
+          ],
+          [
+            "o7",
+            1135
+          ],
+          [
+            "o8",
+            1135
+          ]
+        ]
+      }
+    },
+    "o4": {
+      "0.5": {
+        "total_lost_m3": 1188,
+        "losses": [
+          [
+            "o5",
+            297
+          ],
+          [
+            "o6",
+            297
+          ],
+          [
+            "o7",
+            297
+          ],
+          [
+            "o8",
+            297
+          ]
+        ]
+      },
+      "1": {
+        "total_lost_m3": 2372,
+        "losses": [
+          [
+            "o5",
+            593
+          ],
+          [
+            "o6",
+            593
+          ],
+          [
+            "o7",
+            593
+          ],
+          [
+            "o8",
+            593
+          ]
+        ]
+      },
+      "2": {
+        "total_lost_m3": 4744,
+        "losses": [
+          [
+            "o5",
+            1186
+          ],
+          [
+            "o6",
+            1186
+          ],
+          [
+            "o7",
+            1186
+          ],
+          [
+            "o8",
+            1186
+          ]
+        ]
+      }
+    },
+    "o5": {
+      "0.5": {
+        "total_lost_m3": 990,
+        "losses": [
+          [
+            "o6",
+            330
+          ],
+          [
+            "o7",
+            330
+          ],
+          [
+            "o8",
+            330
+          ]
+        ]
+      },
+      "1": {
+        "total_lost_m3": 1980,
+        "losses": [
+          [
+            "o6",
+            660
+          ],
+          [
+            "o7",
+            660
+          ],
+          [
+            "o8",
+            660
+          ]
+        ]
+      },
+      "2": {
+        "total_lost_m3": 3960,
+        "losses": [
+          [
+            "o6",
+            1320
+          ],
+          [
+            "o7",
+            1320
+          ],
+          [
+            "o8",
+            1320
+          ]
+        ]
+      }
+    },
+    "o6": {
+      "0.5": {
+        "total_lost_m3": 826,
+        "losses": [
+          [
+            "o7",
+            413
+          ],
+          [
+            "o8",
+            413
+          ]
+        ]
+      },
+      "1": {
+        "total_lost_m3": 1652,
+        "losses": [
+          [
+            "o7",
+            826
+          ],
+          [
+            "o8",
+            826
+          ]
+        ]
+      },
+      "2": {
+        "total_lost_m3": 3304,
+        "losses": [
+          [
+            "o7",
+            1652
+          ],
+          [
+            "o8",
+            1652
+          ]
+        ]
+      }
+    },
+    "o7": {
+      "0.5": {
+        "total_lost_m3": 691,
+        "losses": [
+          [
+            "o8",
+            691
+          ]
+        ]
+      },
+      "1": {
+        "total_lost_m3": 1382,
+        "losses": [
+          [
+            "o8",
+            1382
+          ]
+        ]
+      },
+      "2": {
+        "total_lost_m3": 2765,
+        "losses": [
+          [
+            "o8",
+            2765
+          ]
+        ]
+      }
+    }
+  }
+}
