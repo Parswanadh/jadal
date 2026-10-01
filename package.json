@@ -11,10 +11,12 @@
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
+    "e2e": "playwright test -c tests/e2e/playwright.config.ts",
     "dev": "pnpm -r --parallel dev",
     "deploy": "pnpm --filter api deploy"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "typescript": "^5.8.2"
   }
 }

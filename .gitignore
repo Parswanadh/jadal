@@ -22,3 +22,7 @@ build/
 # Agent scratch/reference material (raw extracts, clones, logs) — not part of the product
 .ref/
 .agent-logs/
+
+# Playwright
+test-results/
+playwright-report/
