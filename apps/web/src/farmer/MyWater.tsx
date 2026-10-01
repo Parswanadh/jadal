@@ -53,7 +53,7 @@ export default function MyWater({ api, farmerId, entry, outlets, onAsk }: Props)
   return (
     <div className="stack">
       <section className="card turn-card" aria-labelledby="mw-turn">
-        <p className="label-small" id="mw-turn">{t("mywater.nextTurn")}</p>
+        <h2 className="card-title" id="mw-turn">{t("mywater.nextTurn")}</h2>
         {turn ? (
           <>
             <p className="turn-line">
@@ -77,7 +77,7 @@ export default function MyWater({ api, farmerId, entry, outlets, onAsk }: Props)
 
       <div className="grid grid-halves">
         <section className="card" aria-labelledby="mw-week">
-          <p className="label-small" id="mw-week">{t("mywater.thisWeek")}</p>
+          <h2 className="card-title" id="mw-week">{t("mywater.thisWeek")}</h2>
           {!hasShares && <EmptyState title={t("mywater.noShareTitle")} body={t("mywater.noShareBody")} />}
           {single && (
             <>
@@ -105,7 +105,7 @@ export default function MyWater({ api, farmerId, entry, outlets, onAsk }: Props)
         </section>
 
         <section className="card" aria-labelledby="mw-season">
-          <p className="label-small" id="mw-season">{t("mywater.season")}</p>
+          <h2 className="card-title" id="mw-season">{t("mywater.season")}</h2>
           {view.quota_m3 === null ? (
             <EmptyState title={t("mywater.noQuotaTitle")} body={t("mywater.noQuotaBody")} />
           ) : (

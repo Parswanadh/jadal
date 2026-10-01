@@ -222,9 +222,9 @@ export default function SimulatedPhone() {
                   <PhoneIcon />
                 </div>
                 <p className="jadal-phone__hint">{t("phone.incoming")}</p>
-                <h3 className="jadal-phone__caller" id="phone-caller-id">
+                <h2 className="jadal-phone__caller" id="phone-caller-id">
                   {callerId}
-                </h3>
+                </h2>
                 <div className="jadal-phone__call-actions">
                   <div>
                     <button
@@ -290,7 +290,7 @@ export default function SimulatedPhone() {
                   </button>
                 )}
 
-                <h4 className="jadal-phone__heading">{t("phone.transcript")}</h4>
+                <h2 className="jadal-phone__heading">{t("phone.transcript")}</h2>
                 <ul className="jadal-phone__transcript" aria-live="polite">
                   {turns.map((turn) => (
                     <li key={turn.id} className={`jadal-phone__turn jadal-phone__turn--${turn.from}`}>
@@ -319,10 +319,10 @@ export default function SimulatedPhone() {
                       {sending ? t("phone.sending") : t("phone.send")}
                     </button>
                     {/* Upload is always offered: browser mic recording is not guaranteed, so voice replies go through file upload. */}
-                    <label className="jadal-phone__upload" htmlFor={`${fileId}-file`}>
+                    <label className="jadal-phone__upload jadal-phone__upload--file">
                       {t("phone.uploadVoice")}
+                      <input id={`${fileId}-file`} className="jadal-phone__file" type="file" accept="audio/*" onChange={(e) => void handleClipFile(e.target.files?.[0])} />
                     </label>
-                    <input id={`${fileId}-file`} className="jadal-phone__file" type="file" accept="audio/*" onChange={(e) => void handleClipFile(e.target.files?.[0])} />
                   </div>
                   {!caps.mediaRecorder && <p className="jadal-phone__hint">{t("phone.micNote")}</p>}
                   {clipName && (

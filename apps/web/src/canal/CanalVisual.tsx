@@ -25,11 +25,6 @@ function halfH(flow_m3s: number): number {
   return flow_m3s * PX_PER_M3S;
 }
 
-/** The fixture names the canal "Kondaveedu Minor (demo)". The demo badge already says so. */
-function plainCanalName(name: string): string {
-  return name.replace(/\s*\(demo\)\s*$/i, "");
-}
-
 export interface CanalVisualProps {
   /** Pre-loaded bundle (tests/storybook); when omitted the component loads it from the shared API client. */
   initial?: CanalVisualData;
@@ -96,7 +91,7 @@ function CanalVisualView({ data }: { data: CanalVisualData }) {
   return (
     <section className="canal-hero" aria-labelledby="canal-title">
       <PageHeader
-        eyebrow={`${t("page.canal.eyebrow")} · ${plainCanalName(data.canal.name)}`}
+        eyebrow={t("page.canal.eyebrow")}
         title={t("page.canal.title")}
         lead={t("page.canal.lead")}
         titleId="canal-title"
@@ -140,7 +135,7 @@ function CanalVisualView({ data }: { data: CanalVisualData }) {
                   <line x1={x} y1={CENTER_Y - halfH(fl.flow_m3s)} x2={x} y2={CENTER_Y + halfH(fl.flow_m3s) + 34} />
                   <circle cx={x} cy={CENTER_Y + halfH(fl.flow_m3s) + 34} r="9" />
                   <text x={x} y={CENTER_Y + halfH(fl.flow_m3s) + 38} textAnchor="middle" className="canal-outlet-n">
-                    {fl.outlet_id.replace("o", "")}
+                    {outletLabel(fl.outlet_id)}
                   </text>
                   <text x={x} y={CENTER_Y + halfH(fl.flow_m3s) + 66} textAnchor="middle" className="canal-chainage">
                     {t("canal.km", { km: (fl.chainage_m / 1000).toFixed(1) })}

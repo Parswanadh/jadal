@@ -293,6 +293,12 @@
   background: transparent;
 }
 
+/* The upload label wraps a visually hidden file input; ring the label when it has focus. */
+.jadal-phone__upload--file:focus-within {
+  outline: 2px solid var(--phone-accent);
+  outline-offset: 2px;
+}
+
 .jadal-phone__file {
   position: absolute;
   width: 1px;
@@ -336,6 +342,7 @@
   color: var(--phone-fg);
   border-radius: 0.5rem;
   padding: 0.15rem 0.6rem;
+  min-height: 2.25rem;
   cursor: pointer;
   font-size: 0.8rem;
 }
@@ -378,5 +385,6 @@
   border-radius: 0.5rem;
   font-size: 0.75rem;
   padding: 0.25rem 0.6rem;
+  min-height: 2.25rem;
   cursor: pointer;
 }

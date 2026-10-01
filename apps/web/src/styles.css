@@ -538,6 +538,11 @@ progress {
   margin-top: 2rem;
 }
 
+/* The demo-data pill sits on its own line under the hero actions, never between them. */
+.hero > .data-badge {
+  margin-top: 1.25rem;
+}
+
 .section-label {
   margin: 0 0 1.25rem;
   font-family: var(--font-body);

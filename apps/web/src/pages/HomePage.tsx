@@ -28,8 +28,8 @@ export default function HomePage() {
           <Link className="btn btn-lg" to="/farmer">
             {t('home.ctaFarmer')}
           </Link>
-          <DataBadge />
         </div>
+        <DataBadge />
       </section>
 
       <section className="home-section" aria-labelledby="home-flow">

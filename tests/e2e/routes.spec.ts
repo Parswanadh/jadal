@@ -65,7 +65,7 @@ for (const route of ROUTES) {
 
     const header = page.locator(route.headerSelector);
     await expect(header.getByRole('heading', { level: 1 })).toHaveText(route.heading);
-    // The canal screen appends the canal name to its eyebrow, so match on the label.
+    // The eyebrow is a short label; match on it rather than the whole header text.
     await expect(header.locator('.eyebrow').first()).toContainText(route.eyebrow);
 
     // No developer text on screen: no API paths, HTTP verbs, internal ids or raw ISO times.
