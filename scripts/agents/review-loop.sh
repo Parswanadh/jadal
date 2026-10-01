@@ -6,6 +6,7 @@ set -uo pipefail
 
 INTERVAL="${1:-120}"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"   # prompt is read next to this script, not from the working tree
 WORK="$REPO_ROOT/.ref/review"
 WT="$WORK/worktree"
 STATE="$WORK/reviewed.txt"
@@ -69,7 +70,7 @@ review_pr() {
   echo "EXIT CODE: $checks" >>"$run/checks.log"
 
   local msg
-  msg="$(cat "$REPO_ROOT/scripts/agents/review-prompt.md")
+  msg="$(cat "$SCRIPT_DIR/review-prompt.md")
 
 Run inputs for this review (relative to the current directory): .review/pr.json, .review/issue.md, .review/diff.patch, .review/checks.log. Write the decision JSON to .review/decision.json"
   mkdir -p "$WT/.review" && cp "$run/pr.json" "$run/issue.md" "$run/diff.patch" "$run/checks.log" "$WT/.review/"
@@ -97,9 +98,8 @@ Run inputs for this review (relative to the current directory): .review/pr.json,
   # Never merge when the checks failed, whatever the model says.
   if [ "$decision" = "approve" ] && [ "$checks" -eq 0 ]; then
     gh pr review "$n" --approve --body "$body" >/dev/null 2>&1 || gh pr comment "$n" --body "$body" >/dev/null
-    if gh pr merge "$n" --squash --delete-branch >/dev/null 2>&1; then
+    if gh pr merge "$n" --merge --delete-branch >/dev/null 2>&1; then
       log "PR #$n: merged — $summary"
-      git -C "$REPO_ROOT" pull -q --ff-only origin main && log "local main fast-forwarded"
     else
       log "PR #$n: approve OK but merge failed (branch protection or conflict)"
     fi
