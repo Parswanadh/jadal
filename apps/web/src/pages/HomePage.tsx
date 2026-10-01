@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext';
 import DataBadge from '../components/DataBadge';
+import HeroVideo from '../components/HeroVideo';
 
 const FLOW_STEPS = ['step1', 'step2', 'step3', 'step4', 'step5', 'step6'] as const;
 
@@ -18,18 +19,21 @@ export default function HomePage() {
   return (
     <div>
       <section className="hero">
-        <p className="eyebrow">{t('home.eyebrow')}</p>
-        <h1>{t('home.title')}</h1>
-        <p>{t('home.subtitle')}</p>
-        <div className="hero-actions">
-          <Link className="btn btn-primary btn-lg" to="/demo">
-            {t('home.ctaDemo')}
-          </Link>
-          <Link className="btn btn-lg" to="/farmer">
-            {t('home.ctaFarmer')}
-          </Link>
+        <div className="hero-copy">
+          <p className="eyebrow">{t('home.eyebrow')}</p>
+          <h1>{t('home.title')}</h1>
+          <p>{t('home.subtitle')}</p>
+          <div className="hero-actions">
+            <Link className="btn btn-primary btn-lg" to="/demo">
+              {t('home.ctaDemo')}
+            </Link>
+            <Link className="btn btn-lg" to="/farmer">
+              {t('home.ctaFarmer')}
+            </Link>
+          </div>
+          <DataBadge />
         </div>
-        <DataBadge />
+        <HeroVideo />
       </section>
 
       <section className="home-section" aria-labelledby="home-flow">
