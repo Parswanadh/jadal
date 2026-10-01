@@ -1,4 +1,3 @@
-// @ts-ignore vitest is provided by the workspace test runner; apps/api does not declare it yet.
 import { beforeEach, describe, expect, it } from "vitest";
 import { Hono } from "hono";
 import type { Contact, System1Result } from "@jadal/contracts";

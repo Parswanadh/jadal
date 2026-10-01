@@ -1,4 +1,3 @@
-// @ts-ignore vitest is provided by the workspace test runner; apps/api does not declare it yet.
 import { describe, expect, it } from "vitest";
 import { computeTwilioSignature, twilioSigningString, validateTwilioSignature } from "./signature";
 
