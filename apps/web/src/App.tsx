@@ -5,7 +5,7 @@ import { FarmerPortal } from './farmer';
 import { CoordinatorConsole } from './coordinator';
 import { CanalVisual } from './canal';
 import { SimulatedPhone } from './phone';
-import PlaceholderPage from './pages/PlaceholderPage';
+import { DemoMode } from './demo';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -17,10 +17,7 @@ export default function App() {
         <Route path="/coordinator" element={<CoordinatorConsole />} />
         <Route path="/canal" element={<CanalVisual />} />
         <Route path="/phone" element={<SimulatedPhone />} />
-        <Route
-          path="/demo"
-          element={<PlaceholderPage titleKey="demo.title" bodyKey="demo.body" noteKey="demo.note" />}
-        />
+        <Route path="/demo" element={<DemoMode />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Layout>
