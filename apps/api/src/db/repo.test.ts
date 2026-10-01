@@ -279,7 +279,7 @@ describe("requests", () => {
 
   // Fixed in `toRequest`: NULL decision columns are omitted rather than parsed, so a request that
   // has not yet been recommended reads back without the optional decision fields.
-  it("getRequest tolerates a request with NULL agent_recommendation", async () => {
+  it("getRequest tolerates a request with NULL decision columns", async () => {
     const db = await createTestDb();
     const bareEnv: DbEnv = { DB: db };
     const bareScenario = demoScenario();
@@ -313,6 +313,7 @@ describe("requests", () => {
     const request = await getRequest(bareEnv, requestId);
     expect(request).not.toBeNull();
     expect(request?.agent_recommendation).toBeUndefined();
+    expect(request?.coordinator_decision).toBeUndefined();
   });
 });
 

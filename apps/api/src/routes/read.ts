@@ -26,8 +26,9 @@ import {
   listFarmers,
   listOutlets,
   listReleaseWindows,
+  listRequests,
 } from "../db/repo";
-import type { DbEnv } from "../db/store";
+import { readEvents, type DbEnv } from "../db/store";
 import type { Env } from "../env";
 import { APP_VERSION, notFound, parseResponse } from "../http";
 
@@ -100,63 +101,21 @@ async function buildBalancesView(env: Env): Promise<BalancesView> {
 /**
  * Read the append-only event log, oldest first.
  *
- * `db/store.readEvents` currently hands the stored JSON *text* straight to `JadalEvent.parse`, which
- * rejects a string (documented as a bug in `store.test.ts`). This module cannot edit the store, so it
- * does the one missing `JSON.parse` itself and validates through the same contract. The SQL is the
- * same ordered projection read the store performs.
+ * Thin delegation to `db/store.readEvents`, which owns the one `payload`-JSON parse and validates
+ * every row through `JadalEvent`; the read route does not keep a second reader to drift from it.
  */
 export async function readEventLog(env: DbEnv): Promise<JadalEvent[]> {
-  const rows = await env.DB.prepare("SELECT payload FROM events ORDER BY seq ASC").all<{ payload: string }>();
-  return rows.map((row) => JadalEvent.parse(JSON.parse(row.payload)));
-}
-
-/** The columns the `request` projection stores, as read back from SQLite. */
-interface RequestRow {
-  id: string;
-  farmer_id: string;
-  crop_plan_id: string | null;
-  type: string;
-  volume_m3: number;
-  reason: string;
-  channel: string;
-  status: string;
-  raised_at: string;
-  triage_score: number | null;
-  agent_recommendation: string | null;
-  coordinator_decision: string | null;
+  return readEvents(env);
 }
 
 /**
- * `request` row → contract `WaterRequest`.
+ * All water requests, oldest first — the read `routes.listRequests` and `decideRequest` share.
  *
- * `db/repo.toRequest` parses the two nullable JSON columns with `.optional().parse(null)`, which
- * rejects `null` (documented in this file's report; `repo.test.ts` only covers rows where both
- * columns are set). This mapper treats a NULL column as *absent*, which is what `WaterRequest`'s
- * optional fields mean, and still validates the whole object through the contract schema.
+ * Delegates to `db/repo.listRequests` with no filter, so `repo.toRequest` is the single request-row
+ * mapper (it omits NULL decision columns instead of parsing them as `null`).
  */
-function toWaterRequest(row: RequestRow): WaterRequest {
-  const recommendation = row.agent_recommendation === null ? undefined : JSON.parse(row.agent_recommendation);
-  const decision = row.coordinator_decision === null ? undefined : JSON.parse(row.coordinator_decision);
-  return WaterRequest.parse({
-    id: row.id,
-    farmer_id: row.farmer_id,
-    type: row.type,
-    volume_m3: row.volume_m3,
-    reason: row.reason,
-    channel: row.channel,
-    status: row.status,
-    raised_at: row.raised_at,
-    ...(row.crop_plan_id === null ? {} : { crop_plan_id: row.crop_plan_id }),
-    ...(row.triage_score === null ? {} : { triage_score: row.triage_score }),
-    ...(recommendation === undefined ? {} : { agent_recommendation: recommendation }),
-    ...(decision === undefined ? {} : { coordinator_decision: decision }),
-  });
-}
-
-/** All water requests, oldest first — the read `routes.listRequests` and `decideRequest` share. */
 export async function readRequestSnapshot(env: DbEnv): Promise<WaterRequest[]> {
-  const rows = await env.DB.prepare("SELECT * FROM request ORDER BY raised_at ASC, id ASC").all<RequestRow>();
-  return rows.map(toWaterRequest);
+  return listRequests(env);
 }
 
 /** Register every `GET` route on `app`. */

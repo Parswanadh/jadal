@@ -17,6 +17,7 @@ import { JadalEvent, type WeatherDay } from "@jadal/contracts";
 import { createEnv, createTestDb, type FetchRoutes, type TestEnv } from "../../test/harness";
 import { seedScenario } from "../../test/fixtures";
 import { setNow } from "../db/clock";
+import { readEvents } from "../db/store";
 import { rainTriggerMm } from "../voice/openmeteo";
 import { replan, shouldReplan } from "./rain";
 
@@ -27,10 +28,9 @@ async function dbEnv(routes: FetchRoutes = {}): Promise<TestEnv> {
   return env;
 }
 
-/** Read the log directly: `store.readEvents` has a known payload-parsing bug this file must avoid. */
+/** Read the log through the store, which parses and validates every row as `JadalEvent`. */
 async function readJadalEvents(env: TestEnv): Promise<JadalEvent[]> {
-  const rows = await env.DB.prepare("SELECT payload FROM events ORDER BY seq ASC").all<{ payload: string }>();
-  return rows.map((row) => JadalEvent.parse(JSON.parse(row.payload) as unknown));
+  return readEvents(env);
 }
 
 /** 2026-09-14T12:00:00Z; the horizon is 2026-09-15T12:00:00Z. */

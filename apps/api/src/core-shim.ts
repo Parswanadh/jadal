@@ -2,9 +2,10 @@
  * The single import boundary between the API and the deterministic core.
  *
  * Everything in this module either re-exports `@jadal/core` (the merged Task A implementation of
- * `packages/contracts/src/core.ts`) or comes from `./core-adapters`, which holds the few helpers the
- * core does not export. Explicit re-exports rather than a bare `export *` so this file stays
- * reviewable and a name the core does not own cannot leak in silently.
+ * `packages/contracts/src/core.ts`), wraps a core export so an API-specific rule cannot be bypassed
+ * (`ledger`), or comes from `./core-adapters`, which holds the few helpers the core does not export.
+ * Explicit re-exports rather than a bare `export *` so this file stays reviewable and a name the core
+ * does not own cannot leak in silently.
  *
  * Rules that hold:
  *  * Every water number in the API comes from `@jadal/core` or from the pin-compatible adapters in
@@ -13,15 +14,14 @@
  *    never types a table in by hand.
  */
 
-import { ledger } from "@jadal/core";
-import type { JadalEvent, LedgerEntry } from "@jadal/contracts";
+import { ledger as coreLedger } from "@jadal/core";
+import type { JadalEvent, Ledger, LedgerEntry } from "@jadal/contracts";
 
 export {
   cropEngine,
   SOIL_AVAILABLE_WATER,
   hydraulics,
   rosterEngine,
-  ledger,
   policy,
   cropParams,
   mmHaToCubicMeters,
@@ -46,5 +46,12 @@ export {
  */
 export function entriesFor(event: JadalEvent): LedgerEntry[] {
   if (event.type === "request.decided") return [];
-  return ledger.entriesFor(event);
+  return coreLedger.entriesFor(event);
 }
+
+/**
+ * The API's ledger facade: the core ledger with `entriesFor` replaced by the wrapped version above,
+ * so a caller using `ledger.entriesFor` cannot bypass the `request.decided` guard. The spread keeps
+ * `balances` on the facade, which is what `checkConservation`'s `this.balances(entries)` call needs.
+ */
+export const ledger: Ledger = { ...coreLedger, entriesFor };

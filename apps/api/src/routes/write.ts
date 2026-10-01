@@ -6,10 +6,11 @@
  * mints an id, builds a `JadalEvent`, and appends it; the projection tables and the ledger entries
  * are written by `appendEvent` in one atomic `db.batch()`. Nothing here writes a projection directly.
  *
- * System 1 (`classify`) only ever *scores* a request — it never decides water. The two places a
- * decision becomes water are `policy.canGrantUrgent` / `policy.canGrantBuffer` and the ledger's
- * `entriesForDecision`; both are deterministic core functions, and both are applied inside the same
- * batch as the `request.decided` event (see `appendDecision`).
+ * System 1 (`classify`) only ever *scores* a request — it never decides water. A coordinator
+ * approval becomes water in two steps: `policy.canGrantUrgent` / `policy.canGrantBuffer` (both core
+ * functions) refuse an over-grant in `assertApprovable`, and the API-local `entriesForDecision`
+ * adapter books the movement, which `appendDecision` adds to the same atomic batch as the
+ * `request.decided` event.
  */
 
 import type { Hono } from "hono";

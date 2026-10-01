@@ -19,7 +19,7 @@ import { createEnv, createTestDb, type FetchRoutes, type TestEnv } from "../../t
 import { seedScenario } from "../../test/fixtures";
 import { now as clockNow } from "../db/clock";
 import { deterministicId } from "../db/id";
-import { appendEvent } from "../db/store";
+import { appendEvent, readEvents } from "../db/store";
 import {
   RETRY_DELAY_MINUTES,
   chooseMessageChannel,
@@ -37,16 +37,9 @@ async function dbEnv(routes: FetchRoutes = {}): Promise<TestEnv> {
   return env;
 }
 
-/**
- * Read the log directly and validate every row against `JadalEvent`.
- *
- * The store's own `readEvents` helper has a pre-existing bug (it hands the raw `payload` JSON text to
- * `JadalEvent.parse` without `JSON.parse`); this file must not depend on a file it does not own, so it
- * does the one-line read itself and keeps the contract assertion.
- */
+/** Read the log through the store, which parses and validates every row as `JadalEvent`. */
 async function readJadalEvents(env: TestEnv): Promise<JadalEvent[]> {
-  const rows = await env.DB.prepare("SELECT payload FROM events ORDER BY seq ASC").all<{ payload: string }>();
-  return rows.map((row) => JadalEvent.parse(JSON.parse(row.payload) as unknown));
+  return readEvents(env);
 }
 
 function plusMinutes(iso: string, minutes: number): string {
