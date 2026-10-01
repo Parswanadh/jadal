@@ -2,16 +2,15 @@
  * The Request assessor.
  *
  * `assessRequest` answers one urgent or buffer request. The *decision and the volume* come only from
- * `core/policy` — `canGrantUrgent` / `canGrantBuffer` — so the number a coordinator approves is the
- * number the ledger rules produced. A language model, if one is configured, may only reword the
- * rationale (`llm.rewrite`); with no key the policy's own reason is returned verbatim, which is why
- * the agent works unchanged offline.
+ * `core-shim`'s `policy` — `canGrantUrgent` / `canGrantBuffer` — so the number a coordinator approves
+ * is the number the ledger rules produced. A language model, if one is configured, may only reword
+ * the rationale (`llm.rewrite`); with no key the policy's own reason is returned verbatim, which is
+ * why the agent works unchanged offline.
  */
 
 import type { WaterRequest } from "@jadal/contracts";
 import { WaterRequest as WaterRequestSchema } from "@jadal/contracts";
-import { ledger, policy } from "../core";
-import { round } from "../core/units";
+import { ledger, policy, round } from "../core-shim";
 import { getLedgerEntries, listEntitlements, listRequests } from "../db/repo";
 import { rewrite } from "./llm";
 import { toAgentEnv, type ToolEnv } from "./tools";

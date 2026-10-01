@@ -550,8 +550,8 @@ function numberBefore(text: string, unit: string): number | null {
  *
  * Deliberately conservative: it reads only an explicit quantity ("100 cubic metres",
  * "100 క్యూబిక్ మీటర్"). It never converts litres, acres or hours into m³, because discharge and
- * plot area belong to `src/core/` — see `extractRequestedHours` for the hour-shaped request, and let
- * the core turn hours into a volume.
+ * plot area belong to the deterministic core (`@jadal/core`) — see `extractRequestedHours` for the
+ * hour-shaped request, and let the core turn hours into a volume.
  */
 export function extractVolumeM3(text: string): number | null {
   const normalized = normalizeText(text);
@@ -568,7 +568,7 @@ export function extractVolumeM3(text: string): number | null {
 /**
  * Duration in hours explicitly requested ("రెండు గంటలు", "3 hours", "అర్ధగంట"), else null.
  * Not folded into `extractVolumeM3`: hours are a scheduling input, not a volume, and the
- * discharge needed to convert them lives in `src/core/roster.ts`.
+ * discharge needed to convert them lives in `@jadal/core`'s roster engine.
  */
 export function extractRequestedHours(text: string): number | null {
   const normalized = normalizeText(text);

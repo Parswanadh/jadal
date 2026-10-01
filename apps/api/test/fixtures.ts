@@ -34,10 +34,7 @@ import {
 import type { CropParams } from "@jadal/contracts/entities";
 import type { JadalEvent } from "@jadal/contracts/events";
 
-import { cropParamsFor } from "../src/core/crop-params";
-import { cropEngine } from "../src/core/crop-engine";
-import { hydraulics } from "../src/core/hydraulics";
-import { round } from "../src/core/units";
+import { cropEngine, cropParamsFor, hydraulics, round } from "../src/core-shim";
 import { now } from "../src/db/clock";
 import { deterministicId } from "../src/db/id";
 import { applySchema } from "../src/db/schema.sql";
@@ -247,7 +244,8 @@ function verificationEvents(scenario: DemoScenario, at: string): JadalEvent[] {
  * Volumes come from `cropEngine.weeklyNeed` rather than being written by hand, for the same reason
  * the app calls core: a fixture that hard-codes volumes would assert nothing about the numbers, and
  * an invented constant here would be an invented agronomic constant. ASSUMED-free by construction —
- * every number traces to FAO-56 parameters in `core/crop-params.ts` and the offline weather fixture.
+ * every number traces to FAO-56 parameters in `@jadal/core`'s `cropParams` table and the offline
+ * weather fixture.
  *
  * The rainfall offset the demo weather carries on some days is left in: a week with rain needs less,
  * and that is the behaviour the engine exists to produce.

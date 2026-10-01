@@ -27,8 +27,7 @@ import type {
 
 import { suggestEntitlements } from "../agents/need";
 import { proposeRoster } from "../agents/scheduler";
-import { ledger, policy } from "../core";
-import { entriesForDecision } from "../core/ledger";
+import { entriesForDecision, ledger, policy } from "../core-shim";
 import { now } from "../db/clock";
 import { newId } from "../db/id";
 import {

@@ -73,8 +73,8 @@ export interface MessagePair {
  * ASSUMED — and noted honestly in the report: `src/db/clock.ts` holds the same constant
  * (`IST_OFFSET_MINUTES`) for the night-release rule. It is duplicated here on purpose: this module
  * renders an *arbitrary* instant (a window start from a roster row) and is imported by tests that
- * must not drag the event store — and, through it, the not-yet-merged `src/core/ledger.ts` — into
- * the module graph. A display formatter must not depend on the store.
+ * must not drag the event store — and, through it, `@jadal/core` — into the module graph. A display
+ * formatter must not depend on the store.
  */
 const IST_OFFSET_MINUTES = 330;
 const MS_PER_MINUTE = 60_000;

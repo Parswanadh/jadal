@@ -5,7 +5,7 @@
  *
  *   1. the `events` row,
  *   2. every projection upsert from `projections.ts`,
- *   3. every double-entry `ledger_entry` row from `core/ledger.ts`.
+ *   3. every double-entry `ledger_entry` row from the core seam (`core-shim`, i.e. `@jadal/core`).
  *
  * `db.batch()` is D1's atomic transaction: it either commits all of it or rolls all of it back. That
  * is the whole point — there must be no way for water to move without an event, and no way for an
@@ -21,7 +21,7 @@
 
 import { JadalEvent, type JadalEventType } from "@jadal/contracts/events";
 import { LedgerEntry } from "@jadal/contracts/entities";
-import { entriesFor } from "../core/ledger";
+import { entriesFor } from "../core-shim";
 import { projectionsFor } from "./projections";
 
 /** A bound statement. Mirrors the subset of `D1PreparedStatement` the store uses. */

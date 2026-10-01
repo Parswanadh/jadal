@@ -1,7 +1,7 @@
 /**
  * The single source of "now" for the whole app.
  *
- * Nothing outside `src/core/`'s pure functions and this module may call `Date.now()` or
+ * Nothing outside the deterministic core's pure functions and this module may call `Date.now()` or
  * `new Date()`: every timestamp in the event log and in the projections comes from the `clock` table.
  * That is what makes the demo replayable and the tests deterministic — `POST /api/demo/advance` moves
  * the world forward and the next event is stamped with the new time.

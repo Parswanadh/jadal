@@ -413,8 +413,8 @@ export function projectionsFor(event: JadalEvent): ProjectionStatement[] {
     case "rain.replanned":
       // SCHEMA NOTE: `by_farmer_m3` is keyed by farmer, but `entitlement` rows are keyed by
       // (crop_plan_id, week_start). Deciding which weeks absorb the saving is crop arithmetic, which
-      // belongs in `src/core/` and would need a migration to record per-week results. The ledger
-      // entry for this event records the saving as quota → buffer.
+      // belongs to the deterministic core (`@jadal/core`) and would need a migration to record
+      // per-week results. The ledger entry for this event records the saving as quota → buffer.
       return [];
 
     case "contact.updated":

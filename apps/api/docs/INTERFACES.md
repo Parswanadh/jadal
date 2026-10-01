@@ -4,18 +4,21 @@ Every agent owns specific files. Do not edit files you do not own. Imports resol
 
 ## Already implemented and green (reuse, do not reimplement)
 
-- `src/core/index.ts` → re-exports `cropEngine`, `hydraulics`, `rosterEngine`, `ledger`, `policy`,
-  plus the interfaces. Also exports all of `src/core/{crop-params,soil,crop-engine,hydraulics,roster,ledger,policy,units}.ts`.
+- `src/core-shim.ts` → the single import boundary over the merged `@jadal/core` (Task A). Re-exports
+  `cropEngine`, `SOIL_AVAILABLE_WATER`, `hydraulics`, `rosterEngine`, `ledger`, `policy`, `cropParams`,
+  `mmHaToCubicMeters`, plus the api-local adapters `round`, `daysBetween`, `effectiveRain_mm`,
+  `cropParamsFor`, `entriesForDecision`, and a wrapped `entriesFor`. Import core functions **only** via
+  `src/core-shim.ts`; `apps/api/src/core/` no longer exists.
 - `cropEngine`: `kcOnDay(params, das)`, `weeklyNeed({plan,plot,params,weather,weekStart})`, `seasonNeed({plan,plot,params,weather})`.
-  Also `effectiveRain_mm(rain)`, `daysBetween(a,b)` from `core/crop-engine`.
+  `effectiveRain_mm(rain)` and `daysBetween(a,b)` also come from the shim (`core-adapters`).
 - `hydraulics`: `velocity_ms(canal)`, `atOutlets(canal, outlets, q)`, `overrunImpact({canal,outlets,overrunOutletId,overrun_h,headDischarge_m3s})`.
 - `rosterEngine`: `build(input: RosterInput, rosterId)`, `needMet(input, roster)`.
-- `ledger`: `entriesFor(event)`, `entriesForDecision({event, farmer_id, request_type})`, `balances(entries)`,
-  `checkConservation(entries, supply, tolerance?)`, `gini(values)`, `quotaAccount(id)`, `deliveredAccount(id)`.
-  **Note:** `entriesFor` returns `[]` for `request.decided` because the event lacks `farmer_id`/`type`.
+- `ledger`: `entriesFor(event)`, `balances(entries)`, `checkConservation(entries, supply, tolerance?)`, `gini(values)`
+  (from `@jadal/core`; the shim's `entriesFor` returns `[]` for `request.decided`). `entriesForDecision({event, farmer_id, request_type})`
+  comes from `core-adapters`. **Note:** `entriesFor` returns `[]` for `request.decided` because the event lacks `farmer_id`/`type`.
   When applying a decision, call `entriesForDecision`.
-- `policy`: `canGrantUrgent(balances, farmerId, m3)`, `canGrantBuffer(balances, farmerId, m3, weeklyEnt, alreadyThisWeek)`,
-  `BUFFER_WEEKLY_CAP_FRACTION = 0.25`.
+- `policy`: `canGrantUrgent(balances, farmerId, m3)`, `canGrantBuffer(balances, farmerId, m3, weeklyEnt, alreadyThisWeek)`.
+  The 25%-of-weekly-entitlement buffer cap is an ASSUMED rule inside `@jadal/core`; it is not re-exported as a constant.
 - `src/system1.ts`: `classify(env, text, opts?)`, `gatewayUrl(env, url)`, `ProviderEnv`. Re-exports
   `classifyByRules`, `extractVolumeM3`, `extractRequestedHours`, `normalizeText`.
 - `src/agents/llm.ts`: `chat(env, {system,messages,tools?,maxTokens?}) → {content, toolCalls, source, model?}`,

@@ -14,7 +14,7 @@
  */
 
 import type { Plot, Roster, RosterInput } from "@jadal/contracts";
-import { ledger, rosterEngine } from "../core";
+import { ledger, rosterEngine } from "../core-shim";
 import { deterministicId } from "../db/id";
 import { getCanal, getEntitlementsForWeek, getReleaseWindow, listFarmers, listOutlets } from "../db/repo";
 import { weekStartFor } from "./need";

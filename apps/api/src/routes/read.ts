@@ -15,7 +15,7 @@ import { z } from "zod";
 
 import { JadalEvent, WaterRequest, routes } from "@jadal/contracts";
 
-import { ledger } from "../core";
+import { ledger } from "../core-shim";
 import { audit } from "../agents/auditor";
 import { DEMO_CANAL_ID } from "../demo";
 import {

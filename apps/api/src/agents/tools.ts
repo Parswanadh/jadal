@@ -5,9 +5,10 @@
  * and `gated` flags are copied from `toolSpecs` itself rather than retyped, so the registry cannot
  * drift from the contract (a test asserts the key sets and the flags are equal).
  *
- * Layering (docs/architecture/overview.md §2): each tool is a thin wrapper over `src/core` or
- * `src/db`. **No water arithmetic lives here** — the crop engine, hydraulics, roster engine, ledger
- * and policy own every number, and this module only reads inputs, calls them and shapes the result.
+ * Layering (docs/architecture/overview.md §2): each tool is a thin wrapper over the core seam
+ * (`src/core-shim.ts`) or `src/db`. **No water arithmetic lives here** — the crop engine, hydraulics,
+ * roster engine, ledger and policy own every number, and this module only reads inputs, calls them
+ * and shapes the result.
  *
  * Gating. `toolSpecs[name].gated` is the authority. A gated tool's runner is a *proposal builder*
  * that never writes: `runTool` centralises the decision, and a gated call is returned as
@@ -29,12 +30,14 @@ import type { ProviderEnv, ProviderFetch } from "../system1";
 import { appendEvent } from "../db/store";
 import { now } from "../db/clock";
 import { newId } from "../db/id";
-import { cropEngine } from "../core/crop-engine";
-import { cropParamsFor } from "../core/crop-params";
-import { daysBetween } from "../core/crop-engine";
-import { hydraulics } from "../core/hydraulics";
-import { ledger } from "../core/ledger";
-import { round } from "../core/units";
+import {
+  cropEngine,
+  cropParamsFor,
+  daysBetween,
+  hydraulics,
+  ledger,
+  round,
+} from "../core-shim";
 import { getForecast, loadDemoWeather } from "../voice/openmeteo";
 import {
   getCanal,

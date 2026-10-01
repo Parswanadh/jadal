@@ -2,8 +2,8 @@
  * The Auditor agent.
  *
  * `audit` is deterministic and reads only the event log and its projections. `conservation_ok` comes
- * straight from `core/ledger.checkConservation`, never from a re-derivation here. Findings are
- * severity-tagged:
+ * straight from `core-shim`'s `ledger.checkConservation`, never from a re-derivation here. Findings
+ * are severity-tagged:
  *
  *   * `critical` — a conservation violation (the declared season supply and the accounted water
  *     disagree beyond tolerance);
@@ -16,8 +16,7 @@
  */
 
 import type { Entitlement } from "@jadal/contracts";
-import { ledger } from "../core";
-import { round } from "../core/units";
+import { ledger, round } from "../core-shim";
 import { getLedgerEntries, getSeason, listEntitlements, listFarmers, listOutlets, listRosters } from "../db/repo";
 import type { ToolEnv } from "./tools";
 

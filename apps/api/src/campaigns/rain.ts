@@ -13,11 +13,11 @@
  *    uses, finds the turns being deferred, and books the saving.
  *
  * **Where the numbers come from.** No water arithmetic is invented here. Each farmer's saving is the
- * sum of `Turn.planned_volume_m3` for their deferred turns — those volumes were produced by the
- * deterministic roster engine (`src/core/roster.ts`) and are already the authoritative field-gate
- * figures. Summing them is bookkeeping; the ledger movement that actually returns the water to the
- * buffer (`farmer:*:quota → buffer`) is produced by `src/core/ledger.ts`'s `entriesFor`, in the same
- * atomic batch as the `rain.replanned` event.
+ * sum of `Turn.planned_volume_m3` for their deferred turns — those volumes were produced by
+ * `@jadal/core`'s deterministic roster engine and are already the authoritative field-gate figures.
+ * Summing them is bookkeeping; the ledger movement that actually returns the water to the buffer
+ * (`farmer:*:quota → buffer`) is produced by `core-shim`'s `entriesFor`, in the same atomic batch as
+ * the `rain.replanned` event.
  */
 
 import type { Contact, WeatherDay } from "@jadal/contracts";
@@ -27,7 +27,7 @@ import { deterministicId } from "../db/id";
 import { getContact, getFarmer, listFarmers, listOutlets, listRosters } from "../db/repo";
 import type { FarmerRecord } from "../db/repo";
 import { appendEvent, isStoreError } from "../db/store";
-import { round } from "../core/units";
+import { round } from "../core-shim";
 import { GUNTUR, getForecast, rainTriggerMm } from "../voice/openmeteo";
 import { rainPostponedEn, rainPostponedTe, type MessageFacts } from "../voice/telugu";
 import { chooseMessageChannel, resolveProviderFetch, type CampaignEnv } from "./escalation";

@@ -17,7 +17,7 @@ import { WeatherDay } from "@jadal/contracts";
 
 import { createEnv, type FetchCall, type FetchRoutes, type TestEnv } from "../test/harness";
 import type { ProviderEnv } from "./system1";
-import { effectiveRain_mm as coreEffectiveRain_mm } from "./core/crop-engine";
+import { effectiveRain_mm as coreEffectiveRain_mm } from "./core-shim";
 import {
   MULTIPART_BOUNDARY,
   STT_MODEL,

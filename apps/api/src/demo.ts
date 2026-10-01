@@ -43,9 +43,7 @@ import type { JadalEvent } from "@jadal/contracts";
 import demoScenarioRaw from "../../../packages/contracts/fixtures/demo-scenario.json";
 import demoWeatherRaw from "../../../packages/contracts/fixtures/demo-weather.json";
 
-import { cropEngine } from "./core/crop-engine";
-import { cropParamsFor } from "./core/crop-params";
-import { round } from "./core/units";
+import { cropEngine, cropParamsFor, round } from "./core-shim";
 import { advanceHours, setNow } from "./db/clock";
 import { deterministicId } from "./db/id";
 import { appendEvent, type DbEnv } from "./db/store";

@@ -23,7 +23,7 @@
 import { WeatherDay } from "@jadal/contracts";
 
 import demoWeather from "../../../../packages/contracts/fixtures/demo-weather.json";
-import { effectiveRain_mm } from "../core/crop-engine";
+import { effectiveRain_mm } from "../core-shim";
 import { fetchWithDeadline, type ProviderRequest } from "./sarvam";
 import type { ProviderEnv } from "../system1";
 

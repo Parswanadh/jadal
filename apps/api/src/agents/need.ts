@@ -11,9 +11,7 @@
  */
 
 import type { Entitlement, WeatherDay } from "@jadal/contracts";
-import { cropEngine } from "../core/crop-engine";
-import { cropParamsFor } from "../core/crop-params";
-import { round } from "../core/units";
+import { cropEngine, cropParamsFor, round } from "../core-shim";
 import { now } from "../db/clock";
 import { deterministicId } from "../db/id";
 import { getWeather, listFarmers, listOutlets } from "../db/repo";

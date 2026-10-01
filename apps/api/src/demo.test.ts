@@ -10,7 +10,7 @@ import { JadalEvent } from "@jadal/contracts";
 import { describe, expect, it } from "vitest";
 
 import { createTestDb } from "../test/harness";
-import { ledger } from "./core/ledger";
+import { ledger } from "./core-shim";
 import { isNightRelease, now } from "./db/clock";
 import { getClockNow, getLedgerEntries, getWeather, listFarmers } from "./db/repo";
 import {
@@ -66,8 +66,9 @@ describe("resetDemo", () => {
     expect(conservation.ok).toBe(true);
 
     const balances = ledger.balances(entries);
-    // canal_supply is the source account, so its signed balance is the negated supply.
-    expect(balances.canal_supply).toBe(-DEMO_SEASON_SUPPLY_M3);
+    // @jadal/core credits `canal_supply` with the supply it debits to quotas/buffer, so the source
+    // account reports the declared supply as a positive figure.
+    expect(balances.canal_supply).toBe(DEMO_SEASON_SUPPLY_M3);
     expect(balances.buffer).toBe(0);
     expect(balances.conveyance_losses).toBe(0);
   });
