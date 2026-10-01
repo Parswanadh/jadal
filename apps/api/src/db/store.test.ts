@@ -343,27 +343,21 @@ describe("readEvents", () => {
     expect(await getEventCount(env)).toBe(3);
   });
 
-  // BUG (store.ts:331): `readEvents` maps `JadalEvent.parse(row.payload)` where `payload` is the
-  // stored JSON *text*, so it throws ZodError as soon as the log is non-empty. The fix is
-  // `JadalEvent.parse(JSON.parse(row.payload))`. `store.test.ts` cannot fix `store.ts` (owned by the
-  // store author), so this is marked `it.fails`: it passes only while the bug is present, and will
-  // fail loudly once the fix lands, prompting removal of the marker.
-  it.fails(
-    "returns events in seq order and filters by type, seq cursor, canal and limit (BUG: readEvents hands raw JSON text to JadalEvent.parse)",
-    async () => {
-      const env = await freshEnv();
-      await appendEvent(env, verifiedEvent("evt_1"));
-      await appendEvent(env, rainEvent("evt_2", { f1: 10 }));
-      await appendEvent(env, verifiedEvent("evt_3", "c2", "f2"));
+  // Fixed in `readEvents`: the stored `payload` column is JSON text, so it is parsed before being
+  // handed to `JadalEvent.parse`.
+  it("returns events in seq order and filters by type, seq cursor, canal and limit", async () => {
+    const env = await freshEnv();
+    await appendEvent(env, verifiedEvent("evt_1"));
+    await appendEvent(env, rainEvent("evt_2", { f1: 10 }));
+    await appendEvent(env, verifiedEvent("evt_3", "c2", "f2"));
 
-      expect((await readEvents(env)).map((event) => event.id)).toEqual(["evt_1", "evt_2", "evt_3"]);
-      expect((await readEvents(env, { types: ["rain.replanned"] })).map((event) => event.id)).toEqual(["evt_2"]);
-      expect((await readEvents(env, { limit: 2 })).map((event) => event.id)).toEqual(["evt_1", "evt_2"]);
-      expect((await readEvents(env, { sinceSeq: 1 })).map((event) => event.id)).toEqual(["evt_2", "evt_3"]);
-      expect((await readEvents(env, { canalId: "c2" })).map((event) => event.id)).toEqual(["evt_3"]);
-      expect(await readEvents(env, { types: ["crop.harvested"] })).toEqual([]);
-    },
-  );
+    expect((await readEvents(env)).map((event) => event.id)).toEqual(["evt_1", "evt_2", "evt_3"]);
+    expect((await readEvents(env, { types: ["rain.replanned"] })).map((event) => event.id)).toEqual(["evt_2"]);
+    expect((await readEvents(env, { limit: 2 })).map((event) => event.id)).toEqual(["evt_1", "evt_2"]);
+    expect((await readEvents(env, { sinceSeq: 1 })).map((event) => event.id)).toEqual(["evt_2", "evt_3"]);
+    expect((await readEvents(env, { canalId: "c2" })).map((event) => event.id)).toEqual(["evt_3"]);
+    expect(await readEvents(env, { types: ["crop.harvested"] })).toEqual([]);
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -328,7 +328,7 @@ export async function readEvents(env: DbEnv, options: ReadEventsOptions = {}): P
   }
 
   const rows = await env.DB.prepare(sql).bind(...bindings).all<{ payload: string }>();
-  return rows.map((row) => JadalEvent.parse(row.payload));
+  return rows.map((row) => JadalEvent.parse(JSON.parse(row.payload)));
 }
 
 /** How many events are in the log. Cheap (`COUNT(*)` on the primary key) and the demo's step counter. */
