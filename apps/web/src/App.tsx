@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import { FarmerPortal } from './farmer';
+import { CoordinatorConsole } from './coordinator';
 import PlaceholderPage from './pages/PlaceholderPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -11,10 +12,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/farmer" element={<FarmerPortal />} />
-        <Route
-          path="/coordinator"
-          element={<PlaceholderPage titleKey="coordinator.title" bodyKey="coordinator.body" noteKey="coordinator.note" />}
-        />
+        <Route path="/coordinator" element={<CoordinatorConsole />} />
         <Route
           path="/canal"
           element={<PlaceholderPage titleKey="canal.title" bodyKey="canal.body" noteKey="canal.note" />}
