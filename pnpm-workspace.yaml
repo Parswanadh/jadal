@@ -1,8 +1,5 @@
 packages:
   - 'packages/*'
   - 'apps/*'
-
 allowBuilds:
   esbuild: true
-  workerd: true
-  sharp: true
