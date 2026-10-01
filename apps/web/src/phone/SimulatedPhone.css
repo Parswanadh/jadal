@@ -1,0 +1,411 @@
+/* C6 — Simulated phone. 360px frame, light/dark, accessible. */
+
+.jadal-phone {
+  --phone-bg: #ffffff;
+  --phone-fg: #111827;
+  --phone-muted: #6b7280;
+  --phone-line: #e5e7eb;
+  --phone-accent: #0e7c3a;
+  --phone-accent-fg: #ffffff;
+  --phone-danger: #b42318;
+  --phone-bubble-in: #f1f5f9;
+  --phone-bubble-out: #dcf8c6;
+  --phone-wa-header: #075e54;
+  --phone-wa-bg: #ece5dd;
+  --phone-badge-wait-bg: #fef3c7;
+  --phone-badge-wait-fg: #92400e;
+  --phone-badge-ok-bg: #d1fae5;
+  --phone-badge-ok-fg: #065f46;
+  --phone-badge-bad-bg: #fee2e2;
+  --phone-badge-bad-fg: #991b1b;
+  color-scheme: light;
+}
+
+.jadal-phone[data-theme="dark"] {
+  --phone-bg: #111827;
+  --phone-fg: #f9fafb;
+  --phone-muted: #9ca3af;
+  --phone-line: #374151;
+  --phone-accent: #34d399;
+  --phone-accent-fg: #062e1d;
+  --phone-danger: #f87171;
+  --phone-bubble-in: #1f2937;
+  --phone-bubble-out: #064e3b;
+  --phone-wa-header: #064e3b;
+  --phone-wa-bg: #0b141a;
+  --phone-badge-wait-bg: #453003;
+  --phone-badge-wait-fg: #fcd34d;
+  --phone-badge-ok-bg: #064e3b;
+  --phone-badge-ok-fg: #a7f3d0;
+  --phone-badge-bad-bg: #450a0a;
+  --phone-badge-bad-fg: #fca5a5;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  .jadal-phone:not([data-theme="light"]) {
+    --phone-bg: #111827;
+    --phone-fg: #f9fafb;
+    --phone-muted: #9ca3af;
+    --phone-line: #374151;
+    --phone-accent: #34d399;
+    --phone-accent-fg: #062e1d;
+    --phone-danger: #f87171;
+    --phone-bubble-in: #1f2937;
+    --phone-bubble-out: #064e3b;
+    --phone-wa-header: #064e3b;
+    --phone-wa-bg: #0b141a;
+    --phone-badge-wait-bg: #453003;
+    --phone-badge-wait-fg: #fcd34d;
+    --phone-badge-ok-bg: #064e3b;
+    --phone-badge-ok-fg: #a7f3d0;
+    --phone-badge-bad-bg: #450a0a;
+    --phone-badge-bad-fg: #fca5a5;
+    color-scheme: dark;
+  }
+}
+
+.jadal-phone {
+  width: min(360px, 100%);
+  margin: 0 auto;
+  background: var(--phone-bg);
+  color: var(--phone-fg);
+  border: 1px solid var(--phone-line);
+  border-radius: 2rem;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.jadal-phone__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--phone-line);
+  font-size: 0.75rem;
+  color: var(--phone-muted);
+}
+
+.jadal-phone__toggles {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.jadal-phone__toggle {
+  border: 1px solid var(--phone-line);
+  background: transparent;
+  color: var(--phone-fg);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.jadal-phone__toggle[aria-pressed="true"] {
+  background: var(--phone-fg);
+  color: var(--phone-bg);
+}
+
+.jadal-phone__toggle:focus-visible,
+.jadal-phone__btn:focus-visible,
+.jadal-phone__send:focus-visible,
+.jadal-phone__input:focus-visible,
+.jadal-phone__drawer-close:focus-visible {
+  outline: 2px solid var(--phone-accent);
+  outline-offset: 2px;
+}
+
+.jadal-phone__screen {
+  padding: 1rem;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.jadal-phone__incoming {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.jadal-phone__avatar {
+  width: 84px;
+  height: 84px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--phone-bubble-in);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .jadal-phone__avatar--ringing {
+    animation: jadal-ring 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes jadal-ring {
+  0%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(12deg); }
+  20% { transform: rotate(-10deg); }
+  30% { transform: rotate(6deg); }
+  40% { transform: rotate(0deg); }
+}
+
+.jadal-phone__caller {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0.75rem 0 0;
+}
+
+.jadal-phone__caller-sub {
+  color: var(--phone-muted);
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0;
+}
+
+.jadal-phone__number,
+.jadal-phone__source {
+  color: var(--phone-muted);
+  font-size: 0.8rem;
+  margin: 0.25rem 0 0;
+}
+
+.jadal-phone__call-actions {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+.jadal-phone__btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #fff;
+}
+
+.jadal-phone__btn--accept { background: #16a34a; }
+.jadal-phone__btn--decline { background: var(--phone-danger); }
+
+.jadal-phone__btn-label {
+  display: block;
+  font-size: 0.7rem;
+  margin-top: 0.25rem;
+  color: var(--phone-muted);
+}
+
+.jadal-phone__status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.jadal-phone__badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+}
+
+.jadal-phone__badge--wait {
+  background: var(--phone-badge-wait-bg);
+  color: var(--phone-badge-wait-fg);
+}
+.jadal-phone__badge--ok {
+  background: var(--phone-badge-ok-bg);
+  color: var(--phone-badge-ok-fg);
+}
+.jadal-phone__badge--bad {
+  background: var(--phone-badge-bad-bg);
+  color: var(--phone-badge-bad-fg);
+}
+
+.jadal-phone__audio {
+  width: 100%;
+}
+
+.jadal-phone__hint {
+  font-size: 0.8rem;
+  color: var(--phone-muted);
+  margin: 0;
+}
+
+.jadal-phone__transcript {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.jadal-phone__turn {
+  border: 1px solid var(--phone-line);
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+}
+
+.jadal-phone__turn--committee { background: var(--phone-bubble-in); }
+.jadal-phone__turn--farmer { background: var(--phone-bubble-out); }
+.jadal-phone__turn--agent {
+  background: transparent;
+  border-style: dashed;
+}
+
+.jadal-phone__turn-meta {
+  font-size: 0.7rem;
+  color: var(--phone-muted);
+  margin-bottom: 0.25rem;
+}
+
+.jadal-phone__reply {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.jadal-phone__input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--phone-line);
+  border-radius: 0.75rem;
+  background: transparent;
+  color: var(--phone-fg);
+  padding: 0.5rem 0.65rem;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.jadal-phone__reply-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.jadal-phone__send {
+  flex: 1 1 auto;
+  border: none;
+  border-radius: 0.75rem;
+  background: var(--phone-accent);
+  color: var(--phone-accent-fg);
+  font-weight: 700;
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.jadal-phone__send:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.jadal-phone__upload {
+  border: 1px solid var(--phone-line);
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--phone-fg);
+  background: transparent;
+}
+
+.jadal-phone__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.jadal-phone__clip {
+  font-size: 0.8rem;
+  color: var(--phone-muted);
+  margin: 0;
+}
+
+.jadal-phone__error {
+  color: var(--phone-danger);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.jadal-phone__drawer {
+  border-top: 1px solid var(--phone-line);
+  background: var(--phone-wa-bg);
+}
+
+.jadal-phone__drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--phone-wa-header);
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.jadal-phone__drawer-close {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 0.15rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.jadal-phone__messages {
+  list-style: none;
+  margin: 0;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.jadal-phone__msg {
+  max-width: 85%;
+  align-self: flex-start;
+  background: var(--phone-bg);
+  color: var(--phone-fg);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.85rem;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+}
+
+.jadal-phone__msg-time {
+  display: block;
+  text-align: right;
+  font-size: 0.65rem;
+  color: var(--phone-muted);
+  margin-top: 0.25rem;
+}
+
+.jadal-phone__ack-btn {
+  margin-top: 0.4rem;
+  border: 1px solid var(--phone-line);
+  background: transparent;
+  color: var(--phone-fg);
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+}

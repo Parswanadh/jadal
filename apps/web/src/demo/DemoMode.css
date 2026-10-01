@@ -1,0 +1,277 @@
+/* C7 Demo mode — responsive (360px+), light/dark, accessible. */
+
+.demo {
+  --bg: #ffffff;
+  --fg: #111827;
+  --muted: #6b7280;
+  --card: #f9fafb;
+  --border: #d1d5db;
+  --accent: #1d4ed8;
+  --accent-fg: #ffffff;
+  --ok: #15803d;
+  font-family: system-ui, -apple-system, "Noto Sans Telugu", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  padding: 1rem;
+  max-width: 46rem;
+  margin: 0 auto;
+  line-height: 1.55;
+  min-width: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .demo[data-theme="auto"] {
+    --bg: #111827;
+    --fg: #f3f4f6;
+    --muted: #9ca3af;
+    --card: #1f2937;
+    --border: #374151;
+    --accent: #93c5fd;
+    --accent-fg: #111827;
+    --ok: #86efac;
+  }
+}
+
+.demo[data-theme="dark"] {
+  --bg: #111827;
+  --fg: #f3f4f6;
+  --muted: #9ca3af;
+  --card: #1f2937;
+  --border: #374151;
+  --accent: #93c5fd;
+  --accent-fg: #111827;
+  --ok: #86efac;
+}
+
+.demo__header {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .demo__header {
+    grid-template-columns: 1fr auto;
+    align-items: start;
+  }
+}
+
+.demo h1 {
+  font-size: 1.4rem;
+  margin: 0.25rem 0;
+}
+
+.demo h1:focus {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.demo h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+
+.demo__kicker {
+  color: var(--muted);
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.demo__sub {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+}
+
+.demo__controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.demo__label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.demo select,
+.demo input[type="range"] {
+  min-height: 44px;
+}
+
+.demo select {
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem;
+}
+
+.demo button {
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.demo button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.demo button:focus-visible,
+.demo select:focus-visible,
+.demo input:focus-visible,
+.demo a:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.demo__statusbar {
+  margin-top: 1rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.demo__badge {
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.demo__meta {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.demo__timer strong {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.2rem;
+}
+
+.demo__warn {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.demo__steps {
+  list-style: none;
+  display: flex;
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0;
+}
+
+.demo__steps li {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-content: center;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  font-weight: 700;
+}
+
+.demo__steps li.done {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.demo__steps li.now {
+  border-color: var(--accent);
+}
+
+.demo progress {
+  width: 100%;
+  height: 0.6rem;
+}
+
+.demo__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.demo__actions button:last-child {
+  background: transparent;
+  color: var(--fg);
+}
+
+.demo__clock,
+.demo__script,
+.demo__audit,
+.demo__timeline {
+  margin-top: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  background: var(--card);
+}
+
+.demo__script ol,
+.demo__timeline ol {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.demo__script li.now {
+  border-left: 4px solid var(--accent);
+  padding-left: 0.6rem;
+}
+
+.demo__script li.done h3 {
+  color: var(--ok);
+}
+
+.demo__hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.demo__hint code {
+  word-break: break-all;
+}
+
+.demo__result {
+  border-left: 3px solid var(--ok);
+  padding-left: 0.6rem;
+}
+
+.demo__etype {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 0.3rem;
+}
+
+.demo__timeline time,
+.demo__clock time {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.demo__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
