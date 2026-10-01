@@ -10,18 +10,18 @@ import "./canal.css";
 /* Display-only geometry. These map a SUPPLIED flow (m3/s from data) to pixels;
    they never create water numbers. */
 const SVG_W = 800;
-const SVG_H = 185;
+const SVG_H = 205;
 const PAD_X = 50;
 const CENTER_Y = 70;
-const BASE_HALF_H = 12;
-const PX_PER_M3S = 34;
+/* Ribbon half-height is proportional to the supplied flow, so it tapers from head to tail. */
+const PX_PER_M3S = 200;
 
 function xForChainage(chainage_m: number, length_m: number): number {
   return PAD_X + (chainage_m / length_m) * (SVG_W - PAD_X * 2);
 }
 
 function halfH(flow_m3s: number): number {
-  return BASE_HALF_H + flow_m3s * PX_PER_M3S;
+  return flow_m3s * PX_PER_M3S;
 }
 
 /** "English · Telugu" when a Telugu form exists, otherwise just the English name. */
@@ -68,6 +68,8 @@ function CanalVisualView({ data, source }: { data: CanalVisualData; source: Data
   const [stepIdx, setStepIdx] = useState(0);
 
   const t = STR[lang];
+  /** Name in the active language only (falls back to English when no Telugu form exists). */
+  const one = (en: string, te: string): string => (lang === "te" && te ? te : en);
   const steps = data.overrunSteps;
   const hours = steps[stepIdx] ?? 0;
   const needRows = getNeedMet(data, mode);
@@ -212,7 +214,7 @@ function CanalVisualView({ data, source }: { data: CanalVisualData; source: Data
             <select value={overrunOutlet} onChange={(e) => setOverrunOutlet(e.target.value)}>
               {data.outlets.map((o) => (
                 <option key={o.id} value={o.id}>
-                  {bi(o.name, o.name_te)} — {(o.chainage_m / 1000).toFixed(1)} {t.kmUnit}
+                  {one(o.name, o.name_te)} — {(o.chainage_m / 1000).toFixed(1)} {t.kmUnit}
                 </option>
               ))}
             </select>
@@ -255,7 +257,7 @@ function CanalVisualView({ data, source }: { data: CanalVisualData; source: Data
                   return (
                     <tr key={id}>
                       <td>
-                        {o ? bi(o.name, o.name_te) : id}
+                        {o ? one(o.name, o.name_te) : id}
                       </td>
                       <td>{lost.toLocaleString("en-IN")}</td>
                     </tr>
