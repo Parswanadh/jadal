@@ -68,7 +68,7 @@ function Option({ plan, mode, gini, recommended, anyApproved, f, onApprove }: Op
                 </th>
                 <td>
                   {f.range(x.start, x.end)}
-                  <span className="sub">{f.length(x.durationH)}</span>
+                  <span className="sub">{f.turnLength(x.start, x.end)}</span>
                 </td>
                 <td className="num">{f.m3(x.plannedVolumeM3)}</td>
                 <td className="num">

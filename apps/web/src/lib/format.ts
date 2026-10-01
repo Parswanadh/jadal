@@ -161,3 +161,15 @@ export function splitHours(totalHours: number): HoursText {
   const minutes = Math.round((totalHours - hours) * 60);
   return minutes === 60 ? { hours: hours + 1, minutes: 0 } : { hours, minutes };
 }
+
+/**
+ * Clock length of a span, for display only: how many hours lie between two
+ * timestamps. Returns null when either end is unreadable, so callers omit the
+ * hint rather than print a raw timestamp.
+ */
+export function hoursBetween(startIso: string, endIso: string): number | null {
+  const s = parse(startIso);
+  const e = parse(endIso);
+  if (!s || !e) return null;
+  return (e.getTime() - s.getTime()) / 3_600_000;
+}

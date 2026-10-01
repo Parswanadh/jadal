@@ -71,7 +71,6 @@ export const api = {
         start: t.start,
         end: t.end,
         plannedVolumeM3: t.planned_volume_m3,
-        durationH: (Date.parse(t.end) - Date.parse(t.start)) / 3600000,
         needMetPct: needByOutlet.get(t.outlet_id) ?? 0,
       })),
       equalHoursGini: data.comparison.equal_hours_gini,

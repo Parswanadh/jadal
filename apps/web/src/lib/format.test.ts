@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDateOnly, formatDateTime, formatDay, formatList, formatNumber, formatRange, formatTimeOfDay, splitHours } from "./format";
+import { formatDateOnly, formatDateTime, formatDay, formatList, formatNumber, formatRange, formatTimeOfDay, hoursBetween, splitHours } from "./format";
 
 // 2026-09-14 06:00 India time is 00:30 UTC.
 const MON_6AM = "2026-09-14T00:30:00Z";
@@ -64,5 +64,10 @@ describe("other formats", () => {
     expect(splitHours(3)).toEqual({ hours: 3, minutes: 0 });
     expect(splitHours(2.5)).toEqual({ hours: 2, minutes: 30 });
     expect(splitHours(1.999)).toEqual({ hours: 2, minutes: 0 });
+  });
+
+  it("measures the clock length of a span, and nothing for a bad one", () => {
+    expect(hoursBetween("2026-09-15T00:30:00Z", "2026-09-15T03:30:00Z")).toBe(3);
+    expect(hoursBetween("2026-09-15T00:30:00Z", "soon")).toBeNull();
   });
 });

@@ -40,8 +40,6 @@ export interface TurnRow {
   start: string;
   end: string;
   plannedVolumeM3: number;
-  /** Turn length in hours, from the turn's own start and end. */
-  durationH: number;
   needMetPct: number;
 }
 

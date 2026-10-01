@@ -8,6 +8,7 @@ import {
   formatNumber,
   formatRange,
   formatTimeOfDay,
+  hoursBetween,
   splitHours,
 } from './format';
 
@@ -27,8 +28,10 @@ export function useFormat() {
       range: (start: string, end: string) => formatRange(start, end, lang),
       dateOnly: (isoDate: string) => formatDateOnly(isoDate, lang),
       list: (items: string[]) => formatList(items, lang),
-      /** "3 h" or "3 h 30 min" */
-      length: (totalHours: number) => {
+      /** "3 h" or "3 h 30 min" for a clock span; null when the span is unreadable. */
+      turnLength: (start: string, end: string) => {
+        const totalHours = hoursBetween(start, end);
+        if (totalHours === null) return null;
         const { hours, minutes } = splitHours(totalHours);
         return minutes === 0
           ? t('units.hoursOnly', { h: hours })
