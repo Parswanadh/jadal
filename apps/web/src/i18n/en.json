@@ -19,6 +19,28 @@
     "phone": "Phone",
     "demo": "Demo"
   },
+  "auth": {
+    "signedInAs": "Signed in as {role}",
+    "signOut": "Sign out",
+    "signIn": "Sign in",
+    "role": {
+      "farmer": "Farmer",
+      "coordinator": "Coordinator"
+    }
+  },
+  "login": {
+    "eyebrow": "Sign in",
+    "title": "Sign in to Jadal",
+    "lead": "Choose who you are, then enter the password for that role.",
+    "roleLabel": "I am signing in as",
+    "role": {
+      "farmer": "Farmer",
+      "coordinator": "Coordinator"
+    },
+    "passwordLabel": "Password",
+    "submit": "Sign in",
+    "error": "That did not match. Check the password and the role you picked."
+  },
   "controls": {
     "languageEnglish": "English",
     "themeLabel": "Theme",
@@ -132,7 +154,9 @@
     "demoCardTitle": "Demo",
     "demoCardBody": "Follow the whole story in about three minutes.",
     "openLabel": "Open",
-    "principle": "Software suggests. The coordinator decides."
+    "principle": "Software suggests. The coordinator decides.",
+    "videoLabel": "Jadal launch film",
+    "videoPlay": "Play the film"
   },
   "page": {
     "farmer": {
@@ -320,7 +344,8 @@
       "quota": "Season quota",
       "delivered": "Delivered",
       "when": "When",
-      "moved": "What moved"
+      "moved": "What moved",
+      "change": "Change"
     },
     "req": {
       "title": "Requests for extra water",
@@ -400,6 +425,20 @@
         "title": "Equal hours",
         "body": "Every farm gets the same length of time. Farms at the tail end get less water.",
         "approve": "Approve equal hours"
+      },
+      "edit": {
+        "action": "Change time",
+        "forTurn": "Change the time for {outlet}",
+        "start": "Starts",
+        "end": "Ends",
+        "save": "Save time",
+        "saving": "Saving…",
+        "cancel": "Cancel",
+        "backwards": "The end time must be after the start time.",
+        "invalid": "Enter a valid start and end time.",
+        "saved": "Turn time saved.",
+        "changed": "Changed",
+        "error": "The time could not be saved. Please try again."
       }
     },
     "farmers": {
@@ -451,6 +490,22 @@
       },
       "emptyTitle": "No accounts yet",
       "emptyBody": "Accounts appear once the season's supply is set."
+    },
+    "alert": {
+      "title": "Alert this farmer",
+      "channelLabel": "How to reach them",
+      "channel": {
+        "call": "Call",
+        "sms": "SMS",
+        "whatsapp": "WhatsApp"
+      },
+      "messageLabel": "Message (optional)",
+      "messageHint": "Leave empty to send the standard message.",
+      "send": "Send alert",
+      "sending": "Sending…",
+      "simulated": "Simulated only: no real {channel} was sent. {detail}",
+      "sent": "Sent by {channel}.",
+      "error": "The alert could not be sent. Please try again."
     }
   },
   "canal": {
