@@ -1,0 +1,21 @@
+{
+  "$comment": "C8 placeholder-first screenshot manifest. BASE_URL defaults to the placeholder preview; override with $env:BASE_URL (local http://localhost:5173). Independent of C1-C7 markup: no data-testid assumptions.",
+  "baseUrl": "https://demo.jadal.example.com",
+  "localBaseUrl": "http://localhost:5173",
+  "outDir": "out",
+  "waitMsAfterLoad": 1500,
+  "viewports": {
+    "desktop": { "width": 1440, "height": 900 },
+    "mobile": { "width": 390, "height": 844 }
+  },
+  "routes": [
+    { "path": "/", "name": "cover", "viewport": "desktop", "fullPage": false },
+    { "path": "/farmer", "name": "farmer", "viewport": "desktop", "fullPage": true },
+    { "path": "/farmer", "name": "farmer-mobile", "viewport": "mobile", "fullPage": true },
+    { "path": "/coordinator", "name": "coordinator", "viewport": "desktop", "fullPage": true },
+    { "path": "/canal", "name": "canal", "viewport": "desktop", "fullPage": false },
+    { "path": "/phone", "name": "phone", "viewport": "desktop", "fullPage": false },
+    { "path": "/phone", "name": "phone-mobile", "viewport": "mobile", "fullPage": false },
+    { "path": "/demo", "name": "demo", "viewport": "desktop", "fullPage": true }
+  ]
+}

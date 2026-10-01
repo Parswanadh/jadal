@@ -1,0 +1,14 @@
+{
+  "name": "jadal-showcase",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "C8 showcase tooling only (screenshots). No app code, no secrets.",
+  "scripts": {
+    "screenshots": "node ./screenshots/capture.mjs",
+    "screenshots:tolerant": "node ./screenshots/capture.mjs --tolerant"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
