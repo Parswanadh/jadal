@@ -76,7 +76,11 @@ Run inputs for this review (relative to the current directory): .review/pr.json,
   if [ "$CLI" = "agy" ]; then
     ( cd "$WT" && agy -p "$msg" --model "${MODEL:-gemini-3.8-flash-high}" --dangerously-skip-permissions >"$run/agent.log" 2>&1 )
   else
-    ( cd "$WT" && opencode run -m "${MODEL:-opencode/space-bunny-free}" "$msg" >"$run/agent.log" 2>&1 )
+    # --auto lets the reviewer read and run checks without permission prompts. It gets an empty gh config,
+    # so it has no GitHub credentials: it cannot push, comment or merge. Only this script acts on GitHub.
+    mkdir -p "$WORK/noauth"
+    ( cd "$WT" && GH_CONFIG_DIR="$WORK/noauth" GH_TOKEN= GITHUB_TOKEN= GIT_TERMINAL_PROMPT=0 \
+        opencode run --auto -m "${MODEL:-opencode-go/muse-spark-1.3-contributor}" "$msg" >"$run/agent.log" 2>&1 )
   fi
 
   cp "$WT/.review/decision.json" "$run/decision.json" 2>/dev/null
