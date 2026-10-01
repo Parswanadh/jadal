@@ -40,21 +40,30 @@ review_pr() {
   fi
 
   ensure_worktree
-  git -C "$WT" fetch -q origin "pull/$n/head" && git -C "$WT" checkout -q --detach FETCH_HEAD
-  ( cd "$WT" && pnpm install --prefer-offline >/dev/null 2>&1; pnpm -r typecheck && pnpm -r test && pnpm -r build ) >"$run/checks.log" 2>&1
+  rm -rf "$WT/.review"
+  git -C "$WT" fetch -q origin "pull/$n/head" main && git -C "$WT" checkout -q --detach FETCH_HEAD
+  # Test what will actually land: the PR merged with the latest main.
+  if ! git -C "$WT" merge -q --no-edit origin/main >/dev/null 2>&1; then
+    git -C "$WT" merge --abort >/dev/null 2>&1
+    gh pr comment "$n" --body "🤖 Reviewer: this branch conflicts with \`main\`. Please run \`git pull --rebase origin main\`, resolve, and force-push; I'll re-review automatically." >/dev/null
+    echo "$n $sha" >>"$STATE"; return
+  fi
+  ( cd "$WT" && set -o pipefail && pnpm install --prefer-offline 2>&1 | tail -5 && pnpm -r typecheck && pnpm -r test && pnpm -r build ) >"$run/checks.log" 2>&1
   local checks=$?
   echo "EXIT CODE: $checks" >>"$run/checks.log"
 
   local msg
   msg="$(cat "$REPO_ROOT/scripts/agents/review-prompt.md")
 
-Run inputs for this review: $run/pr.json, $run/issue.md, $run/diff.patch, $run/checks.log. Write the decision JSON to $run/decision.json"
+Run inputs for this review (relative to the current directory): .review/pr.json, .review/issue.md, .review/diff.patch, .review/checks.log. Write the decision JSON to .review/decision.json"
+  mkdir -p "$WT/.review" && cp "$run/pr.json" "$run/issue.md" "$run/diff.patch" "$run/checks.log" "$WT/.review/"
   if [ "$CLI" = "agy" ]; then
     ( cd "$WT" && agy -p "$msg" --model "${MODEL:-gemini-3.8-flash-high}" --dangerously-skip-permissions >"$run/agent.log" 2>&1 )
   else
     ( cd "$WT" && opencode run -m "${MODEL:-opencode/space-bunny-free}" "$msg" >"$run/agent.log" 2>&1 )
   fi
 
+  cp "$WT/.review/decision.json" "$run/decision.json" 2>/dev/null
   if ! jq -e . "$run/decision.json" >/dev/null 2>&1; then
     log "PR #$n: no valid decision written; will retry next cycle"; return
   fi
@@ -84,7 +93,7 @@ Run inputs for this review: $run/pr.json, $run/issue.md, $run/diff.patch, $run/c
 log "review loop started (interval ${INTERVAL}s, cli $CLI ${MODEL})"
 while true; do
   git -C "$REPO_ROOT" fetch -q origin
-  gh pr list --state open --json number,headRefOid,isDraft -q '.[] | select(.isDraft|not) | "\(.number) \(.headRefOid)"' 2>/dev/null |
+  gh pr list --state open --json number,headRefOid,isDraft -q 'sort_by(.number) | .[] | select(.isDraft|not) | "\(.number) \(.headRefOid)"' 2>/dev/null |
   while read -r n sha; do
     grep -qx "$n $sha" "$STATE" || review_pr "$n" "$sha"
   done
