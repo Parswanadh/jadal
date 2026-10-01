@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
+import { FarmerPortal } from './farmer';
 import PlaceholderPage from './pages/PlaceholderPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -9,10 +10,7 @@ export default function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route
-          path="/farmer"
-          element={<PlaceholderPage titleKey="farmer.title" bodyKey="farmer.body" noteKey="farmer.note" />}
-        />
+        <Route path="/farmer" element={<FarmerPortal />} />
         <Route
           path="/coordinator"
           element={<PlaceholderPage titleKey="coordinator.title" bodyKey="coordinator.body" noteKey="coordinator.note" />}
