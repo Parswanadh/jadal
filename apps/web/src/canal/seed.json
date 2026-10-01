@@ -1,4 +1,5 @@
 {
+  "_note": "ASSUMED / illustrative: precomputed offline by @jadal/core (hydraulics.atOutlets and overrunImpact) from packages/contracts/fixtures/demo-scenario.json. Not computed in the browser and not live data; replace with an API route when one exists.",
   "outlet_name_te": {
     "o1": "ఔట్‌లెట్ 1",
     "o2": "ఔట్‌లెట్ 2",

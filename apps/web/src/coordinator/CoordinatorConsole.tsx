@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "../i18n/I18nContext";
-import { useTheme } from "../theme/ThemeContext";
+import PageHeader from "../components/PageHeader";
 import EntitlementReview from "./EntitlementReview";
 import LedgerAudit from "./LedgerAudit";
 import RequestQueue from "./RequestQueue";
@@ -16,8 +16,7 @@ type Tab = "verify" | "entitlements" | "roster" | "requests" | "ledger";
 const TABS: Tab[] = ["verify", "entitlements", "roster", "requests", "ledger"];
 
 export default function CoordinatorConsole() {
-  const { lang } = useI18n();
-  const dark = useTheme().theme === "dark";
+  const { lang, t: tr } = useI18n();
   const [tab, setTab] = useState<Tab>("verify");
   const [source, setSource] = useState<Source>("mock");
   const [loadError, setLoadError] = useState(false);
@@ -105,19 +104,18 @@ export default function CoordinatorConsole() {
   }
 
   return (
-    <div className={`coord ${dark ? "dark" : ""}`} data-theme={dark ? "dark" : "light"}>
+    <div className="coord">
       <a className="skip" href="#coord-main">{t.skipLink}</a>
-      <header className="coord-head">
-        <div>
-          <h2>{t.consoleTitle}</h2>
-          <p className="muted">{t.consoleSub}</p>
-        </div>
-        <div className="head-actions">
-          <span className={`pill ${source === "live" ? "ok" : "warn"}`} role="status">
+      <PageHeader
+        eyebrow={tr("page.coordinator.eyebrow")}
+        title={tr("page.coordinator.title")}
+        lead={tr("page.coordinator.lead")}
+        actions={
+          <span className={`chip ${source === "live" ? "chip-ok" : "chip-warn"}`} role="status">
             {source === "live" ? t.onlineBadge : t.offlineBadge}
           </span>
-        </div>
-      </header>
+        }
+      />
 
       <nav aria-label={t.consoleTitle}>
         <ul className="tabs" role="tablist">

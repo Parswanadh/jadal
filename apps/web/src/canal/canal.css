@@ -1,91 +1,19 @@
 /* C5 canal hero — works at 360px wide, light + dark, reduced motion. */
 
 .canal-hero {
-  --canal-bg: #ffffff;
-  --canal-ink: #17233b;
-  --canal-muted: #5b6478;
-  --canal-card: #f2f6fc;
-  --canal-line: #d4dce8;
-  --canal-from: #2563eb;
-  --canal-to: #7dd3fc;
-  --canal-track: #e2e8f0;
-  --canal-high: #15803d;
-  --canal-mid: #b45309;
-  --canal-low: #b91c1c;
-  --canal-accent: #1d4ed8;
-  --canal-focus: #1d4ed8;
-
-  box-sizing: border-box;
+  /* Local names alias the global design tokens (styles.css). */
+  --canal-bg: var(--bg);
+  --canal-ink: var(--ink);
+  --canal-muted: var(--muted);
+  --canal-card: var(--surface);
+  --canal-line: var(--rule);
+  --canal-track: var(--rule);
+  --canal-high: var(--ok);
+  --canal-mid: var(--warn);
+  --canal-low: var(--critical);
+  --canal-accent: var(--accent);
+  --canal-focus: var(--accent);
   width: 100%;
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 1rem;
-  background: var(--canal-bg);
-  color: var(--canal-ink);
-  font-family: system-ui, -apple-system, "Noto Sans Telugu", sans-serif;
-  line-height: 1.5;
-  border: 1px solid var(--canal-line);
-  border-radius: 12px;
-}
-
-@media (prefers-color-scheme: dark) {
-  .canal-hero[data-theme="auto"] {
-    color-scheme: dark;
-    --canal-bg: #0f172a;
-    --canal-ink: #e2e8f0;
-    --canal-muted: #94a3b8;
-    --canal-card: #1e293b;
-    --canal-line: #334155;
-    --canal-from: #3b82f6;
-    --canal-to: #0ea5e9;
-    --canal-track: #334155;
-    --canal-high: #4ade80;
-    --canal-mid: #fbbf24;
-    --canal-low: #f87171;
-    --canal-accent: #93c5fd;
-    --canal-focus: #93c5fd;
-  }
-}
-
-.canal-hero[data-theme="dark"] {
-  color-scheme: dark;
-  --canal-bg: #0f172a;
-  --canal-ink: #e2e8f0;
-  --canal-muted: #94a3b8;
-  --canal-card: #1e293b;
-  --canal-line: #334155;
-  --canal-from: #3b82f6;
-  --canal-to: #0ea5e9;
-  --canal-track: #334155;
-  --canal-high: #4ade80;
-  --canal-mid: #fbbf24;
-  --canal-low: #f87171;
-  --canal-accent: #93c5fd;
-  --canal-focus: #93c5fd;
-}
-
-.canal-head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.canal-kicker {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--canal-muted);
-}
-
-.canal-head h2 {
-  margin: 0.1rem 0;
-  font-size: 1.5rem;
-}
-
-.canal-sub {
-  margin: 0;
-  color: var(--canal-muted);
 }
 
 .canal-controls {
@@ -97,7 +25,7 @@
 .canal-ctl {
   display: grid;
   gap: 0.25rem;
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   color: var(--canal-muted);
 }
 
@@ -109,20 +37,24 @@
 .canal-hero button,
 .canal-overrun select {
   font: inherit;
+  font-size: var(--text-sm);
   color: var(--canal-ink);
-  background: var(--canal-card);
+  background: var(--surface);
   border: 1px solid var(--canal-line);
-  border-radius: 8px;
-  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.85rem;
   cursor: pointer;
+}
+
+.canal-hero button:hover {
+  border-color: var(--muted);
 }
 
 .canal-hero button[aria-pressed="true"],
 .canal-hero button[aria-checked="true"] {
   border-color: var(--canal-accent);
-  outline: 2px solid var(--canal-accent);
-  outline-offset: -2px;
-  font-weight: 600;
+  background: var(--accent-subtle);
+  font-weight: 500;
 }
 
 .canal-hero :focus-visible {
@@ -131,10 +63,10 @@
 }
 
 .canal-svg-wrap {
-  margin-top: 0.75rem;
+  margin-top: 0;
   border: 1px solid var(--canal-line);
-  border-radius: 10px;
-  background: var(--canal-card);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
   overflow-x: auto;
 }
 
@@ -146,15 +78,15 @@
 }
 
 .canal-water {
-  fill: url(#canalGrad);
-  opacity: 0.85;
-  stroke: var(--canal-accent);
+  fill: var(--water);
+  opacity: 0.8;
+  stroke: var(--water);
   stroke-width: 1.5;
 }
 
 .canal-flow-arrow {
   font-size: 28px;
-  fill: var(--canal-bg);
+  fill: var(--surface);
   opacity: 0.8;
 }
 
@@ -193,20 +125,21 @@
 
 .canal-outlet.is-selected .canal-outlet-n,
 .canal-outlet.is-downstream .canal-outlet-n {
-  fill: var(--canal-bg);
+  fill: var(--canal-ink);
 }
 
 .canal-outlet.is-selected .canal-outlet-n {
-  fill: #ffffff;
+  fill: var(--on-accent);
 }
 
 .canal-chainage {
+  font-family: var(--font-mono);
   font-size: 11px;
   fill: var(--canal-muted);
 }
 
 .canal-mode {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
 }
 
 .canal-mode-label {
@@ -238,9 +171,10 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.2rem;
-  padding: 0.5rem 0.6rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
   border: 1px solid var(--canal-line);
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 
 .canal-farmer {
@@ -262,7 +196,7 @@
 
 .canal-track {
   display: block;
-  height: 12px;
+  height: 8px;
   border-radius: 999px;
   background: var(--canal-track);
   overflow: hidden;
@@ -288,8 +222,9 @@
 }
 
 .canal-pct {
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .canal-note {
@@ -298,14 +233,14 @@
 }
 
 .canal-overrun {
-  margin-top: 1rem;
+  margin-top: 2rem;
   border-top: 1px solid var(--canal-line);
-  padding-top: 0.75rem;
+  padding-top: 1.5rem;
 }
 
 .canal-overrun h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+  font-size: var(--text-xl);
 }
 
 .canal-overrun-ctl {
@@ -335,7 +270,11 @@
   width: 100%;
   border-collapse: collapse;
   margin-top: 0.6rem;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
+}
+
+.canal-loss-table td {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 

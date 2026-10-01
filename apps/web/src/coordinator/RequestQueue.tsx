@@ -105,7 +105,7 @@ export default function RequestQueue({ lang, rows, onDecided }: Props) {
               {rows.filter((r) => r.decision).map((r) => (
                 <tr key={r.id}>
                   <th scope="row">{r.farmerName}</th>
-                  <td>{r.decision?.decision}</td>
+                  <td className="text">{r.decision?.decision}</td>
                   <td>{r.decision ? fmtM3(r.decision.volumeM3) : "—"}</td>
                 </tr>
               ))}

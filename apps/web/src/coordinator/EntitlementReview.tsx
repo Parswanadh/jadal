@@ -77,7 +77,7 @@ export default function EntitlementReview({ lang, rows, seasonTotalM3, explanati
             {rows.map((r) => (
               <tr key={r.id}>
                 <th scope="row">{r.farmerName}<span className="sub">{r.farmerId} · {r.cropPlanId}</span></th>
-                <td>{r.crop}</td>
+                <td className="text">{r.crop}</td>
                 <td>
                   <label className="sr-only" htmlFor={`ent-${r.id}`}>{t.entEdit} {r.farmerName}</label>
                   <input
