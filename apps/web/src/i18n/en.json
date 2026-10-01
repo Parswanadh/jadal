@@ -80,7 +80,11 @@
   "canal": {
     "title": "Canal view",
     "body": "The canal map and release-window roster will live here. This placeholder reserves the route for the C3–C7 work.",
-    "note": "Flow, lag and turn durations are computed server-side and read from the API."
+    "note": "Flow, lag and turn durations are computed server-side and read from the API.",
+    "ui": {
+      "loading": "Loading the canal map…",
+      "error": "Could not load the canal map."
+    }
   },
   "phone": {
     "title": "Simulated phone",
