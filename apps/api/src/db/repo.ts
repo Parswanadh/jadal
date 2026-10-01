@@ -508,15 +508,15 @@ function toTurn(row: TurnRow): Turn {
 
 /** Roster row plus its already-parsed turns and JSON shortfall. */
 function toRoster(row: RosterRow, turns: Turn[]): RosterRecord {
-  return Roster.parse({
+  const parsed = Roster.parse({
     id: row.id,
     canal_id: row.canal_id,
     release_window_id: row.release_window_id,
     status: row.status,
     turns,
     shortfall_m3: parseNumberRecord(row.shortfall, "roster.shortfall", row.id),
-    created_at: row.created_at,
-  }) as RosterRecord;
+  });
+  return { ...parsed, created_at: row.created_at };
 }
 
 /**
@@ -567,7 +567,7 @@ function toRequest(row: RequestRow): WaterRequest {
 }
 
 function toContact(row: ContactRow): ContactRecord {
-  return Contact.parse(
+  const parsed = Contact.parse(
     withOptional(
       {
         id: row.id,
@@ -579,12 +579,12 @@ function toContact(row: ContactRow): ContactRecord {
         message_te: row.message_te,
         message_en: row.message_en,
         at: row.at,
-        escalated: toBool(row.escalated),
       },
       "transcript",
       row.transcript,
     ),
-  ) as ContactRecord;
+  );
+  return { ...parsed, escalated: toBool(row.escalated) };
 }
 
 function toLedgerEntry(row: LedgerEntryRow): LedgerEntry {

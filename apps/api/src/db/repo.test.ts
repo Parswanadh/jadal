@@ -233,11 +233,9 @@ describe("rosters", () => {
     expect(await listRosters(env, { canalId: "missing" })).toEqual([]);
   });
 
-  // BUG (repo.ts:510): `toRoster` builds `{ ...turns, shortfall, created_at }` then runs
-  // `Roster.parse(...)`, whose zod object *strips* `created_at`, and casts the result to
-  // `RosterRecord`. The declared `created_at` is therefore `undefined` at runtime. Fix: spread the
-  // parsed object and re-add `created_at` after parsing. Not my file, so marked `it.fails`.
-  it.fails("RosterRecord.created_at survives the Roster.parse round-trip (BUG: field is stripped)", async () => {
+  // Fixed in `toRoster`: the contract is parsed first, then the record-only `created_at` is spread
+  // back on, so `Roster.parse` can no longer strip it.
+  it("RosterRecord.created_at survives the Roster.parse round-trip", async () => {
     const rosters = await listRosters(env);
     const roster = rosters[0];
     if (roster === undefined) throw new Error("no roster was seeded");
@@ -333,9 +331,9 @@ describe("contacts", () => {
     expect(contact.transcript).toBe("farmer: నా పంటకు నీళ్లు అవసరం");
   });
 
-  // BUG (repo.ts:569): same pattern as `toRoster` — `Contact.parse(...)` strips `escalated` before
-  // the `as ContactRecord` cast, so the declared boolean is `undefined` at runtime. Not my file.
-  it.fails("ContactRecord.escalated survives the Contact.parse round-trip (BUG: field is stripped)", async () => {
+  // Fixed in `toContact`: the contract is parsed first, then the record-only `escalated` flag is
+  // spread back on.
+  it("ContactRecord.escalated survives the Contact.parse round-trip", async () => {
     const contacts = await listContacts(env);
     const contact = contacts[0];
     if (contact === undefined) throw new Error("no contact was seeded");
