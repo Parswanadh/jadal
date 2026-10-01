@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
+
+const CoordinatorConsole = lazy(() => import('./coordinator/CoordinatorConsole'));
 
 interface HealthResponse {
   ok: boolean;
@@ -30,7 +32,7 @@ export default function App() {
   }, []);
 
   return (
-    <main style={{ fontFamily: 'system-ui, -apple-system, sans-serif', padding: '2rem', maxWidth: '640px', margin: '0 auto', lineHeight: 1.5 }}>
+    <main style={{ fontFamily: 'system-ui, -apple-system, sans-serif', padding: '2rem', maxWidth: '1100px', margin: '0 auto', lineHeight: 1.5 }}>
       <h1>Jadal</h1>
       <p>Warabandi-style Canal Irrigation Management &amp; Agentic AI</p>
 
@@ -46,6 +48,10 @@ export default function App() {
           </div>
         )}
       </section>
+
+      <Suspense fallback={<p>Loading coordinator console…</p>}>
+        <CoordinatorConsole />
+      </Suspense>
     </main>
   );
 }

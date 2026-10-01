@@ -4,7 +4,9 @@
     "jsx": "react-jsx",
     "rootDir": "src",
     "outDir": "dist",
-    "noEmit": true
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node", "react", "react-dom"]
   },
   "include": ["src/**/*"]
 }
