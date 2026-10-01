@@ -20,6 +20,18 @@ const MOCK_URGENT_VOLUME_M3 = 200; // ASSUMED: mock urgent request volume
 const MOCK_BUFFER_VOLUME_M3 = 120; // ASSUMED: mock buffer request volume
 const MOCK_URGENT_GRANT_M3 = 150; // ASSUMED: mock agent recommendation for the urgent request
 
+/**
+ * The mock's own request copy. These strings are the English values of the
+ * matching `fixture.*` keys in src/i18n/en.json; the screens translate them
+ * back by looking the text up in either language (src/i18n/fixtureText.ts), so
+ * the two must stay identical. `i18n/fixtureText.test.ts` locks that equality.
+ */
+export const MOCK_FIXTURE_TEXT = {
+  reasonMaizeTasseling: "My maize is tasseling and the leaves are rolling in the heat.",
+  reasonTailShortTurn: "My field at the tail end got a short turn.",
+  reasonWaterNeeded: "Water needed for my crop.",
+  noteTailShort: "Tail end was short last turn.",
+} as const;
 
 // Minimal structural view of the seed fixture (extra keys ignored).
 interface DemoScenario {
@@ -291,7 +303,7 @@ function seededRequests(): WaterRequestT[] {
       crop_plan_id: "cp6",
       type: "urgent",
       volume_m3: MOCK_URGENT_VOLUME_M3,
-      reason: "My maize is tasseling and the leaves are rolling in the heat.",
+      reason: MOCK_FIXTURE_TEXT.reasonMaizeTasseling,
       channel: "voice",
       status: "raised",
       raised_at: MOCK_NOW,
@@ -307,12 +319,12 @@ function seededRequests(): WaterRequestT[] {
       farmer_id: "f8",
       type: "buffer",
       volume_m3: MOCK_BUFFER_VOLUME_M3,
-      reason: "My field at the tail end got a short turn.",
+      reason: MOCK_FIXTURE_TEXT.reasonTailShortTurn,
       channel: "portal",
       status: "approved",
       raised_at: MOCK_NOW,
       triage_score: 0.4,
-      coordinator_decision: { decision: "approve", volume_m3: MOCK_BUFFER_VOLUME_M3, note: "Tail end was short last turn.", at: MOCK_NOW },
+      coordinator_decision: { decision: "approve", volume_m3: MOCK_BUFFER_VOLUME_M3, note: MOCK_FIXTURE_TEXT.noteTailShort, at: MOCK_NOW },
     },
   ];
 }
@@ -338,7 +350,7 @@ export function mockDecideRequest(id: string, body: z.input<typeof routes.decide
       farmer_id: "f1",
       type: "urgent",
       volume_m3: input.volume_m3,
-      reason: "Water needed for my crop.",
+      reason: MOCK_FIXTURE_TEXT.reasonWaterNeeded,
       channel: "voice",
       raised_at: MOCK_NOW,
     } as const);

@@ -141,12 +141,20 @@ export interface UrgentRequestResult {
   approved: boolean;
 }
 
+/**
+ * The words the demo farmer speaks, in Telugu. This reason reaches the
+ * coordinator screen, which shows it in the active language, so the text must
+ * match `fixture.reasonPaddyFlowering` exactly (see src/i18n/fixtureText.ts and
+ * its test, which lock the two together).
+ */
+export const DEMO_INTAKE_TEXT = "నాకు అత్యవసరంగా నీరు కావాలి, వరి పూత దశలో ఉంది.";
+
 export function raiseUrgentRequest(): Promise<ApiResult<UrgentRequestResult>> {
   return run(async () => {
     const farmerId = "f1";
     const [names, intake] = await Promise.all([
       farmerNameMap(),
-      api.intake({ farmer_id: farmerId, text: "నాకు అత్యవసరంగా నీరు కావాలి, వరి పూత దశలో ఉంది" }),
+      api.intake({ farmer_id: farmerId, text: DEMO_INTAKE_TEXT }),
     ]);
     const raised =
       intake.request ??
