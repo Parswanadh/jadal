@@ -1,0 +1,23 @@
+{
+  "name": "api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "echo \"No tests for api yet\"",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@jadal/contracts": "workspace:*",
+    "@jadal/core": "workspace:*",
+    "hono": "^4.7.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "web": "workspace:*"
+  }
+}
