@@ -234,7 +234,7 @@ export function mockListRequests() {
       status: "approved",
       raised_at: MOCK_NOW,
       triage_score: 0.4,
-      coordinator_decision: { decision: "approve", volume_m3: 120, note: "Mock approval.", at: MOCK_NOW },
+      coordinator_decision: { decision: "approve", volume_m3: MOCK_BUFFER_VOLUME_M3, note: "Mock approval.", at: MOCK_NOW },
     },
   ]);
 }
