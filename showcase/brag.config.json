@@ -1,0 +1,27 @@
+{
+  "$comment": "STUB — latent-spaces/brag config for Jadal showcase (C8). docs/research/brag.md has NOT landed (ADR-005 open), so this file is a best-effort placeholder the orchestrator replaces once the real schema lands. No secrets. See ../brag-note.md.",
+  "_stub": true,
+  "_pendingResearch": "docs/research/brag.md (ADR-005 Showcase tooling)",
+  "site": {
+    "name": "Jadal — Whose Turn Is It to Irrigate",
+    "tagline": "Equal water, not equal hours.",
+    "baseUrl": "https://demo.jadal.example.com",
+    "localBaseUrl": "http://localhost:5173"
+  },
+  "source": {
+    "seedScenario": "../packages/contracts/fixtures/demo-scenario.json",
+    "heroMetric": "tail need-met equal-hours (~45%) vs equal-water (>90%), Gini before/after",
+    "ledgerInvariant": "supply = quotas + buffer + delivered + losses"
+  },
+  "sections": [
+    { "id": "hero", "title": "Hours are not water", "route": "/canal", "shot": "screenshots/out/canal.png" },
+    { "id": "farmer", "title": "Need in: registration + entitlements", "route": "/farmer", "shot": "screenshots/out/farmer.png" },
+    { "id": "coordinator", "title": "Coordinator approves: roster + requests", "route": "/coordinator", "shot": "screenshots/out/coordinator.png" },
+    { "id": "voice", "title": "Telugu voice request + acknowledged calls", "route": "/phone", "shot": "screenshots/out/phone.png" },
+    { "id": "demo", "title": "Ledger proof + event replay", "route": "/demo", "shot": "screenshots/out/demo.png" }
+  ],
+  "narration": {
+    "voiceTeluguLine": "నాకు ఈ వారం అత్యవసరంగా నీరు కావాలి.",
+    "voiceEnglishLine": "I urgently need water this week."
+  }
+}
