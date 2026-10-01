@@ -98,7 +98,9 @@ Run inputs for this review (relative to the current directory): .review/pr.json,
   # Never merge when the checks failed, whatever the model says.
   if [ "$decision" = "approve" ] && [ "$checks" -eq 0 ]; then
     gh pr review "$n" --approve --body "$body" >/dev/null 2>&1 || gh pr comment "$n" --body "$body" >/dev/null
-    if gh pr merge "$n" --merge --delete-branch >/dev/null 2>&1; then
+    gh pr merge "$n" --merge >/dev/null 2>&1
+    if [ "$(gh pr view "$n" --json state -q .state)" = "MERGED" ]; then
+      gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/$(jq -r '.headRefName' "$run/pr.json")" >/dev/null 2>&1
       log "PR #$n: merged — $summary"
     else
       log "PR #$n: approve OK but merge failed (branch protection or conflict)"
