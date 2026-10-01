@@ -1,0 +1,46 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`A4: Roster Engine > snapshots a representative roster for regression testing 1`] = `
+{
+  "canal_id": "c1",
+  "id": "r_snap",
+  "release_window_id": "rw-test",
+  "shortfall_m3": {},
+  "status": "proposed",
+  "turns": [
+    {
+      "end": "2026-09-15T01:10:10.587Z",
+      "expected_flow_m3s": 0.14469604402246847,
+      "farmer_id": "f1",
+      "id": "turn_r_snap_1",
+      "lag_h": 0.20974103369240749,
+      "outlet_id": "o1",
+      "planned_volume_m3": 499.99999999999994,
+      "roster_id": "r_snap",
+      "start": "2026-09-15T00:12:35.067Z",
+    },
+    {
+      "end": "2026-09-15T02:10:14.329Z",
+      "expected_flow_m3s": 0.13874466398153087,
+      "farmer_id": "f2",
+      "id": "turn_r_snap_2",
+      "lag_h": 0.45443890633354955,
+      "outlet_id": "o2",
+      "planned_volume_m3": 500,
+      "roster_id": "r_snap",
+      "start": "2026-09-15T01:10:10.587Z",
+    },
+    {
+      "end": "2026-09-15T03:12:52.652Z",
+      "expected_flow_m3s": 0.1330380655075736,
+      "farmer_id": "f3",
+      "id": "turn_r_snap_3",
+      "lag_h": 0.6991367789746916,
+      "outlet_id": "o3",
+      "planned_volume_m3": 500,
+      "roster_id": "r_snap",
+      "start": "2026-09-15T02:10:14.329Z",
+    },
+  ],
+}
+`;

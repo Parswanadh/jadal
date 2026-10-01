@@ -1,0 +1,115 @@
+[
+  {
+    "crop": "rice",
+    "variant": "flooded",
+    "kc_ini": 1.05,
+    "kc_mid": 1.20,
+    "kc_end": 0.75,
+    "stage_days": { "ini": 30, "dev": 30, "mid": 60, "late": 30 },
+    "max_height_m": 1.0,
+    "root_depth_m": { "min": 0.5, "max": 0.7 },
+    "depletion_p": 0.20,
+    "percolation_mm_day": 3.5,
+    "source": "FAO-56 (2025) Table 6.2 (p. 170), Table 6.7 (p. 185), Table 8.2 (p. 260); FAO-56 (1998) Table 11, Table 12, Table 22"
+  },
+  {
+    "crop": "maize",
+    "kc_ini": 0.30,
+    "kc_mid": 1.20,
+    "kc_end": 0.35,
+    "stage_days": { "ini": 20, "dev": 35, "mid": 40, "late": 30 },
+    "max_height_m": 2.0,
+    "root_depth_m": { "min": 0.8, "max": 1.2 },
+    "depletion_p": 0.50,
+    "source": "FAO-56 (2025) Table 6.2 (p. 168), Table 8.2 (p. 260); FAO-56 (1998) Table 11 (India dry, cool)"
+  },
+  {
+    "crop": "groundnut",
+    "kc_ini": 0.40,
+    "kc_mid": 1.15,
+    "kc_end": 0.60,
+    "stage_days": { "ini": 25, "dev": 35, "mid": 45, "late": 25 },
+    "max_height_m": 0.4,
+    "root_depth_m": { "min": 0.5, "max": 1.0 },
+    "depletion_p": 0.50,
+    "source": "FAO-56 (1998) Table 11 (West Africa/Dry), Table 12, Table 22; FAO-56 (2025) Table 6.2 (p. 169), Table 8.2 (p. 260)"
+  },
+  {
+    "crop": "cotton",
+    "kc_ini": 0.35,
+    "kc_mid": 1.18,
+    "kc_end": 0.60,
+    "stage_days": { "ini": 30, "dev": 50, "mid": 60, "late": 55 },
+    "max_height_m": 1.3,
+    "root_depth_m": { "min": 1.0, "max": 1.7 },
+    "depletion_p": 0.65,
+    "source": "FAO-56 (1998) Table 11 (Egypt/Pakistan), Table 12, Table 22; FAO-56 (2025) Table 6.2 (p. 169), Table 8.2 (p. 260)"
+  },
+  {
+    "crop": "chilli",
+    "kc_ini": 0.60,
+    "kc_mid": 1.05,
+    "kc_end": 0.90,
+    "stage_days": { "ini": 30, "dev": 40, "mid": 40, "late": 20 },
+    "max_height_m": 0.7,
+    "root_depth_m": { "min": 0.5, "max": 1.0 },
+    "depletion_p": 0.30,
+    "source": "FAO-56 (1998) Table 11, Table 12, Table 22 (Sweet peppers bell proxy); FAO-56 (2025) Table 6.1 (p. 167), Table 8.1 (p. 259)"
+  },
+  {
+    "crop": "sugarcane",
+    "variant": "virgin",
+    "kc_ini": 0.40,
+    "kc_mid": 1.25,
+    "kc_end": 0.75,
+    "stage_days": { "ini": 35, "dev": 60, "mid": 180, "late": 90 },
+    "max_height_m": 3.0,
+    "root_depth_m": { "min": 1.2, "max": 2.0 },
+    "depletion_p": 0.65,
+    "source": "FAO-56 (1998) Table 11 (Tropics), Table 12, Table 22; FAO-56 (2025) Table 6.2 (p. 170), Table 8.2 (p. 260)"
+  },
+  {
+    "crop": "greengram",
+    "kc_ini": 0.40,
+    "kc_mid": 1.05,
+    "kc_end": 0.35,
+    "stage_days": { "ini": 20, "dev": 30, "mid": 30, "late": 20 },
+    "max_height_m": 0.4,
+    "root_depth_m": { "min": 0.6, "max": 1.0 },
+    "depletion_p": 0.45,
+    "source": "FAO-56 (1998) Table 11 (Green gram, cowpeas), Table 12, Table 22; FAO-56 (2025) Table 6.2 (p. 169), Table 8.2 (p. 260)"
+  },
+  {
+    "crop": "blackgram",
+    "kc_ini": 0.40,
+    "kc_mid": 1.10,
+    "kc_end": 0.35,
+    "stage_days": { "ini": 15, "dev": 25, "mid": 35, "late": 20 },
+    "max_height_m": 0.5,
+    "root_depth_m": { "min": 0.6, "max": 0.9 },
+    "depletion_p": 0.45,
+    "source": "FAO-56 (2025) Table 6.2 (p. 169), Table 8.2 (p. 260); FAO-56 (1998) Table 11 proxy (Beans, dry, Pakistan)"
+  },
+  {
+    "crop": "redgram",
+    "kc_ini": 0.35,
+    "kc_mid": 1.10,
+    "kc_end": 0.40,
+    "stage_days": { "ini": 25, "dev": 40, "mid": 65, "late": 40 },
+    "max_height_m": 1.8,
+    "root_depth_m": { "min": 1.0, "max": 1.5 },
+    "depletion_p": 0.60,
+    "source": "ASSUMED: ICRISAT / ANGRAU agronomic guidelines for Pigeonpea (Cajanus cajan); not tabulated in FAO-56 (fao56-book-reference.md line 410)"
+  },
+  {
+    "crop": "chickpea",
+    "kc_ini": 0.40,
+    "kc_mid": 1.00,
+    "kc_end": 0.35,
+    "stage_days": { "ini": 20, "dev": 30, "mid": 40, "late": 20 },
+    "max_height_m": 0.4,
+    "root_depth_m": { "min": 0.6, "max": 1.0 },
+    "depletion_p": 0.50,
+    "source": "FAO-56 (1998) Table 12, Table 22 (Chickpea); FAO-56 (2025) Table 6.2 (p. 169), Table 8.2 (p. 260); Table 11 proxy (Beans, dry)"
+  }
+]
