@@ -528,15 +528,15 @@ function toRoster(row: RosterRow, turns: Turn[]): RosterRecord {
  * The two JSON columns are re-validated through the contract's own sub-schemas rather than trusted as
  * `unknown`, because `request.recommended` and `request.decided` write them as opaque `json(...)`
  * blobs and a `decision` value the contract rejects would otherwise surface as a 500 from a route
- * that only meant to read a list.
+ * that only meant to read a list. A NULL column means the decision has not happened yet: it is
+ * omitted rather than parsed, because the contract's `.optional()` accepts `undefined`, not `null`.
  */
 function toRequest(row: RequestRow): WaterRequest {
-  const recommendation = WaterRequest.shape.agent_recommendation.parse(
-    parseJsonObject(row.agent_recommendation, "request.agent_recommendation", row.id),
-  );
-  const decision = WaterRequest.shape.coordinator_decision.parse(
-    parseJsonObject(row.coordinator_decision, "request.coordinator_decision", row.id),
-  );
+  const rawRecommendation = parseJsonObject(row.agent_recommendation, "request.agent_recommendation", row.id);
+  const rawDecision = parseJsonObject(row.coordinator_decision, "request.coordinator_decision", row.id);
+  const recommendation =
+    rawRecommendation === null ? undefined : WaterRequest.shape.agent_recommendation.parse(rawRecommendation);
+  const decision = rawDecision === null ? undefined : WaterRequest.shape.coordinator_decision.parse(rawDecision);
   return WaterRequest.parse(
     withDecision(
       withOptional(

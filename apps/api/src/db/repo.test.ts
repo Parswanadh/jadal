@@ -279,11 +279,9 @@ describe("requests", () => {
     expect(await getRequest(env, "missing")).toBeNull();
   });
 
-  // BUG (repo.ts:534): `toRequest` calls `WaterRequest.shape.agent_recommendation.parse(null)` when
-  // the JSON column is NULL; `.optional()` accepts `undefined`, not `null`, so any request that has
-  // not yet been recommended (or decided) throws on read instead of omitting the field. The fix is
-  // to skip the parse when `parseJsonObject` returns null. Not my file, so marked `it.fails`.
-  it.fails("getRequest tolerates a request with NULL agent_recommendation (BUG: null is parsed, not omitted)", async () => {
+  // Fixed in `toRequest`: NULL decision columns are omitted rather than parsed, so a request that
+  // has not yet been recommended reads back without the optional decision fields.
+  it("getRequest tolerates a request with NULL agent_recommendation", async () => {
     const db = await createTestDb();
     const bareEnv: DbEnv = { DB: db };
     const bareScenario = demoScenario();
