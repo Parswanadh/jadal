@@ -34,7 +34,8 @@ test('the demo walkthrough can be stepped through all 6 steps', async ({ page, c
   await expect(page.getByText(/^Tail farms now get \d+% of their need instead of \d+%\./)).toBeVisible();
   await expect(page.getByText(/^Ramaiah Kota asked for [\d,]+ m³\. The coordinator approved [\d,]+ m³/)).toBeVisible();
   await expect(page.getByText(/Anjamma Bandi and Narasimha Chinta have no smartphone/)).toBeVisible();
-  await expect(page.getByText(/^The books balance\./)).toBeVisible();
+  // The step outcome, not the audit summary card that also opens with "The books balance.".
+  await expect(page.locator('.demo__result').filter({ hasText: /^The books balance\. The fairness gap/ })).toBeVisible();
   await expect(page.getByText(/All steps are done in \d{1,2}:\d\d\./)).toBeVisible();
 
   // Each step links to the screen where the result can be seen.

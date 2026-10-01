@@ -68,10 +68,38 @@ for (const route of ROUTES) {
     // The canal screen appends the canal name to its eyebrow, so match on the label.
     await expect(header.locator('.eyebrow').first()).toContainText(route.eyebrow);
 
+    // No developer text on screen: no API paths, HTTP verbs, internal ids or raw ISO times.
+    const text = await page.locator('main').innerText();
+    expect(text).not.toMatch(/\/api\/|\bPOST\b|\bGET\b|\brw\d\b|\bf\d\b|\bo\d\b/);
+    expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+
     await settle(page);
     expect(consoleErrors).toEqual([]);
   });
 }
+
+/** Sub-tabs of the farmer and coordinator screens, where most of the copy lives. */
+const SUB_TABS = [
+  '/farmer?tab=ask',
+  '/farmer?tab=pool',
+  '/farmer?tab=register',
+  '/coordinator?tab=requests',
+  '/coordinator?tab=farmers',
+  '/coordinator?tab=entitlements',
+  '/coordinator?tab=roster',
+  '/coordinator?tab=accounts',
+];
+
+test('every sub-tab keeps developer text off the screen', async ({ page, consoleErrors }) => {
+  for (const path of SUB_TABS) {
+    await page.goto(path);
+    await settle(page);
+    const text = await page.locator('main').innerText();
+    expect(text, path).not.toMatch(/\/api\/|\bPOST\b|\bGET\b|\brw\d\b|\bf\d\b|\bo\d\b/);
+    expect(text, path).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+  }
+  expect(consoleErrors).toEqual([]);
+});
 
 test('the primary navigation reaches every screen', async ({ page, consoleErrors }) => {
   await page.goto('/');
