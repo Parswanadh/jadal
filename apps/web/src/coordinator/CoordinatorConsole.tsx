@@ -80,9 +80,11 @@ export default function CoordinatorConsole() {
     accounts: 0,
   };
 
-  // Open on what needs attention: requests when any are waiting, otherwise the weekly shares.
+  // Open on what needs attention first: extra-water requests, then unchecked
+  // farmers, then the weekly shares. Fall back to the weekly shares.
   const fromUrl = params.get("tab");
-  const defaultTab: Tab = pendingRequests > 0 ? "requests" : "entitlements";
+  const defaultTab: Tab =
+    pendingRequests > 0 ? "requests" : pendingFarmers > 0 ? "farmers" : "entitlements";
   const tab: Tab = isTab(fromUrl) ? fromUrl : (chosen ?? defaultTab);
 
   const pick = useCallback(
