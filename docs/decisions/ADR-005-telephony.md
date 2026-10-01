@@ -56,7 +56,7 @@ The signature check rebuilds the signed URL from `PUBLIC_BASE_URL` plus the requ
 
 ## Environment variables
 
-Set secrets with `wrangler secret put NAME` (or in `apps/api/.dev.vars` for local dev, which is gitignored). Never commit values.
+Set secrets with `wrangler secret put NAME` (or in `apps/api/.dev.vars` for local dev; make sure it is not committed). Never commit values.
 
 | Name | Required | Purpose |
 | --- | --- | --- |
