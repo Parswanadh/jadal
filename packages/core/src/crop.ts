@@ -6,7 +6,7 @@ import type {
   Plot,
   WeatherDay,
   SoilType,
-} from '../../contracts/dist/index.js';
+} from '@jadal/contracts';
 
 // FAO-56 Table 7.5 (p. 232) / Table 19: Available soil water capacity (theta_FC - theta_WP) in m3/m3
 export const SOIL_AVAILABLE_WATER: Record<SoilType, number> = {

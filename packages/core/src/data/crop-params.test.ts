@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CropParams, CropName } from '../../../contracts/dist/index.js';
+import { CropParams, CropName } from '@jadal/contracts';
 import rawData from './crop-params.json';
 
 describe('crop-params.json validation (Task A1)', () => {

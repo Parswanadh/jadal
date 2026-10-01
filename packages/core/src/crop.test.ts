@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { CropParams, CropPlan, Plot, WeatherDay } from '../../contracts/dist/index.js';
+import type { CropParams, CropPlan, Plot, WeatherDay } from '@jadal/contracts';
 import { cropEngine, SOIL_AVAILABLE_WATER } from './crop';
 
 describe('cropEngine (Task A2)', () => {
