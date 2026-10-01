@@ -54,6 +54,11 @@ const INVISIBLE = /[\u200b-\u200f\u202a-\u202e\u2060\ufeff]/g;
 /**
  * Lowercase, drop invisibles, fold Telugu digits to Latin, strip punctuation to spaces.
  * Aggressive on purpose: the goal is a stable haystack for substring search, not pretty text.
+ *
+ * Combining marks (`\p{M}`) are kept, not stripped: Telugu vowel signs, anusvara and virama are
+ * Mn/Mc code points that carry real phonetic information, and every Telugu keyword and volume unit
+ * in the tables below is written with them. Treating them as punctuation would render the whole
+ * Telugu-script side of the classifier (and `extractVolumeM3`'s `క్యూబిక్ మీటర్లు`) unmatchable.
  */
 export function normalizeText(raw: string): string {
   return raw
@@ -61,7 +66,7 @@ export function normalizeText(raw: string): string {
     .replace(INVISIBLE, "")
     .replace(/[౦-౯]/g, (d) => TELUGU_DIGITS[d] ?? d)
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}.]+/gu, " ")
+    .replace(/[^\p{L}\p{N}\p{M}.]+/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
