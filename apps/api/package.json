@@ -16,7 +16,8 @@
   "dependencies": {
     "@jadal/contracts": "workspace:*",
     "@jadal/core": "workspace:*",
-    "hono": "^4.7.2"
+    "hono": "^4.7.2",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@jadal/contracts": "workspace:*",
