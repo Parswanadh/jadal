@@ -1,0 +1,90 @@
+{
+  "app": {
+    "name": "Jadal",
+    "tagline": "Fair canal water for every farm",
+    "description": "Warabandi-style canal irrigation management with agentic AI"
+  },
+  "a11y": {
+    "skipToContent": "Skip to main content",
+    "mainNav": "Primary navigation",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "toggleTheme": "Toggle color theme",
+    "toggleLanguage": "Switch language"
+  },
+  "nav": {
+    "home": "Home",
+    "farmer": "Farmer",
+    "coordinator": "Coordinator",
+    "canal": "Canal",
+    "phone": "Phone",
+    "demo": "Demo"
+  },
+  "controls": {
+    "languageLabel": "Language",
+    "languageEnglish": "English",
+    "languageTelugu": "Telugu",
+    "switchToTelugu": "తె",
+    "switchToEnglish": "EN",
+    "themeLabel": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark"
+  },
+  "home": {
+    "title": "Whose turn is it to irrigate?",
+    "subtitle": "One shared schedule for the whole canal: crop needs, release windows, requests and deliveries, all recorded by volume.",
+    "healthTitle": "System health",
+    "healthChecking": "Checking /api/health…",
+    "healthOperational": "Operational",
+    "healthDegraded": "Degraded",
+    "healthUnreachable": "API unreachable — showing app shell only",
+    "versionLabel": "Version",
+    "portalsTitle": "Portals",
+    "farmerCardTitle": "Farmer portal",
+    "farmerCardBody": "Registration, crop plans, quota and requests. Values come from the API.",
+    "coordinatorCardTitle": "Coordinator portal",
+    "coordinatorCardBody": "Verify farmers, approve entitlements and rosters, decide requests.",
+    "canalCardTitle": "Canal view",
+    "canalCardBody": "Outlets along the canal and the weekly roster. No water maths in the browser.",
+    "phoneCardTitle": "Simulated phone",
+    "phoneCardBody": "Browser fallback for the Telugu voice call flow.",
+    "demoCardTitle": "Demo controls",
+    "demoCardBody": "Reset the seeded scenario and replay the event log."
+  },
+  "farmer": {
+    "title": "Farmer portal",
+    "body": "Registration, plots, crop plans, quota balance and water requests will live here. This placeholder reserves the route for the C3–C7 work.",
+    "note": "All volumes and schedules on this page will come from the API. This UI never computes water numbers."
+  },
+  "coordinator": {
+    "title": "Coordinator portal",
+    "body": "Farmer verification, entitlement and roster approvals, and request decisions will live here. This placeholder reserves the route for the C3–C7 work.",
+    "note": "The coordinator approves every proposal. Agents suggest; the deterministic core computes; the coordinator decides."
+  },
+  "canal": {
+    "title": "Canal view",
+    "body": "The canal map and release-window roster will live here. This placeholder reserves the route for the C3–C7 work.",
+    "note": "Flow, lag and turn durations are computed server-side and read from the API."
+  },
+  "phone": {
+    "title": "Simulated phone",
+    "body": "The in-browser Telugu call simulator will live here as the telephony fallback. This placeholder reserves the route for the C3–C7 work.",
+    "note": "Voice transcripts and agent replies come from the API."
+  },
+  "demo": {
+    "title": "Demo controls",
+    "body": "Seeded-scenario reset, time travel and event replay will live here. This placeholder reserves the route for the C3–C7 work.",
+    "note": "Demo state is owned by the API; this page only sends demo commands and renders responses."
+  },
+  "common": {
+    "comingSoon": "Coming soon",
+    "placeholderDetail": "Full content arrives with a later sub-task. Shell, navigation, language and theme already work on this page.",
+    "backHome": "Back to home",
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "This route does not exist. Use the navigation above to continue."
+  },
+  "footer": {
+    "text": "Jadal — deterministic volumes, coordinator-approved. UI displays API values only.",
+    "healthLabel": "API"
+  }
+}
