@@ -65,7 +65,6 @@ export default function CoordinatorConsole() {
         setSumTe(au.summaryTe);
         const sources = [f.source, e.source, rw.source, rq.source, lg.source, au.source];
         setSource(sources.every((s) => s === "live") ? "live" : "mock");
-        if (sources.some((s) => s === "mock")) setLoadError(true);
       } catch {
         if (!cancelled) setLoadError(true);
       } finally {
