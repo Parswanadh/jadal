@@ -64,6 +64,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Right-aligned table column labels: alignment only, never the mono face. */
+.col-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
 .pill {
   display: inline-block;
   padding: 0.1rem 0.65rem;
@@ -384,7 +390,8 @@
 }
 
 .table td.num,
-.table th.num {
+.table td.col-num,
+.table th.col-num {
   text-align: right;
   white-space: nowrap;
 }

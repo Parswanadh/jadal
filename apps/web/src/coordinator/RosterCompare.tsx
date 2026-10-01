@@ -55,7 +55,7 @@ function Option({ plan, mode, gini, recommended, anyApproved, f, onApprove }: Op
             <tr>
               <th scope="col">{t("coord.col.outlet")}</th>
               <th scope="col">{t("coord.col.turn")}</th>
-              <th scope="col" className="num">{t("coord.col.water")}</th>
+              <th scope="col" className="col-num">{t("coord.col.water")}</th>
               <th scope="col">{t("coord.col.needMet")}</th>
             </tr>
           </thead>

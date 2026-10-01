@@ -121,7 +121,7 @@ export default function RequestQueue({ rows, onDecided }: Props) {
                 <tr>
                   <th scope="col">{t("coord.col.farmer")}</th>
                   <th scope="col">{t("coord.col.request")}</th>
-                  <th scope="col" className="num">{t("coord.col.asked")}</th>
+                  <th scope="col" className="col-num">{t("coord.col.asked")}</th>
                   <th scope="col">{t("coord.col.result")}</th>
                 </tr>
               </thead>

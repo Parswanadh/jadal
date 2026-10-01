@@ -83,8 +83,8 @@ export default function EntitlementReview({ rows, seasonTotalM3, explanation, on
                   <tr>
                     <th scope="col">{t("coord.col.farmer")}</th>
                     <th scope="col">{t("coord.col.crop")}</th>
-                    <th scope="col" className="num">{t("coord.col.share")}</th>
-                    <th scope="col" className="num">{t("coord.col.need")}</th>
+                    <th scope="col" className="col-num">{t("coord.col.share")}</th>
+                    <th scope="col" className="col-num">{t("coord.col.need")}</th>
                     <th scope="col">{t("coord.col.status")}</th>
                   </tr>
                 </thead>

@@ -64,9 +64,9 @@ export default function LedgerAudit({ ledger, audit }: Props) {
               <thead>
                 <tr>
                   <th scope="col">{t("coord.col.farmer")}</th>
-                  <th scope="col" className="num">{t("coord.col.quota")}</th>
-                  <th scope="col" className="num">{t("coord.col.delivered")}</th>
-                  <th scope="col" className="num">{t("coord.col.needMet")}</th>
+                  <th scope="col" className="col-num">{t("coord.col.quota")}</th>
+                  <th scope="col" className="col-num">{t("coord.col.delivered")}</th>
+                  <th scope="col" className="col-num">{t("coord.col.needMet")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -75,7 +75,7 @@ export default function LedgerAudit({ ledger, audit }: Props) {
                     <th scope="row">{x.name}</th>
                     <td className="num">{f.m3(x.quotaM3)}</td>
                     <td className="num">{f.m3(x.deliveredM3)}</td>
-                    <td className="num">{x.deliveredM3 > 0 ? f.pct(x.needMetPct) : <span className="muted">{t("coord.acc.notStarted")}</span>}</td>
+                    <td className="col-num">{x.deliveredM3 > 0 ? <span className="num">{f.pct(x.needMetPct)}</span> : <span className="muted">{t("coord.acc.notStarted")}</span>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -89,7 +89,7 @@ export default function LedgerAudit({ ledger, audit }: Props) {
                 <tr>
                   <th scope="col">{t("coord.col.when")}</th>
                   <th scope="col">{t("coord.col.moved")}</th>
-                  <th scope="col" className="num">{t("coord.col.water")}</th>
+                  <th scope="col" className="col-num">{t("coord.col.water")}</th>
                 </tr>
               </thead>
               <tbody>

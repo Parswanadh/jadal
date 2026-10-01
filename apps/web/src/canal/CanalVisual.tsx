@@ -236,7 +236,7 @@ function CanalVisualView({ data }: { data: CanalVisualData }) {
                   <thead>
                     <tr>
                       <th scope="col">{t("canal.colOutlet")}</th>
-                      <th scope="col" className="num">{t("canal.colLost")}</th>
+                      <th scope="col" className="col-num">{t("canal.colLost")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -266,8 +266,8 @@ function CanalVisualView({ data }: { data: CanalVisualData }) {
             <thead>
               <tr>
                 <th scope="col">{t("canal.colOutlet")}</th>
-                <th scope="col" className="num">{t("canal.colDistance")}</th>
-                <th scope="col" className="num">{t("canal.colFlow")}</th>
+                <th scope="col" className="col-num">{t("canal.colDistance")}</th>
+                <th scope="col" className="col-num">{t("canal.colFlow")}</th>
               </tr>
             </thead>
             <tbody>
