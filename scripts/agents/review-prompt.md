@@ -14,12 +14,12 @@ Review against these gates (any FAIL means request_changes):
 2. Scope: the PR only touches the folders its issue owns. Changes to packages/contracts are only allowed when the PR has the label `contracts-ok`.
 3. Contract conformance: implementations match packages/contracts types and zod schemas; API responses are validated.
 4. Determinism rule: no LLM calls, fetch or Math.random in packages/core; no water arithmetic in prompts, the API layer or the UI (it must come from @jadal/core).
-5. No invented constants: crop parameters come from the verified table with sources; other constants are marked ASSUMED.
+5. No invented constants — this gate covers WATER numbers only (agronomic, hydraulic, volume, quota, flow values): crop parameters come from the verified table with sources; other water constants are marked ASSUMED. Colours, spacing, fonts and other styling are NOT constants for this gate.
 6. No secrets, API keys or .dev.vars committed; no large binaries.
 7. Tests exist for new logic and are meaningful (not just snapshot-of-nothing).
 8. Code quality: readable, matches surrounding style, no dead code or debug logs left behind.
 
-Be pragmatic: this is a 12-hour hackathon. Approve if all gates pass even when small nits remain (list nits as suggestions). Request changes only for gate failures or real bugs, and make every requested change specific: file, line or symbol, what to change.
+Styling and visual-design deviations (palette, fonts, spacing) are never blocking: list them under suggestions. Be pragmatic: this is a 12-hour hackathon; PRs are stacked and a blocked early PR stalls the whole task. Approve if all gates pass even when small nits remain (list nits as suggestions). Request changes only for gate failures or real bugs, and make every requested change specific: file, line or symbol, what to change.
 
 Write exactly this JSON to the decision path given in the run message:
 {"decision": "approve" | "request_changes", "summary": "<2-4 sentences>", "gates": {"checks": "pass|fail", "scope": "pass|fail", "contracts": "pass|fail", "determinism": "pass|fail", "constants": "pass|fail", "secrets": "pass|fail", "tests": "pass|fail", "quality": "pass|fail"}, "required_changes": ["..."], "suggestions": ["..."]}
