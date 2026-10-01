@@ -41,10 +41,26 @@ review_pr() {
 
   ensure_worktree
   rm -rf "$WT/.review"
+  git -C "$WT" merge --abort >/dev/null 2>&1
+  git -C "$WT" reset -q --hard && git -C "$WT" clean -fdq -e node_modules
   git -C "$WT" fetch -q origin "pull/$n/head" main && git -C "$WT" checkout -q --detach FETCH_HEAD
   # Test what will actually land: the PR merged with the latest main.
   if ! git -C "$WT" merge -q --no-edit origin/main >/dev/null 2>&1; then
+    local conflicted head
+    conflicted=$(git -C "$WT" diff --name-only --diff-filter=U | tr '\n' ' ')
+    head=$(jq -r '.headRefName' "$run/pr.json")
+    if [ "$conflicted" = "pnpm-lock.yaml " ]; then
+      # Lockfile-only conflict: take main's lockfile, regenerate it for the PR's package.json files, push the merge.
+      git -C "$WT" checkout -q --theirs pnpm-lock.yaml
+      if ( cd "$WT" && pnpm install --lockfile-only >/dev/null 2>&1 ) && git -C "$WT" add pnpm-lock.yaml &&
+         git -C "$WT" commit -q --no-edit && git -C "$WT" push -q origin "HEAD:refs/heads/$head"; then
+        gh pr comment "$n" --body "🤖 Reviewer: merged \`main\` into this branch and regenerated \`pnpm-lock.yaml\` (lockfile-only conflict). Reviewing the updated branch next." >/dev/null
+        log "PR #$n: lockfile conflict auto-resolved and pushed"
+        echo "$n $sha" >>"$STATE"; return
+      fi
+    fi
     git -C "$WT" merge --abort >/dev/null 2>&1
+    log "PR #$n: merge conflict in $conflicted— asked author to rebase"
     gh pr comment "$n" --body "🤖 Reviewer: this branch conflicts with \`main\`. Please run \`git pull --rebase origin main\`, resolve, and force-push; I'll re-review automatically." >/dev/null
     echo "$n $sha" >>"$STATE"; return
   fi
