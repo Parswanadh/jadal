@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import SimulatedPhone from './phone/SimulatedPhone';
 
 interface HealthResponse {
   ok: boolean;
@@ -45,6 +46,16 @@ export default function App() {
             <p><strong>Commit:</strong> <code>{health.commit}</code></p>
           </div>
         )}
+      </section>
+      {/* C6 — simulated phone demo (Task C). Anchored section; other
+          workstreams add their own sections below to keep merges trivial. */}
+      <section id="phone" style={{ marginTop: '2rem' }}>
+        <h2>Simulated Phone</h2>
+        <p>
+          <a href="#phone">Incoming-call demo</a> — Telugu TTS, typed or uploaded
+          voice replies, and night-release WhatsApp alerts.
+        </p>
+        <SimulatedPhone />
       </section>
     </main>
   );

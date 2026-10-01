@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "test": "echo \"No tests for web yet\""
+    "test": "node --test \"src/phone/*.test.ts\""
   },
   "dependencies": {
     "react": "^19.0.0",
