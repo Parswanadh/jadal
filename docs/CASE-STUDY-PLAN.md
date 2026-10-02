@@ -112,6 +112,10 @@ Short versions (30 s and 2 min) are in the script file.
 
 **Why is equal volume not simply better in your own test?** On the raw season-scaled seed, `equal_water` starves the tail, because the whole season supply is spread across one week's plans. That is a product decision about weekly versus seasonal entitlement, and it is listed as open.
 
+**How are the crop constants sourced?** From the FAO-56 Rev. 1 (2025) tables where we could verify them: Kc, plant height and root depth against Table 6.2 (pages 168 to 170; chilli in Table 6.1 page 166) and the depletion fraction p against Table 8.2 (page 260). Of 109 tagged fields in `crop-params.json`, 59 are measured against the book, 43 are assumptions, and 7 are unsourced. Every stage length is assumed, because the 2025 edition replaced fixed day counts with growing degrees. The redgram row has no valid source and is tagged unsourced. Shipped crop values agree with the book (Kc exactly for all 9 comparable crops, height within range or exact, root depth matching for 8 of 9). Cross-validation caught two provenance findings for owner decision: chilli cites Table 6.2 but is in Table 6.1, and the root depth tag MEASURED overstates agreement for flooded rice (shipped max 1.0 m vs book max 0.50 m).
+
+**Does the product ingest the whole book?** No. The product holds ten crops across eleven rows in `crop-params.json`. The repo's crop explorer parses 376 distinct crop parameter rows across four tables from local FAO-56 Rev.1 (2025): Table 6.1 (vegetables, 102 rows), Table 6.2 (field crops, 70 rows), Table 6.3 (fruit trees, shrubs and vines, 181 rows), Table 6.4 (grasses and grasslands, 23 rows); plus 49 rows across three repo research extracts (17 in `fao56-book-reference.md`, 23 in `fao56-crop-tables.md`, 9 in `fao56-model.md`), totaling 425 rows. Tables 6.5 and later and general text are not parsed. The book covers far more than these tables and the product does not ingest the whole book.
+
 **What would you do with funding or more time?** Fund the telephony account; get a native Telugu review; calibrate the seepage model against gauge readings; settle the groundnut table value; ship the two contract changes.
 
 ## 8. Claims we will not make
@@ -135,3 +139,5 @@ Short versions (30 s and 2 min) are in the script file.
 | Unscored triage shows a low-urgency pill | small web change not yet made |
 | Workflow audit F4/F5 ("alert the coordinator" does not alert; fixed 15-minute gap) | open: `docs/research/workflows-audit.md` |
 | Mock-mode screens show illustrative need-met bars that core does not produce | do not present the `/canal` need-met bars as results |
+| Chilli citation in crop-params.json (cites Table 6.2, row is in Table 6.1 p.166) | provenance finding, **needs owner decision** |
+| Flooded rice root depth tag (constant_status MEASURED vs book max 0.50m) | provenance finding, **needs owner decision** |
