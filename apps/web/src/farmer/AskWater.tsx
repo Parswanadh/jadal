@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { CropPlan, WaterRequest } from "@jadal/contracts";
-import { sendAlert } from "../api";
+import { isMockMode, sendAlert } from "../api";
 import type { Allocation } from "../api/extra";
 import { useI18n } from "../i18n/I18nContext";
 import { useFormat } from "../lib/useFormat";
@@ -101,9 +101,13 @@ export default function AskWater({ api, farmerId, farmerName, cropPlans, refresh
       setVolume("");
       setReason("");
       onRaised();
-      // An urgent request also asks the agent to call: the alert creates the
-      // contact whose call carries the agent's spoken reply.
-      if (type === "urgent") {
+      // Raising a request must not phone a real farmer. The only call a request triggers live is the
+      // coordinator's, placed by the API. This alert used to go out in live mode too, and "urgent"
+      // maps to the night-release warning ("be ready to open your field gate"), so the farmer's phone
+      // rang with what sounded like approved water before any decision existed. Farmers are phoned
+      // only after the coordinator decides. In mock mode there is no telephony: the alert is simulated
+      // and the agent's reply plays on this device, which keeps the spoken-agent demo.
+      if (type === "urgent" && isMockMode()) {
         try {
           const alert = await sendAlert({
             farmer_id: farmerId,
