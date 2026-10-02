@@ -428,3 +428,10 @@
 [INFO] [Render:trace] {"renderJobId":"28a32919-eefe-4907-ba33-4abc40a6c5e2","phase":"capture_streaming","status":"end","elapsedMs":102684,"durationMs":98338,"stagePhase":"capturing","workerCount":1,"forceScreenshot":true,"totalFrames":1620,"framesCompleted":1620,"captureMode":"screenshot","captureOperation":"encode"}
 [INFO] [Render:trace] {"renderJobId":"28a32919-eefe-4907-ba33-4abc40a6c5e2","phase":"assemble","status":"start","elapsedMs":102685,"stagePhase":"capturing","hasAudio":true,"workerCount":1,"forceScreenshot":true,"totalFrames":1620,"framesCompleted":1620,"captureMode":"screenshot","captureOperation":"encode"}
   ██████████████████████░░░  90%  Assembling final video
+[INFO] [Render:trace] {"renderJobId":"28a32919-eefe-4907-ba33-4abc40a6c5e2","phase":"assemble","status":"end","elapsedMs":104744,"durationMs":2059,"stagePhase":"capturing","hasAudio":true,"workerCount":1,"forceScreenshot":true,"totalFrames":1620,"framesCompleted":1620,"captureMode":"screenshot","captureOperation":"encode"}
+[INFO] [Render:trace] {"renderJobId":"28a32919-eefe-4907-ba33-4abc40a6c5e2","phase":"pipeline","status":"checkpoint","elapsedMs":104800,"message":"artifact validated","totalElapsedMs":104798}
+  █████████████████████████  100%  Render complete
+
+◇  /home/parshu/projects/cis/jadal-w-video-revise/showcase/brag-output-v3/brag.mp4
+   13.9 MB · 54.0s video · rendered in 1m 44.8s
+   screenshot capture · hardware gpu · compile 2.6s · extract 0.0s · audio 1.7s · probe 1.6s · setup 0.0s · capture 1m 38.3s · encode (during capture) 1m 38.3s · assemble 2.1s
