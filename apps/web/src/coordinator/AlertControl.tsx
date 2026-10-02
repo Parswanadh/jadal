@@ -4,6 +4,7 @@ import type { AlertChannel, AlertSeverity, Allocation } from '../api/extra';
 import { useI18n } from '../i18n/I18nContext';
 import { useFormat } from '../lib/useFormat';
 import { api } from './api';
+import { alertDeliveryState } from './alertDelivery';
 import './alert.css';
 
 const CHANNELS: AlertChannel[] = ['call', 'sms', 'whatsapp'];
@@ -95,7 +96,7 @@ export default function AlertControl({ farmerId, farmerName }: Props) {
         severity,
         simulated: res.simulated,
         detail: res.detail,
-        dialled: res.dialled,
+        dialled: res.dialled ?? null,
         allocation: sending ?? null,
       });
     } catch (error) {
@@ -193,37 +194,46 @@ export default function AlertControl({ farmerId, farmerName }: Props) {
         )}
 
         {result && (
-          <div className={`notice ${result.simulated ? 'notice-warn' : 'notice-ok'}`} role="status">
-            <p>
-              {result.simulated
-                ? t('coord.alert.simulated', {
-                    channel: t(`coord.alert.channel.${result.channel}`),
-                    severity: t(`coord.alert.severity.${result.severity}`),
-                    detail: result.detail,
-                  })
-                : t('coord.alert.sent', {
-                    channel: t(`coord.alert.channel.${result.channel}`),
-                    severity: t(`coord.alert.severity.${result.severity}`),
-                  })}
-            </p>
-            {/* Where it actually went, in the API's own words. A demo mapping can
-                redirect a call to a different handset, so the farmer's stored
-                number is not an honest answer to "where did this go". */}
-            <p className="alert-dialled">
-              {result.dialled !== null
-                ? t('coord.alert.dialled', { number: result.dialled })
-                : t('coord.alert.dialledNone')}
-            </p>
-            {result.allocation && (
-              <p>
-                {t('coord.alert.allocationSent', {
-                  name: farmerName,
-                  m3: f.m3(result.allocation.volume_m3),
-                  when: f.range(result.allocation.start, result.allocation.end),
-                })}
-              </p>
-            )}
-          </div>
+          /*
+           * The channel decides the wording first (see `alertDeliveryState`).
+           * `sms`/`whatsapp` have no transport in this app, so they are always
+           * reported as "not sent" — never as sent, and not as a simulated
+           * call either. Only a `call` can be sent or simulated.
+           */
+          (() => {
+            const state = alertDeliveryState(result.channel, result.simulated);
+            const channel = t(`coord.alert.channel.${result.channel}`);
+            const severity = t(`coord.alert.severity.${result.severity}`);
+            return (
+              <div className={`notice ${state === 'sent' ? 'notice-ok' : 'notice-warn'}`} role="status">
+                <p>
+                  {state === 'not-sent'
+                    ? t('coord.alert.notSent', { channel, severity, detail: result.detail })
+                    : state === 'simulated'
+                      ? t('coord.alert.simulated', { channel, severity, detail: result.detail })
+                      : t('coord.alert.sent', { channel, severity })}
+                </p>
+                {/* Where it actually went, in the API's own words. A demo mapping can
+                    redirect a call to a different handset, so the farmer's stored
+                    number is not an honest answer to "where did this go". A simulated
+                    call says plainly that no number was rung; a not-sent message says
+                    nothing about calls at all because none was attempted. */}
+                {state === 'simulated' && <p className="alert-dialled">{t('coord.alert.dialledNone')}</p>}
+                {state === 'sent' && result.dialled !== null && result.dialled.trim().length > 0 && (
+                  <p className="alert-dialled">{t('coord.alert.dialled', { number: result.dialled })}</p>
+                )}
+                {result.allocation && (
+                  <p>
+                    {t('coord.alert.allocationSent', {
+                      name: farmerName,
+                      m3: f.m3(result.allocation.volume_m3),
+                      when: f.range(result.allocation.start, result.allocation.end),
+                    })}
+                  </p>
+                )}
+              </div>
+            );
+          })()
         )}
       </form>
     </details>

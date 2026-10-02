@@ -526,6 +526,7 @@
       "send": "Send alert",
       "sending": "Sending…",
       "simulated": "Simulated only: no real {channel} was sent. {severity} level. {detail}",
+      "notSent": "Not sent: {channel} is not connected in this app, so nothing was sent to the farmer. The alert was recorded for the coordinator's list only. {severity} level. {detail}",
       "sent": "Sent by {channel}. {severity} level.",
       "error": "The alert could not be sent. Please try again.",
       "severityLabel": "Warning level",
