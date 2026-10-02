@@ -589,7 +589,8 @@ export function nextTurnTe(facts: MessageFacts): string {
     windowClauseTe(facts).length === 0 ? "" : `విడుదల సమయం ${windowClauseTe(facts)}.`,
     outletClauseTe(facts),
     volumeClauseTe(facts).length === 0 ? "" : `మీకు కేటాయించిన పరిమాణం ${volumeClauseTe(facts)}.`,
-    "దయచేసి సమయానికి సిద్ధంగా ఉండండి.",
+    whyLongerClauseTe(facts),
+    "దయచేసి సమయానికి సిద్ధంగా ఉండండి. నిర్ధారించడానికి 1 నొక్కండి లేదా మాట్లాడి చెప్పండి.",
   );
 }
 
@@ -601,7 +602,8 @@ export function nextTurnEn(facts: MessageFacts): string {
     windowClauseEn(facts).length === 0 ? "" : `The release window is ${windowClauseEn(facts)}.`,
     outletClauseEn(facts),
     volumeClauseEn(facts).length === 0 ? "" : `Your allocated volume is ${volumeClauseEn(facts)}.`,
-    "Please be ready on time.",
+    whyLongerClauseEn(facts),
+    "Please be ready on time. Press 1 to confirm, or speak your reply.",
   );
 }
 
@@ -617,7 +619,8 @@ export function requestApprovedTe(facts: MessageFacts): string {
     dayClauseTe(facts).length === 0 ? "" : `విడుదల రోజు ${dayClauseTe(facts)}.`,
     windowClauseTe(facts).length === 0 ? "" : `విడుదల సమయం ${windowClauseTe(facts)}.`,
     outletClauseTe(facts),
-    "దయచేసి సమయానికి సిద్ధంగా ఉండండి.",
+    whyLongerClauseTe(facts),
+    "దయచేసి సమయానికి సిద్ధంగా ఉండండి. నిర్ధారించడానికి 1 నొక్కండి లేదా మాట్లాడి చెప్పండి.",
   );
 }
 
@@ -629,7 +632,8 @@ export function requestApprovedEn(facts: MessageFacts): string {
     dayClauseEn(facts).length === 0 ? "" : `The release day is ${dayClauseEn(facts)}.`,
     windowClauseEn(facts).length === 0 ? "" : `The release window is ${windowClauseEn(facts)}.`,
     outletClauseEn(facts),
-    "Please be ready on time.",
+    whyLongerClauseEn(facts),
+    "Please be ready on time. Press 1 to confirm, or speak your reply.",
   );
 }
 
@@ -712,6 +716,7 @@ export function alertTe(severity: AlertSeverity, facts: MessageFacts): string {
     dayClauseTe(facts).length === 0 ? "" : `విడుదల రోజు ${dayClauseTe(facts)}.`,
     windowClauseTe(facts).length === 0 ? "" : `విడుదల సమయం ${windowClauseTe(facts)}.`,
     volumeClauseTe(facts).length === 0 ? "" : `మీకు ${volumeClauseTe(facts)} నీరు.`,
+    whyLongerClauseTe(facts),
     closing,
   );
 }
@@ -730,6 +735,7 @@ export function alertEn(severity: AlertSeverity, facts: MessageFacts): string {
     dayClauseEn(facts).length === 0 ? "" : `The release day is ${dayClauseEn(facts)}.`,
     windowClauseEn(facts).length === 0 ? "" : `The release window is ${windowClauseEn(facts)}.`,
     volumeClauseEn(facts).length === 0 ? "" : `${volumeClauseEn(facts)} of water for you.`,
+    whyLongerClauseEn(facts),
     closing,
   );
 }
