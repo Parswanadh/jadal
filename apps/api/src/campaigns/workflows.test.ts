@@ -253,6 +253,24 @@ describe("CallCampaignWorkflow", () => {
     expect(twilioCalls(env)).toBe(1);
   });
 
+  it("falls back to the default ceiling when maxAttempts is not a finite number", async () => {
+    const env = await dbEnv({ "api.twilio.com": { sid: "CA1", status: "queued" } });
+    Object.assign(env, TWILIO);
+    const at = await clockNow(env);
+    await seedContact(env, voiceContact("ct-camp-nan", "f5", 1, at));
+
+    const step = new FakeStep();
+    const workflow = new CallCampaignWorkflow({} as ExecutionContext, env);
+    const result = await workflow.run(
+      event({ contactId: "ct-camp-nan", maxAttempts: Number.NaN }),
+      step,
+    );
+
+    // A checkout-ruining NaN must not silently turn the campaign into a one-rung no-op; the
+    // documented default ladder is used instead.
+    expect(result.status).toBe("escalated");
+  });
+
   it("does not bound the first rung by maxAttempts", async () => {
     const env = await dbEnv({ "api.twilio.com": { sid: "CA1", status: "queued" } });
     Object.assign(env, TWILIO);

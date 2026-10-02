@@ -144,6 +144,24 @@ export interface CallCampaignResult {
 export const DEFAULT_MAX_ATTEMPTS = 4;
 
 /**
+ * Coerce a caller-supplied retry ceiling into a locally bounded, finite integer.
+ *
+ * `maxAttempts` arrives in the trigger payload, so it is untrusted input. As written it was used
+ * verbatim: a `NaN` made `index <= limit` never true, so the campaign silently stopped after the
+ * first rung, and an `Infinity` left the loop with no local bound at all (its only stop condition
+ * was the `escalated` status produced by `escalation.ts`). A safety ceiling has to bound the loop
+ * *here*, so anything that is not a finite number falls back to {@link DEFAULT_MAX_ATTEMPTS}, a
+ * negative request is treated as zero, and a finite request beyond the ladder's own length is
+ * clamped to it (the ladder escalates at attempt 4 regardless).
+ */
+function normaliseMaxAttempts(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) return DEFAULT_MAX_ATTEMPTS;
+  const whole = Math.floor(value);
+  if (whole < 0) return 0;
+  return Math.min(whole, DEFAULT_MAX_ATTEMPTS);
+}
+
+/**
  * Climb the escalation ladder durably, sleeping 15 minutes between rungs, and stop when the contact
  * escalates to the coordinator (or the attempt ceiling is reached).
  */
@@ -152,7 +170,7 @@ export class CallCampaignWorkflow extends WorkflowEntrypoint<CampaignEnv, CallCa
     let current = await step.do("first-contact", () => runEscalation(this.env, event.payload.contactId));
     let attempts = current === null ? 0 : current.attempt;
 
-    const limit = event.payload.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+    const limit = normaliseMaxAttempts(event.payload.maxAttempts);
     for (let index = 1; index <= limit; index += 1) {
       if (current === null || current.status === "escalated") break;
       const from = current.id;
