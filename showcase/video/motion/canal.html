@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0">
+  <title>Jadal — Canal Seepage Motion Graphic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    /* Reset & Base Stage Styles */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      /* Jadal design system tokens from apps/web/src/styles.css */
+      --bg: #faf9f5;
+      --surface: #ffffff;
+      --surface-alt: #f3f1ea;
+      --ink: #1f1e1d;
+      --muted: #73716a;
+      --rule: #e3e0d6;
+      --clay: #c96442;
+      --clay-subtle: #f9ede8;
+      --water: #4e7a96;
+      --water-subtle: #e6eef3;
+      --water-dark: #325870;
+      --font-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+      --font-head: "Source Serif 4", Georgia, serif;
+      --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+
+    body {
+      background-color: #121212;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: var(--font-body);
+      color: var(--ink);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 1920x1080 Exact Video Stage */
+    #stage {
+      width: 1920px;
+      height: 1080px;
+      background-color: var(--bg);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Top Header Section */
+    .header {
+      position: absolute;
+      top: 36px;
+      left: 72px;
+      right: 72px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      z-index: 10;
+    }
+
+    .header-left {
+      max-width: 1200px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px;
+      background: var(--surface-alt);
+      border: 1px solid var(--rule);
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--water);
+    }
+
+    .title {
+      font-family: var(--font-head);
+      font-size: 38px;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 17px;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .header-badge {
+      padding: 8px 16px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-badge span {
+      color: var(--clay);
+    }
+
+    /* Card Panels */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 16px;
+      position: absolute;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    }
+
+    /* Beat 1: Canal Schematic Panel */
+    #canal-panel {
+      top: 154px;
+      left: 72px;
+      width: 1776px;
+      height: 404px;
+      padding: 20px 32px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .panel-title {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    /* Metric Cards on Top Row of Canal Panel */
+    .metrics-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .metric-callout {
+      background: var(--surface-alt);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 10px 18px;
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+    }
+
+    .metric-callout.head {
+      border-left: 4px solid var(--water);
+    }
+
+    .metric-callout.tail {
+      border-left: 4px solid var(--clay);
+    }
+
+    .metric-tag {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .metric-callout.head .metric-tag {
+      color: var(--water);
+    }
+
+    .metric-callout.tail .metric-tag {
+      color: var(--clay);
+    }
+
+    .metric-value {
+      font-family: var(--font-mono);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .metric-sub {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .metric-callout.head .metric-sub {
+      color: var(--muted);
+    }
+
+    .metric-callout.tail .metric-sub {
+      color: var(--clay);
+    }
+
+    .canal-svg-container {
+      width: 100%;
+      height: 276px;
+      position: relative;
+    }
+
+    /* Beat 2: Comparison Panel */
+    #comparison-panel {
+      top: 578px;
+      left: 72px;
+      width: 1776px;
+      height: 440px;
+      padding: 24px 32px;
+    }
+
+    .comparison-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: 14px;
+      position: relative;
+      height: 64px;
+    }
+
+    .header-state {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+
+    .header-state.state-volume {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .comparison-headline {
+      font-family: var(--font-head);
+      font-size: 25px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .comparison-subline {
+      font-size: 15px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .mode-indicators {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-left: auto;
+    }
+
+    .mode-tab {
+      padding: 7px 16px;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: 1px solid var(--rule);
+      color: var(--muted);
+      background: var(--surface-alt);
+    }
+
+    .mode-tab.tab-hours-active {
+      background: var(--surface);
+      border-color: var(--ink);
+      color: var(--ink);
+    }
+
+    .mode-tab.tab-volume-active {
+      background: var(--clay);
+      border-color: var(--clay);
+      color: #ffffff;
+    }
+
+    /* Roster Turn Bars Grid */
+    .roster-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 18px;
+      margin-top: 20px;
+    }
+
+    .outlet-card {
+      background: var(--surface-alt);
+      border: 1px solid var(--rule);
+      border-radius: 12px;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .outlet-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .outlet-id {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .outlet-role {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      color: var(--muted);
+    }
+
+    .outlet-card.head-card .outlet-role {
+      color: var(--water);
+      border-color: var(--water);
+    }
+
+    .outlet-card.tail-card .outlet-role {
+      color: var(--clay);
+      border-color: var(--clay);
+    }
+
+    /* Turn Bar Visual Representation */
+    .turn-bar-container {
+      height: 140px;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .turn-bar {
+      width: 100%;
+      height: 0px;
+      background: var(--water);
+      border-radius: 6px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .turn-bar-label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: #ffffff;
+      text-align: center;
+    }
+
+    /* Volume Delivery Indicator */
+    .delivery-status {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .delivery-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .delivery-badge {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 6px;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .badge-deficit {
+      background: var(--clay-subtle);
+      color: var(--clay);
+      border: 1px solid rgba(201, 100, 66, 0.3);
+    }
+
+    .badge-equal {
+      background: var(--water-subtle);
+      color: var(--water-dark);
+      border: 1px solid rgba(78, 122, 150, 0.3);
+    }
+
+    .badge-standard {
+      background: var(--surface);
+      color: var(--muted);
+      border: 1px solid var(--rule);
+    }
+
+    /* Bottom Scrubber & Controls */
+    #hud-controls {
+      position: absolute;
+      bottom: 12px;
+      left: 72px;
+      right: 72px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      background: rgba(250, 249, 245, 0.95);
+      padding: 0 16px;
+      border-radius: 8px;
+      border: 1px solid var(--rule);
+      z-index: 100;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .hud-btn {
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      padding: 3px 10px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .hud-scrubber {
+      flex: 1;
+      height: 6px;
+      cursor: pointer;
+    }
+
+    .seepage-drop {
+      fill: var(--water);
+      opacity: 0;
+    }
+  </style>
+</head>
+<body data-duration="14">
+
+  <div id="stage">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="pill">
+          <span class="pill-dot"></span>
+          Kondaveedu Minor &middot; 3 km &middot; 8 Outlets
+        </div>
+        <h1 class="title">Canal Seepage: Flow Tapers Over 3 km</h1>
+        <p class="subtitle">Unlined earthen canal leaks flow from head to tail before water reaches the field.</p>
+      </div>
+      <div class="header-badge">
+        <span>&bull;</span> HYDRAULICS CORE
+      </div>
+    </header>
+
+    <!-- Beat 1: Canal Schematic Panel -->
+    <section id="canal-panel" class="card">
+      <div class="panel-header">
+        <div class="panel-title">Physical Canal Profile (Head to Tail)</div>
+        <div class="panel-title" style="color: var(--water);">Discharge &amp; Seepage Model</div>
+      </div>
+
+      <!-- Top Metrics Row -->
+      <div class="metrics-row">
+        <!-- Head Callout -->
+        <div id="head-callout" class="metric-callout head">
+          <span class="metric-tag">Head &middot; Outlet 1</span>
+          <span class="metric-value">0.145 m&sup3;/s</span>
+          <span class="metric-sub">3.5% loss</span>
+        </div>
+
+        <div style="font-family: var(--font-mono); font-size: 13px; color: var(--muted);">
+          Unlined Earthen Canal &middot; Gravity Conveyance
+        </div>
+
+        <!-- Tail Callout -->
+        <div id="tail-callout" class="metric-callout tail">
+          <span class="metric-tag">Tail &middot; Outlet 8</span>
+          <span class="metric-value">0.106 m&sup3;/s</span>
+          <span class="metric-sub">29.4% loss</span>
+        </div>
+      </div>
+
+      <!-- SVG Canal Flow Schematic -->
+      <div class="canal-svg-container">
+        <svg id="canal-svg" viewBox="0 0 1712 276" width="100%" height="276" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="canalGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#4e7a96" />
+              <stop offset="100%" stop-color="#3c6b88" />
+            </linearGradient>
+
+            <pattern id="soilPattern" width="16" height="16" patternUnits="userSpaceOnUse">
+              <path d="M 0,16 L 16,0 M 0,0 L 16,16" stroke="#e8e5dc" stroke-width="0.8" />
+            </pattern>
+
+            <g id="drop-shape">
+              <path d="M 0 0 C -4 6, -4 10, 0 14 C 4 10, 4 6, 0 0 Z" />
+            </g>
+          </defs>
+
+          <!-- Soil Substratum Layer (Unlined Canal Bed) -->
+          <rect x="50" y="80" width="1612" height="145" fill="url(#soilPattern)" opacity="0.75" rx="8" />
+          <text x="60" y="210" font-family="IBM Plex Mono" font-size="12" fill="#73716a" font-weight="500">Unlined earthen bed &mdash; continuous seepage loss along 3 km</text>
+
+          <!-- Ruler / Distance Guideline -->
+          <line x1="80" y1="235" x2="1632" y2="235" stroke="#d5d0c2" stroke-width="1.5" stroke-dasharray="4 4" />
+          <circle cx="80" cy="235" r="3" fill="#73716a" />
+          <circle cx="1632" cy="235" r="3" fill="#73716a" />
+          <text x="80" y="250" font-family="IBM Plex Mono" font-size="12" fill="#73716a">0 km (Head)</text>
+          <text x="856" y="250" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#73716a">3 km Unlined Reach</text>
+          <text x="1632" y="250" text-anchor="end" font-family="IBM Plex Mono" font-size="12" fill="#73716a">3 km (Tail)</text>
+
+          <!-- Canal Banks Outer Outline (Earthen Profile) -->
+          <path id="canal-banks" d="
+            M 80 50
+            L 1632 66
+            L 1632 94
+            L 80 110
+            Z"
+            fill="#e5dfd0" stroke="#cfc7b4" stroke-width="2" />
+
+          <!-- Tapered Canal Water Flow Body -->
+          <!-- Head water width: 48px (y 56 to 104); Tail water width: 18px (y 71 to 89) -->
+          <path id="canal-stream" d="
+            M 80 56
+            L 1632 71
+            L 1632 89
+            L 80 104
+            Z"
+            fill="url(#canalGradient)" opacity="0" />
+
+          <!-- Dynamic Center Flow Line -->
+          <path id="flow-line" d="M 80 80 L 1632 80" stroke="#ffffff" stroke-width="2" stroke-dasharray="8 8" opacity="0.4" />
+
+          <!-- 8 Outlets Group -->
+          <g id="outlets-group">
+            <!-- Outlet 1: x = 110 -->
+            <g class="outlet-node" id="node-o1" transform="translate(110, 0)">
+              <line x1="0" y1="104" x2="0" y2="150" stroke="#4e7a96" stroke-width="3" />
+              <rect x="-9" y="52" width="18" height="56" rx="3" fill="#ffffff" stroke="#4e7a96" stroke-width="2" />
+              <circle cx="0" cy="80" r="4" fill="#4e7a96" />
+              <text x="0" y="42" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" font-weight="700" fill="#1f1e1d">Outlet 1</text>
+            </g>
+
+            <!-- Outlet 2: x = 325 -->
+            <g class="outlet-node" id="node-o2" transform="translate(325, 0)">
+              <line x1="0" y1="101" x2="0" y2="150" stroke="#4e7a96" stroke-width="2.5" />
+              <rect x="-8" y="55" width="16" height="50" rx="3" fill="#ffffff" stroke="#4e7a96" stroke-width="2" />
+              <circle cx="0" cy="80" r="4" fill="#4e7a96" />
+              <text x="0" y="42" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" font-weight="700" fill="#1f1e1d">Outlet 2</text>
+            </g>
+
+            <!-- Outlet 3: x = 540 -->
+            <g class="outlet-node" id="node-o3" transform="translate(540, 0)">
+              <line x1="0" y1="99" x2="0" y2="150" stroke="#4e7a96" stroke-width="2.5" />
+              <rect x="-8" y="58" width="16" height="44" rx="3" fill="#ffffff" stroke="#4e7a96" stroke-width="2" />
+              <circle cx="0" cy="80" r="4" fill="#4e7a96" />
+              <text x="0" y="42" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" font-weight="700" fill="#1f1e1d">Outlet 3</text>
+            </g>
+
+            <!-- Outlet 4: x = 755 -->
+            <g class="outlet-node" id="node-o4" transform="translate(755, 0)">
+              <line x1="0" y1="96" x2="0" y2="150" stroke="#4e7a96" stroke-width="2" />
+              <rect x="-8" y="61" width="16" height="38" rx="3" fill="#ffffff" stroke="#4e7a96" stroke-width="2" />
+              <circle cx="0" cy="80" r="4" fill="#4e7a96" />
+              <text x="0" y="42" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" font-weight="700" fill="#1f1e1d">Outlet 4</text>
+            </g>
+
+            <!-- Outlet 5: x = 970 -->
+            <g class="outlet-node" id="node-o5" transform="translate(970, 0)">
+              <line x1="0" y1="94" x2="0" y2="150" stroke="#4e7a96" stroke-width="2" />
+              <rect x="-7" y="64" width="14" height="34" rx="3" fill="#ffffff" stroke="#4e7a96" stroke-width="2" />
+              <circle cx="0" cy="80" r="4" fill="#4e7a96" />
+              <text x="0" y="42" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" font-weight="700" fill="#1f1e1d">Outlet 5</text>
+            </g>
+
+            <!-- Outlet 6: x = 1185 -->
+            <g class="outlet-node" id="node-o6" transform="translate(1185, 0)">
+              <line x1="0" y1="92" x2="0" y2="150" stroke="#4e7a96" stroke-width="2" />
+              <rect x="-7" y="67" width="14" height="28" rx="3" fill="#ffffff" stroke="#4e7a96" stroke-width="2" />
+              <circle cx="0" cy="80" r="4" fill="#4e7a96" />
+              <text x="0" y="42" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" font-weight="700" fill="#1f1e1d">Outlet 6</text>
+            </g>
+
+            <!-- Outlet 7: x = 1400 -->
+            <g class="outlet-node" id="node-o7" transform="translate(1400, 0)">
+              <line x1="0" y1="90" x2="0" y2="150" stroke="#4e7a96" stroke-width="1.8" />
+              <rect x="-7" y="70" width="14" height="24" rx="3" fill="#ffffff" stroke="#4e7a96" stroke-width="2" />
+              <circle cx="0" cy="80" r="4" fill="#4e7a96" />
+              <text x="0" y="42" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" font-weight="700" fill="#1f1e1d">Outlet 7</text>
+            </g>
+
+            <!-- Outlet 8: x = 1600 -->
+            <g class="outlet-node" id="node-o8" transform="translate(1600, 0)">
+              <line x1="0" y1="89" x2="0" y2="150" stroke="#c96442" stroke-width="1.8" />
+              <rect x="-7" y="72" width="14" height="20" rx="3" fill="#ffffff" stroke="#c96442" stroke-width="2" />
+              <circle cx="0" cy="80" r="4" fill="#c96442" />
+              <text x="0" y="42" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" font-weight="700" fill="#c96442">Outlet 8</text>
+            </g>
+          </g>
+
+          <!-- Seepage Droplets Leaking Out Along Canal Bed into Soil -->
+          <!-- Using wrapped slot groups so GSAP animates inner drop relative to (x, y) -->
+          <g id="seepage-droplets">
+            <g class="drop-slot" transform="translate(180, 114)"><g class="seepage-drop" id="drop-1"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(260, 112)"><g class="seepage-drop" id="drop-2"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(380, 110)"><g class="seepage-drop" id="drop-3"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(470, 108)"><g class="seepage-drop" id="drop-4"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(600, 107)"><g class="seepage-drop" id="drop-5"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(680, 105)"><g class="seepage-drop" id="drop-6"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(810, 104)"><g class="seepage-drop" id="drop-7"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(900, 103)"><g class="seepage-drop" id="drop-8"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(1030, 102)"><g class="seepage-drop" id="drop-9"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(1110, 101)"><g class="seepage-drop" id="drop-10"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(1240, 100)"><g class="seepage-drop" id="drop-11"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(1330, 99)"><g class="seepage-drop" id="drop-12"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(1460, 98)"><g class="seepage-drop" id="drop-13"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(1540, 97)"><g class="seepage-drop" id="drop-14"><use href="#drop-shape"/></g></g>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Beat 2: Comparison Panel (Equal Hours vs Equal Volume) -->
+    <section id="comparison-panel" class="card">
+      <div class="comparison-nav">
+        <!-- Dual Header Elements for Clean GSAP Timeline Seeking -->
+        <div class="header-state state-hours" id="header-hours">
+          <h2 class="comparison-headline">Turn Allocation: Equal Hours</h2>
+          <p class="comparison-subline">Every outlet receives equal turn time, but unlined canal seepage starves the tail.</p>
+        </div>
+
+        <div class="header-state state-volume" id="header-volume">
+          <h2 class="comparison-headline">Turn Allocation: Equal Volume</h2>
+          <p class="comparison-subline">Tail turn bars lengthened to compensate for seepage and travel lag.</p>
+        </div>
+
+        <div class="mode-indicators">
+          <div id="tab-hours" class="mode-tab tab-hours-active">Equal Hours</div>
+          <div id="tab-volume" class="mode-tab">Equal Volume</div>
+        </div>
+      </div>
+
+      <!-- 8 Outlet Roster Turn Bars -->
+      <div class="roster-grid">
+        <!-- Outlet 1 (Head) -->
+        <div class="outlet-card head-card" id="card-o1">
+          <div class="outlet-card-header">
+            <span class="outlet-id">Outlet 1</span>
+            <span class="outlet-role">Head</span>
+          </div>
+          <div class="turn-bar-container">
+            <div class="turn-bar" id="bar-o1">
+              <span class="turn-bar-label" id="bar-label-o1">Turn</span>
+            </div>
+          </div>
+          <div class="delivery-status">
+            <span class="delivery-title">Delivery Rate</span>
+            <div class="delivery-badge badge-standard" id="badge-o1">0.145 m&sup3;/s</div>
+          </div>
+        </div>
+
+        <!-- Outlet 2 -->
+        <div class="outlet-card" id="card-o2">
+          <div class="outlet-card-header">
+            <span class="outlet-id">Outlet 2</span>
+            <span class="outlet-role">Reach 1</span>
+          </div>
+          <div class="turn-bar-container">
+            <div class="turn-bar" id="bar-o2">
+              <span class="turn-bar-label" id="bar-label-o2">Turn</span>
+            </div>
+          </div>
+          <div class="delivery-status">
+            <span class="delivery-title">Delivery Rate</span>
+            <div class="delivery-badge badge-standard" id="badge-o2">Flowing</div>
+          </div>
+        </div>
+
+        <!-- Outlet 3 -->
+        <div class="outlet-card" id="card-o3">
+          <div class="outlet-card-header">
+            <span class="outlet-id">Outlet 3</span>
+            <span class="outlet-role">Reach 1</span>
+          </div>
+          <div class="turn-bar-container">
+            <div class="turn-bar" id="bar-o3">
+              <span class="turn-bar-label" id="bar-label-o3">Turn</span>
+            </div>
+          </div>
+          <div class="delivery-status">
+            <span class="delivery-title">Delivery Rate</span>
+            <div class="delivery-badge badge-standard" id="badge-o3">Flowing</div>
+          </div>
+        </div>
+
+        <!-- Outlet 4 -->
+        <div class="outlet-card" id="card-o4">
+          <div class="outlet-card-header">
+            <span class="outlet-id">Outlet 4</span>
+            <span class="outlet-role">Reach 2</span>
+          </div>
+          <div class="turn-bar-container">
+            <div class="turn-bar" id="bar-o4">
+              <span class="turn-bar-label" id="bar-label-o4">Turn</span>
+            </div>
+          </div>
+          <div class="delivery-status">
+            <span class="delivery-title">Delivery Rate</span>
+            <div class="delivery-badge badge-standard" id="badge-o4">Flowing</div>
+          </div>
+        </div>
+
+        <!-- Outlet 5 -->
+        <div class="outlet-card" id="card-o5">
+          <div class="outlet-card-header">
+            <span class="outlet-id">Outlet 5</span>
+            <span class="outlet-role">Reach 2</span>
+          </div>
+          <div class="turn-bar-container">
+            <div class="turn-bar" id="bar-o5">
+              <span class="turn-bar-label" id="bar-label-o5">Turn</span>
+            </div>
+          </div>
+          <div class="delivery-status">
+            <span class="delivery-title">Delivery Rate</span>
+            <div class="delivery-badge badge-standard" id="badge-o5">Flowing</div>
+          </div>
+        </div>
+
+        <!-- Outlet 6 -->
+        <div class="outlet-card" id="card-o6">
+          <div class="outlet-card-header">
+            <span class="outlet-id">Outlet 6</span>
+            <span class="outlet-role">Reach 3</span>
+          </div>
+          <div class="turn-bar-container">
+            <div class="turn-bar" id="bar-o6">
+              <span class="turn-bar-label" id="bar-label-o6">Turn</span>
+            </div>
+          </div>
+          <div class="delivery-status">
+            <span class="delivery-title">Delivery Rate</span>
+            <div class="delivery-badge badge-standard" id="badge-o6">Flowing</div>
+          </div>
+        </div>
+
+        <!-- Outlet 7 -->
+        <div class="outlet-card" id="card-o7">
+          <div class="outlet-card-header">
+            <span class="outlet-id">Outlet 7</span>
+            <span class="outlet-role">Reach 3</span>
+          </div>
+          <div class="turn-bar-container">
+            <div class="turn-bar" id="bar-o7">
+              <span class="turn-bar-label" id="bar-label-o7">Turn</span>
+            </div>
+          </div>
+          <div class="delivery-status">
+            <span class="delivery-title">Delivery Rate</span>
+            <div class="delivery-badge badge-standard" id="badge-o7">Flowing</div>
+          </div>
+        </div>
+
+        <!-- Outlet 8 (Tail) -->
+        <div class="outlet-card tail-card" id="card-o8">
+          <div class="outlet-card-header">
+            <span class="outlet-id" style="color: var(--clay);">Outlet 8</span>
+            <span class="outlet-role">Tail</span>
+          </div>
+          <div class="turn-bar-container">
+            <div class="turn-bar" id="bar-o8">
+              <span class="turn-bar-label" id="bar-label-o8">Turn</span>
+            </div>
+          </div>
+          <div class="delivery-status">
+            <span class="delivery-title">Delivery Rate</span>
+            <div class="delivery-badge badge-deficit" id="badge-o8">0.106 m&sup3;/s</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom HUD Controls for Frame Scrubbing & Verification -->
+    <div id="hud-controls">
+      <button class="hud-btn" id="hud-play-btn">Play / Pause</button>
+      <input type="range" id="hud-slider" class="hud-scrubber" min="0" max="14" step="0.02" value="0">
+      <span id="hud-time">0.00s / 14.00s</span>
+    </div>
+  </div>
+
+  <script>
+    // Hyperframes-compatible seekable, deterministic timeline
+    // Single paused GSAP timeline exposed as window.__timeline
+    const tl = gsap.timeline({ paused: true });
+    window.__timeline = tl;
+
+    // Build timeline sequence: total duration = 14.0 seconds
+    // Beat 1: Canal entrance and flow tapering (0s - 7.5s)
+    // 0.0s - 0.8s: Header & Panels fade in cleanly
+    tl.fromTo(".header", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" }, 0);
+    tl.fromTo("#canal-panel", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" }, 0.2);
+    tl.fromTo("#comparison-panel", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" }, 0.4);
+
+    // 0.8s - 2.8s: Canal water stream flows downstream and tapers
+    tl.fromTo("#canal-stream", 
+      { opacity: 0, scaleX: 0, transformOrigin: "left center" }, 
+      { opacity: 1, scaleX: 1, duration: 2.0, ease: "power1.inOut" }, 
+      0.8
+    );
+
+    // 1.6s - 3.0s: Outlet nodes appear sequentially along the 3 km run
+    const outletNodes = document.querySelectorAll(".outlet-node");
+    outletNodes.forEach((node, i) => {
+      tl.fromTo(node, 
+        { opacity: 0, y: -8 }, 
+        { opacity: 1, y: 0, duration: 0.4, ease: "back.out(1.4)" }, 
+        1.6 + (i * 0.16)
+      );
+    });
+
+    // 2.4s - 3.2s: Head Metric Callout enters (0.145 m3/s, 3.5% loss)
+    tl.fromTo("#head-callout",
+      { opacity: 0, scale: 0.95 },
+      { opacity: 1, scale: 1, duration: 0.6, ease: "power2.out" }, 
+      2.4
+    );
+
+    // 3.2s - 4.0s: Tail Metric Callout enters (0.106 m3/s, 29.4% loss)
+    tl.fromTo("#tail-callout",
+      { opacity: 0, scale: 0.95 },
+      { opacity: 1, scale: 1, duration: 0.6, ease: "power2.out" }, 
+      3.2
+    );
+
+    // 3.8s - 7.2s: Seepage droplets leaking out into soil stratum beneath unlined bed
+    const drops = document.querySelectorAll(".seepage-drop");
+    drops.forEach((drop, index) => {
+      const startTime = 3.6 + (index % 5) * 0.35 + Math.floor(index / 5) * 0.15;
+      // Cycle 1: leak down from bed into soil
+      tl.fromTo(drop,
+        { opacity: 0, y: 0, scale: 0.6 },
+        { opacity: 0.85, y: 32, scale: 1.1, duration: 0.9, ease: "power1.in" },
+        startTime
+      );
+      tl.to(drop, { opacity: 0, y: 52, duration: 0.35, ease: "power1.out" }, startTime + 0.9);
+
+      // Cycle 2: second droplet
+      tl.fromTo(drop,
+        { opacity: 0, y: 0, scale: 0.6 },
+        { opacity: 0.85, y: 32, scale: 1.1, duration: 0.9, ease: "power1.in" },
+        startTime + 1.35
+      );
+      tl.to(drop, { opacity: 0, y: 52, duration: 0.35, ease: "power1.out" }, startTime + 2.25);
+    });
+
+    // Beat 2: Comparison between Equal Hours and Equal Volume (7.5s - 14.0s)
+    // 7.5s - 8.5s: Reveal turn bars in Equal Hours mode
+    const turnBars = [
+      "#bar-o1", "#bar-o2", "#bar-o3", "#bar-o4",
+      "#bar-o5", "#bar-o6", "#bar-o7", "#bar-o8"
+    ];
+
+    turnBars.forEach((barId, i) => {
+      tl.fromTo(barId,
+        { height: 0 },
+        { height: 48, duration: 0.6, ease: "power2.out" },
+        7.5 + (i * 0.08)
+      );
+    });
+
+    // Highlight the tail deficit in Equal Hours mode (8.5s - 10.0s)
+    tl.to("#bar-o8", { backgroundColor: "#c96442", duration: 0.5 }, 8.6);
+    tl.to("#badge-o8", { scale: 1.08, duration: 0.3, yoyo: true, repeat: 1 }, 8.9);
+
+    // 10.2s: Deterministic Header and Tab Switch via GSAP opacity/classes
+    tl.to("#header-hours", { opacity: 0, duration: 0.3 }, 10.2);
+    tl.to("#header-volume", { opacity: 1, duration: 0.3 }, 10.5);
+
+    tl.to("#tab-hours", {
+      backgroundColor: "#f3f1ea",
+      borderColor: "#e3e0d6",
+      color: "#73716a",
+      duration: 0.3
+    }, 10.3);
+
+    tl.to("#tab-volume", {
+      backgroundColor: "#c96442",
+      borderColor: "#c96442",
+      color: "#ffffff",
+      duration: 0.3
+    }, 10.3);
+
+    // 10.5s - 12.8s: Equal Volume transformation
+    // Turn durations adapt: Outlet 1 remains base turn, Outlets 2 to 8 lengthen progressively
+    // Outlet 8 reaches 125px (tail turn bar significantly longer)
+    const volumeHeights = [44, 49, 55, 63, 73, 86, 102, 125];
+    turnBars.forEach((barId, i) => {
+      tl.to(barId, {
+        height: volumeHeights[i],
+        backgroundColor: i >= 6 ? "#c96442" : "#4e7a96",
+        duration: 1.6,
+        ease: "power2.inOut"
+      }, 10.5);
+    });
+
+    // Update labels and badges deterministically in GSAP timeline
+    tl.set("#bar-label-o8", { textContent: "Longer" }, 11.2);
+    tl.set("#badge-o8", {
+      textContent: "Compensated",
+      className: "delivery-badge badge-equal"
+    }, 11.2);
+
+    // Final settled hold through 14.0s
+    tl.to({}, { duration: 1.2 }, 12.8);
+
+    // Scrub HUD connection
+    const slider = document.getElementById("hud-slider");
+    const timeDisplay = document.getElementById("hud-time");
+    const playBtn = document.getElementById("hud-play-btn");
+
+    function updateHud() {
+      const cur = tl.time();
+      slider.value = cur;
+      timeDisplay.innerText = cur.toFixed(2) + "s / " + tl.duration().toFixed(2) + "s";
+    }
+
+    tl.eventCallback("onUpdate", updateHud);
+
+    slider.addEventListener("input", (e) => {
+      tl.pause();
+      tl.seek(parseFloat(e.target.value));
+      updateHud();
+    });
+
+    playBtn.addEventListener("click", () => {
+      if (tl.isActive()) {
+        tl.pause();
+      } else {
+        if (tl.progress() >= 1) tl.restart();
+        else tl.play();
+      }
+    });
+
+    // Initial render at time 0
+    tl.seek(0);
+    updateHud();
+  </script>
+</body>
+</html>
