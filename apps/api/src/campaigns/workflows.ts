@@ -29,7 +29,17 @@
  * so a workflow is just the durable ordering of their calls.
  */
 
-import { runEscalation, type CampaignEnv } from "./escalation";
+import { RETRY_DELAY_MINUTES, runEscalation, type CampaignEnv } from "./escalation";
+
+/**
+ * The durable retry sleep, derived from the ladder's own gap.
+ *
+ * `escalation.ts` owns the 15-minute retry (`RETRY_DELAY_MINUTES`) and is the single source of
+ * truth for it. This module used to hardcode the literal `"15 minutes"` in two places, so changing
+ * the ladder's constant would have silently left the durable workflow sleeping the old gap. The
+ * duration string is built from the constant instead.
+ */
+const RETRY_SLEEP = `${RETRY_DELAY_MINUTES} minutes`;
 
 /* ------------------------------------------------------------------ runtime surface (local stand-ins) */
 
@@ -116,7 +126,7 @@ export class UrgentRequestWorkflow extends WorkflowEntrypoint<CampaignEnv, Urgen
 
     let finalId = firstId;
     if (ack === null) {
-      await step.sleep("15 minutes");
+      await step.sleep(RETRY_SLEEP);
       const retry = await step.do("retry-call", () => runEscalation(this.env, firstId));
       if (retry !== null) finalId = retry.id;
     }
@@ -174,7 +184,7 @@ export class CallCampaignWorkflow extends WorkflowEntrypoint<CampaignEnv, CallCa
     for (let index = 1; index <= limit; index += 1) {
       if (current === null || current.status === "escalated") break;
       const from = current.id;
-      await step.sleep("15 minutes");
+      await step.sleep(RETRY_SLEEP);
       current = await step.do(`escalation-${index}`, () => runEscalation(this.env, from));
       attempts = current?.attempt ?? attempts;
     }
