@@ -1,27 +1,99 @@
 {
-  "$comment": "STUB — latent-spaces/brag config for Jadal showcase (C8). docs/research/brag.md has NOT landed (ADR-005 open), so this file is a best-effort placeholder the orchestrator replaces once the real schema lands. No secrets. See ../brag-note.md.",
-  "_stub": true,
-  "_pendingResearch": "docs/research/brag.md (ADR-005 Showcase tooling)",
-  "site": {
-    "name": "Jadal — Whose Turn Is It to Irrigate",
-    "tagline": "Equal water, not equal hours.",
+  "$schema": "../docs/research/brag.md",
+  "project": {
+    "name": "Jadal",
+    "tagline": "Canal water shared by volume, not by hours.",
+    "summary": "Rotational canal water allocation transformed from fixed hours (warabandi) to deterministic volume accounting with FAO-56 crop physics, bilingual Telugu voice agents, and double-entry ledger verification.",
+    "repository": "https://github.com/Parswanadh/jadal",
     "baseUrl": "https://demo.jadal.example.com",
     "localBaseUrl": "http://localhost:5173"
   },
+  "video": {
+    "format": "landscape",
+    "dimensions": {
+      "width": 1920,
+      "height": 1080
+    },
+    "durationSeconds": 20,
+    "fps": 30,
+    "outputDir": "showcase/brag-output"
+  },
+  "creative": {
+    "tone": "polished",
+    "direction": "Quiet premium civic-infrastructure launch film; serious, clear, evidence-based; no startup sarcasm.",
+    "hookPrompt": "On this canal, everyone received their hours — and the tail still lost her crop. Hours are not water.",
+    "outroPrompt": "LLMs propose · Core computes · Coordinator approves. Fair water, verified by ledger."
+  },
+  "branding": {
+    "colors": {
+      "background": "#FFFCF5",
+      "surface": "#FFFFFF",
+      "text": "#1E1B16",
+      "muted": "#6E675C",
+      "accent": "#E8A100",
+      "water": "#3F7CA6",
+      "rule": "#ECE5D6"
+    },
+    "fonts": {
+      "display": "Plus Jakarta Sans",
+      "body": "Plus Jakarta Sans",
+      "mono": "JetBrains Mono",
+      "telugu": "Noto Sans Telugu"
+    }
+  },
+  "narrative": {
+    "heroClaim": "Canal water shared by volume, not by hours.",
+    "voiceLine": {
+      "telugu": "నాకు ఈ వారం అత్యవసరంగా నీరు కావాలి.",
+      "english": "I urgently need water this week."
+    },
+    "shareCopy": "Jadal replaces fixed-hour canal rosters with volume-based sharing: crop physics converts volume into turn time, Telugu voice calls reach every farmer, and a double-entry ledger guarantees conservation."
+  },
   "source": {
-    "seedScenario": "../packages/contracts/fixtures/demo-scenario.json",
-    "heroMetric": "tail need-met equal-hours (~45%) vs equal-water (>90%), Gini before/after",
+    "seedScenario": "packages/contracts/fixtures/demo-scenario.json",
+    "heroMetric": "Tail need-met equal-hours (~42%) vs equal-water (>90%), Gini drops from 0.31 to 0.05",
     "ledgerInvariant": "supply = quotas + buffer + delivered + losses"
   },
   "sections": [
-    { "id": "hero", "title": "Hours are not water", "route": "/canal", "shot": "screenshots/out/canal.png" },
-    { "id": "farmer", "title": "Need in: registration + entitlements", "route": "/farmer", "shot": "screenshots/out/farmer.png" },
-    { "id": "coordinator", "title": "Coordinator approves: roster + requests", "route": "/coordinator", "shot": "screenshots/out/coordinator.png" },
-    { "id": "voice", "title": "Telugu voice request + acknowledged calls", "route": "/phone", "shot": "screenshots/out/phone.png" },
-    { "id": "demo", "title": "Ledger proof + event replay", "route": "/demo", "shot": "screenshots/out/demo.png" }
-  ],
-  "narration": {
-    "voiceTeluguLine": "నాకు ఈ వారం అత్యవసరంగా నీరు కావాలి.",
-    "voiceEnglishLine": "I urgently need water this week."
-  }
+    {
+      "id": "hero",
+      "title": "Hours are not water",
+      "route": "/canal",
+      "visualType": "screenshot",
+      "assetPath": "apps/web/docs/screenshots/canal-light.png",
+      "keyMetric": "Outlet 8 tail flow drops by 29.4% due to seepage over 3 km"
+    },
+    {
+      "id": "farmer",
+      "title": "Need in: registration + entitlements",
+      "route": "/farmer",
+      "visualType": "screenshot",
+      "assetPath": "apps/web/docs/screenshots/home-light.png",
+      "keyMetric": "FAO-56 model calculates gross volume per crop, stage, and soil"
+    },
+    {
+      "id": "coordinator",
+      "title": "Coordinator approves: roster + requests",
+      "route": "/coordinator",
+      "visualType": "screenshot",
+      "assetPath": "apps/web/docs/screenshots/coordinator-light.png",
+      "keyMetric": "Tail need-met rises from ~42% to >90%; Gini improves from 0.31 to 0.05"
+    },
+    {
+      "id": "voice",
+      "title": "Telugu voice request + acknowledged calls",
+      "route": "/phone",
+      "visualType": "screenshot",
+      "assetPath": "apps/web/docs/screenshots/home-telugu-dark.png",
+      "keyMetric": "Voice-first telephony for farmers without smartphones (f5, f8)"
+    },
+    {
+      "id": "demo",
+      "title": "Ledger proof + event replay",
+      "route": "/demo",
+      "visualType": "ui_component",
+      "assetPath": "apps/web/docs/screenshots/coordinator-light.png",
+      "keyMetric": "Conservation holds: supply = quotas + buffer + delivered + losses"
+    }
+  ]
 }
