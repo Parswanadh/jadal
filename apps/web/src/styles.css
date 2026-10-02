@@ -511,8 +511,16 @@ progress {
 /* ---------- Home ---------- */
 
 .hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 3rem;
+  align-items: center;
   padding: 1rem 0 3.5rem;
-  max-width: 52rem;
+}
+
+.hero-copy {
+  min-width: 0;
+  max-width: 44rem;
 }
 
 .hero h1 {
@@ -539,8 +547,38 @@ progress {
 }
 
 /* The demo-data pill sits on its own line under the hero actions, never between them. */
-.hero > .data-badge {
+.hero .data-badge {
   margin-top: 1.25rem;
+}
+
+/* The launch film: poster first, a play control only while it is not running. */
+.hero-media {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+}
+
+.hero-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: var(--surface-alt);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+}
+
+.hero-video-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--surface);
+}
+
+.hero-video-play:hover {
+  background: var(--surface);
+  border-color: var(--accent);
 }
 
 .section-label {
@@ -720,6 +758,11 @@ progress {
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1000px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
+
   .flow {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
