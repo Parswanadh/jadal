@@ -31,6 +31,7 @@ import { appendEvent } from "./db/store";
 import { DEMO_CANAL_ID } from "./demo";
 import type { Env } from "./env";
 import { providerEnv } from "./http";
+import { checkOutboundCall, logCallDecision, type CallDecision } from "./noloop";
 import { raiseRequest } from "./requests";
 import { classify, extractVolumeM3 } from "./system1";
 import type { AudioCache, InboundCaller, RaiseRequestInput, StatusDetail, TelephonyDeps, TelephonyEnv } from "./telephony";
@@ -47,6 +48,9 @@ export interface TelephonyBindings extends TelephonyEnv {
   readonly CACHE?: KVNamespace | undefined;
   /** Injected only by tests; the Worker falls back to the runtime's global `fetch`. */
   readonly fetch?: unknown;
+  /** The rate-limit window and ceiling. Names documented in `docs/ops/CALL-SAFETY.md`. */
+  readonly CALL_RATE_WINDOW_SECONDS?: string | undefined;
+  readonly CALL_RATE_MAX_CALLS?: string | undefined;
 }
 
 /** The runtime fetch, used when no test injected one. */
@@ -92,6 +96,47 @@ export function placeCallDeps(env: TelephonyBindings): Pick<TelephonyDeps, "env"
     fetch: typeof injected === "function" ? (injected as typeof fetch) : runtimeFetch,
     cache: audioCacheFromKv(env.CACHE),
   };
+}
+
+/**
+ * The result of asking the rate guard for permission to dial.
+ *
+ * A discriminated union rather than a nullable decision, so a caller cannot reach `placed` without
+ * having branched on `allowed` — the one mistake that would make the guard cosmetic.
+ */
+export type GuardedCallResult =
+  | { readonly allowed: false; readonly refusal: CallDecision }
+  | { readonly allowed: true; readonly decision: CallDecision; readonly placed: PlaceCallResult };
+
+/**
+ * The guarded dial: ask the rate limiter, then dial only if it permits.
+ *
+ * This is the **one seam every outbound call goes through**. Both call sites
+ * (`campaigns/escalation.ts` and `coordinator-alert.ts`) use it, so neither can dial without the
+ * budget being spent and checked, and a future call site that uses `placeCallFromCampaign` directly
+ * would be visible as the odd one out in review.
+ *
+ * The refusal is *returned*, never swallowed, and logged with `noloop:` as it happens — the caller is
+ * required to carry it into its own outcome (the ladder marks the contact `failed`, the coordinator
+ * path sets `skipped`), so a dropped call is visible in the audit trail and in the log rather than
+ * looking like success.
+ *
+ * A note on **what counts as a call**: the guard's counter is spent even when Twilio then refuses the
+ * call (`{ok:false}`), because a refused dial is still a dial that rang, cost money and reached a
+ * handset. It is also spent when `placeCall` returns `{simulated:true}` — with `REAL_TELEPHONY` off no
+ * call happens, but counting it uniformly keeps the guard's behaviour identical in the offline demo
+ * and in production, which is what lets the tests here prove the production bound.
+ */
+export async function placeCallIfAllowed(
+  env: TelephonyBindings,
+  input: PlaceCallInput,
+  label = "outbound call",
+): Promise<GuardedCallResult> {
+  const decision = await checkOutboundCall(env, input.to);
+  logCallDecision(label, decision);
+  if (!decision.allowed) return { allowed: false, refusal: decision };
+  const placed = await placeCallFromCampaign(env, input);
+  return { allowed: true, decision, placed };
 }
 
 /** Place an outbound call through the shared `placeCall`, for the escalation ladder (B9 step 2). */
