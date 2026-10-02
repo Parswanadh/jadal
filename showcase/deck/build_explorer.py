@@ -2,7 +2,9 @@
 """
 showcase/deck/build_explorer.py
 Generates fao56-data.json and fao56-explorer.html.
-No external dependencies; fully rerunnable; reads local tracked docs and FAO56-full.txt.
+Parses FAO-56 Rev.1 (2025) Tables 6.1, 6.2, 6.3, and 6.4 from FAO56-full.txt
+plus tracked research extracts in the repo.
+No external dependencies; fully rerunnable.
 """
 
 import os
@@ -41,17 +43,43 @@ TRACKED_DOCS_SPECS = [
 def clean_cell(text):
     if not text:
         return ""
-    # remove <br>...
     text = re.sub(r'<br\s*/?>.*', '', text, flags=re.IGNORECASE)
-    # remove footnote tags like ^{\dagger}
     text = re.sub(r'\^\{.*?\}', '', text)
     text = re.sub(r'[*$]', '', text)
     return text.strip()
 
+def get_page(ln):
+    if ln < 11778:
+        return 165
+    elif ln < 11843:
+        return 166
+    elif ln < 11903:
+        return 167
+    elif ln < 11971:
+        return 168
+    elif ln < 12025:
+        return 169
+    elif ln < 12097:
+        return 170
+    elif ln < 12157:
+        return 171
+    elif ln < 12225:
+        return 172
+    elif ln < 12290:
+        return 173
+    elif ln < 12353:
+        return 174
+    elif ln < 12422:
+        return 175
+    elif ln < 12484:
+        return 176
+    else:
+        return 177
+
 def parse_num(s):
     if not s:
         return None
-    s = s.strip().replace('–', '-').replace(',', '.')
+    s = s.strip().replace('–', '-').replace(',', '.').replace('<', '').replace('>', '')
     m = re.search(r'([0-9]+\.?[0-9]*)', s)
     if m:
         try:
@@ -63,7 +91,7 @@ def parse_num(s):
 def parse_range(s):
     if not s:
         return None
-    s = s.strip().replace('–', '-').replace(',', '.')
+    s = s.strip().replace('–', '-').replace(',', '.').replace('<', '').replace('>', '').strip()
     m = re.match(r'([0-9]+\.?[0-9]*)\s*-\s*([0-9]+\.?[0-9]*)', s)
     if m:
         try:
@@ -114,7 +142,6 @@ def parse_tracked_docs():
         doc_counts[spec["file"]] = len(raw_rows)
         for r in raw_rows:
             if spec["type"] == "book-reference":
-                # ['Crop Name', 'Kc,ini', 'Kc,mid', 'Kc,end', 'Max Height h [m]', 'Stage Lengths in Days', 'Thermal Stage Lengths', 'Max Root Depth Zr [m]', 'Depletion p', 'Source Citations']
                 crop_name = clean_cell(r[0])
                 kc_ini = parse_num(r[1]) if len(r) > 1 else None
                 kc_mid = parse_num(r[2]) if len(r) > 2 else None
@@ -123,7 +150,6 @@ def parse_tracked_docs():
                 stage_len = clean_cell(r[5]) if len(r) > 5 else None
                 root_depth = parse_range(r[7]) if len(r) > 7 else None
             elif spec["type"] == "crop-tables":
-                # ['Crop & Local Name', 'Season / AP Context', 'FAO-56 Stage Lengths (days)', 'Single Kc', 'Max Height', 'Max Root Depth', 'Depletion Fraction', 'FAO-56 Source Citations']
                 crop_name = clean_cell(r[0])
                 stage_len = clean_cell(r[2]) if len(r) > 2 else None
                 kc_str = r[3] if len(r) > 3 else ""
@@ -134,7 +160,6 @@ def parse_tracked_docs():
                 height = parse_range(r[4]) if len(r) > 4 else None
                 root_depth = parse_range(r[5]) if len(r) > 5 else None
             elif spec["type"] == "model":
-                # ['Crop Name', 'Season', 'Status', 'Kc,ini', 'Kc,mid', 'Kc,end', 'Stage Lengths', 'Max Height', 'Root Depth', 'Depletion p', 'Field Ea', 'Window']
                 crop_name = clean_cell(r[0])
                 kc_ini = parse_num(r[3]) if len(r) > 3 else None
                 kc_mid = parse_num(r[4]) if len(r) > 4 else None
@@ -144,6 +169,7 @@ def parse_tracked_docs():
                 root_depth = parse_range(r[8]) if len(r) > 8 else None
 
             all_rows.append({
+                "table_id": "tracked",
                 "source_type": "tracked_doc",
                 "source": f"{spec['file']} {spec['section']}",
                 "group": "Repo Research Extracts",
@@ -166,6 +192,121 @@ def parse_tracked_docs():
 
     return all_rows, doc_counts
 
+def parse_table_6_1_rows(lines):
+    rows = []
+    cur_group = None
+    cur_crop = None
+    pending_crop_line = None
+    cassava_count = 0
+
+    variants_set = {
+        "Year 1", "Year 2", "Dry", "Green", "Seed", "Long season", "Short season",
+        "1st cycle", "2nd cycle", "1st year", "2nd year", "Following years", "Following years*",
+        "First harvest", "Second harvest", "For processing", "Fresh market",
+        "Fresh market, on trellis", "Fresh market, with trellis", "Single harvest", "Multiple harvests"
+    }
+
+    def is_variant(name):
+        return name in variants_set or name.startswith("Year ") or name.startswith("1st ") or name.startswith("2nd ")
+
+    for ln in range(11753, 11917):
+        if ln > len(lines):
+            break
+        l = lines[ln - 1].strip()
+        if not l:
+            continue
+        if any(h in l for h in ["TABLE 6.1", "Single (time-averaged)", "root depths", "standardized", "ETo equation", "crop height", "(h, m)", "(Zr, m)", "Crop evapotranspiration", "6. ETc and", "Cultivated"]):
+            continue
+
+        if re.match(r"^[a-d]\.\s+", l):
+            cur_group = l
+            cur_crop = None
+            continue
+        if re.match(r"^d[1-3]\.\s+", l):
+            cur_group = f"d. Spicy and medicinal herbs > {l}"
+            cur_crop = None
+            continue
+
+        nums = re.findall(r"\b\d+\.\d{2}\b", l)
+        if len(nums) >= 3:
+            parts = re.split(r"\s{2,}", l)
+            if len(parts) == 6:
+                name_part, k1, k2, k3, h_s, zr_s = parts
+            elif len(parts) == 5:
+                name_part = ""
+                k1, k2, k3, h_s, zr_s = parts
+            else:
+                continue
+
+            start_ln = ln
+            parse_status = "verified"
+
+            if cur_crop and "Cassava" in cur_crop:
+                cassava_count += 1
+                crop_name = "Cassava (Manihot esculenta)"
+                variant = f"Year {cassava_count}"
+                start_ln = pending_crop_line if pending_crop_line else ln
+                parse_status = "uncertain"
+                if cassava_count == 2:
+                    cur_crop = None
+            elif not name_part and cur_crop:
+                crop_name = cur_crop
+                variant = None
+                if pending_crop_line:
+                    start_ln = pending_crop_line
+                    pending_crop_line = None
+                cur_crop = None
+            elif is_variant(name_part) and cur_crop:
+                crop_name = cur_crop
+                variant = name_part.replace("*", "")
+                if pending_crop_line:
+                    start_ln = pending_crop_line
+                    pending_crop_line = None
+            elif cur_crop and ("Chinese cabbage" in name_part or "Kale" in name_part or "Common cabbage" in name_part or "Peppermint" in name_part or "Spearmint" in name_part or "Japanese mint" in name_part):
+                crop_name = f"{cur_crop} > {name_part}"
+                variant = None
+            else:
+                crop_name = name_part
+                variant = None
+                cur_crop = None
+
+            disp = crop_name + (f" ({variant})" if variant else "")
+            line_str = f"lines {start_ln}-{ln}" if start_ln != ln else f"line {ln}"
+            pg = get_page(ln)
+            rows.append({
+                "table_id": "6.1",
+                "source_type": "table_6_1",
+                "source": f"Table 6.1 p.{pg}, .txt {line_str}",
+                "group": cur_group,
+                "crop": crop_name,
+                "variant": variant,
+                "display_name": disp,
+                "kc_ini": float(k1),
+                "kc_mid": float(k2),
+                "kc_end": float(k3),
+                "max_height_m": parse_range(h_s),
+                "root_depth_m": parse_range(zr_s),
+                "stage_lengths": None,
+                "printed_page": pg,
+                "line_range": (start_ln, ln),
+                "parse_status": parse_status,
+                "shipped": False,
+                "shipped_match": None,
+                "differs_from_book": False
+            })
+        else:
+            if cur_crop and "Chicory and bitter chicory" in cur_crop and l.startswith("(Cichorium"):
+                cur_crop = f"{cur_crop} {l}"
+            elif cur_crop and "Kale, leaf cabbage" in cur_crop and l.startswith("and Collard"):
+                cur_crop = f"{cur_crop} {l}"
+            elif cur_crop and "Cassava" in cur_crop and l.startswith("Year"):
+                pass
+            else:
+                cur_crop = l
+                pending_crop_line = ln
+
+    return rows, True
+
 def parse_table_6_2_rows(txt_path):
     if not os.path.exists(txt_path):
         return [], False
@@ -173,9 +314,6 @@ def parse_table_6_2_rows(txt_path):
     with open(txt_path, "r", encoding="utf-8", errors="replace") as f:
         all_lines = f.readlines()
 
-    # Table 6.2 is defined between lines 11920 and 12061 (1-indexed)
-    # We define the structured catalog of Table 6.2 entries based on the book layout
-    # verified against the lines in FAO56-full.txt
     table_rows = [
         # a. Grain legumes (p. 168)
         {"group": "a. Grain legumes", "name": "Bean > Common bean (Phaseolus vulgaris)", "variant": "Green",
@@ -410,6 +548,7 @@ def parse_table_6_2_rows(txt_path):
         line_str = f"lines {item['lines'][0]}-{item['lines'][1]}" if item['lines'][0] != item['lines'][1] else f"line {item['lines'][0]}"
         src_str = f"Table 6.2 p.{item['page']}, .txt {line_str}"
         parsed_rows.append({
+            "table_id": "6.2",
             "source_type": "table_6_2",
             "source": src_str,
             "group": item["group"],
@@ -432,29 +571,162 @@ def parse_table_6_2_rows(txt_path):
 
     return parsed_rows, True
 
+def parse_table_6_3_rows(lines):
+    rows = []
+    top_group = None
+    sub_group = None
+    cur_crop = None
+    pending_desc = []
+    pending_start_ln = None
+
+    for ln in range(12062, 12438):
+        if ln > len(lines):
+            break
+        l = lines[ln - 1].strip()
+        if not l:
+            continue
+        if any(h in l for h in ["TABLE 6.3", "Single (time-averaged)", "Fraction", "Maximum", "Degree of ground cover", "(fc)", "(h, m)", "Kc ini", "Crop evapotranspiration", "6. ETc and", "* Vase:"]):
+            continue
+
+        if re.match(r"^[a-c]\.\s+", l):
+            top_group = l
+            sub_group = None
+            cur_crop = None
+            pending_desc = []
+            pending_start_ln = None
+            continue
+
+        if re.match(r"^[a-c]\.\d+(\.\d+)?\.\s+", l):
+            title = re.sub(r"^[a-c]\.\d+(\.\d+)?\.\s+", "", l)
+            if any(sg in title for sg in ["Pome trees", "Stone fruit trees", "Nut fruit trees", "Other temperate vines", "Sub–tropical and tropical small", "Tropical fruit trees", "Palm, fiber, fodder"]):
+                sub_group = title
+            else:
+                cur_crop = title
+            pending_desc = []
+            pending_start_ln = None
+            continue
+
+        nums = re.findall(r"\b\d+\.\d{2}\b", l)
+        if len(nums) >= 3:
+            parts = re.split(r"\s{2,}", l)
+            if len(parts) == 6:
+                desc = parts[0]
+                fc_s, h_s = parts[1], parts[2]
+                k1, k2, k3 = float(parts[3]), float(parts[4]), float(parts[5])
+                full_desc = " ".join(pending_desc + [desc]).strip()
+                start_ln = pending_start_ln if pending_start_ln else ln
+            elif len(parts) == 5:
+                fc_s, h_s = parts[0], parts[1]
+                k1, k2, k3 = float(parts[2]), float(parts[3]), float(parts[4])
+                full_desc = " ".join(pending_desc).strip()
+                start_ln = pending_start_ln if pending_start_ln else ln
+            else:
+                continue
+
+            pending_desc = []
+            pending_start_ln = None
+
+            group_name = f"{top_group} > {sub_group}" if sub_group else top_group
+            disp = cur_crop + (f" ({full_desc})" if full_desc else "")
+            pg = get_page(ln)
+            line_str = f"lines {start_ln}-{ln}" if start_ln != ln else f"line {ln}"
+
+            rows.append({
+                "table_id": "6.3",
+                "source_type": "table_6_3",
+                "source": f"Table 6.3 p.{pg}, .txt {line_str}",
+                "group": group_name,
+                "crop": cur_crop,
+                "variant": full_desc if full_desc else None,
+                "display_name": disp,
+                "fc": fc_s,
+                "kc_ini": k1,
+                "kc_mid": k2,
+                "kc_end": k3,
+                "max_height_m": parse_range(h_s),
+                "root_depth_m": None,
+                "stage_lengths": None,
+                "printed_page": pg,
+                "line_range": (start_ln, ln),
+                "parse_status": "verified",
+                "shipped": False,
+                "shipped_match": None,
+                "differs_from_book": False
+            })
+        else:
+            if rows and ln == rows[-1]["line_range"][1] + 1 and not re.match(r"^[a-zA-Z]+\s+\(", l) and any(kw in l for kw in ["pl ha", "density", "trellis", "system", "cordon", "shading"]):
+                prev = rows[-1]
+                prev["variant"] = f"{prev['variant']} {l}" if prev["variant"] else l
+                prev["display_name"] = prev["crop"] + f" ({prev['variant']})"
+                prev["line_range"] = (prev["line_range"][0], ln)
+                line_str = f"lines {prev['line_range'][0]}-{ln}"
+                prev["source"] = f"Table 6.3 p.{prev['printed_page']}, .txt {line_str}"
+            else:
+                pending_desc.append(l)
+                if pending_start_ln is None:
+                    pending_start_ln = ln
+
+    return rows, True
+
+def parse_table_6_4_rows(lines):
+    rows = []
+    cur_group = None
+    for ln in range(12445, 12476):
+        if ln > len(lines):
+            break
+        l = lines[ln - 1].strip()
+        if not l:
+            continue
+        if re.match(r"^[a-c]\.\s+", l):
+            cur_group = l
+            continue
+        m = re.match(r"^(.+?)\s+([0-9]+\.[0-9]+)\s+([0-9]+\.[0-9]+)\s+([0-9]+\.[0-9]+)\s+([0-9\.\–\-]+)$", l)
+        if m:
+            name, k_ini, k_mid, k_end, k_avg = m.groups()
+            pg = get_page(ln)
+            rows.append({
+                "table_id": "6.4",
+                "source_type": "table_6_4",
+                "source": f"Table 6.4 p.{pg}, .txt line {ln}",
+                "group": cur_group,
+                "crop": name.strip(),
+                "variant": None,
+                "display_name": name.strip(),
+                "kc_ini": float(k_ini),
+                "kc_mid": float(k_mid),
+                "kc_end": float(k_end),
+                "kc_avg": k_avg.strip(),
+                "max_height_m": None,
+                "root_depth_m": None,
+                "stage_lengths": None,
+                "printed_page": pg,
+                "line_range": (ln, ln),
+                "parse_status": "verified",
+                "shipped": False,
+                "shipped_match": None,
+                "differs_from_book": False
+            })
+    return rows, True
+
 def load_shipped_crops():
     shipped_path = os.path.join(ROOT_DIR, "packages", "core", "src", "data", "crop-params.json")
     with open(shipped_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     return data
 
-def run_cross_validation(table_rows, shipped_crops):
-    """
-    Cross-validation between shipped crops and Table 6.2 parsed rows.
-    """
-    # Mapping shipped crops to Table 6.2 parsed crop and variant
+def run_cross_validation(all_book_rows, shipped_crops):
     shipped_map = {
-        ("rice", "flooded"): {"name": "Rice (Oryza sativa)", "variant": "Flooded"},
-        ("rice", "intermittent"): {"name": "Rice (Oryza sativa)", "variant": "Intermittent irrigation"},
-        ("maize", None): {"name": "Maize (Zea mays)", "variant": "Grain, low grain moisture at harvest"},
-        ("groundnut", None): {"name": "Groundnut (peanut) (Arachis hypogaea)", "variant": None},
-        ("cotton", None): {"name": "Cotton (Gossypium hirsutum)", "variant": None},
-        ("chilli", None): None,  # Not in Table 6.2 (in Table 6.1)
-        ("sugarcane", None): {"name": "Sugar cane (Saccharum officinarum)", "variant": None},
-        ("greengram", None): {"name": "Black and green gram (Vigna mungo)", "variant": "Green gram"},
-        ("blackgram", None): {"name": "Black and green gram (Vigna mungo)", "variant": "Black gram (dry)"},
-        ("redgram", None): None,  # Unsourced, absent from FAO-56
-        ("chickpea", None): {"name": "Chickpea, garbanzo (Cicer arietinum)", "variant": None}
+        ("rice", "flooded"): {"name": "Rice (Oryza sativa)", "variant": "Flooded", "table": "6.2"},
+        ("rice", "intermittent"): {"name": "Rice (Oryza sativa)", "variant": "Intermittent irrigation", "table": "6.2"},
+        ("maize", None): {"name": "Maize (Zea mays)", "variant": "Grain, low grain moisture at harvest", "table": "6.2"},
+        ("groundnut", None): {"name": "Groundnut (peanut) (Arachis hypogaea)", "variant": None, "table": "6.2"},
+        ("cotton", None): {"name": "Cotton (Gossypium hirsutum)", "variant": None, "table": "6.2"},
+        ("chilli", None): {"name": "Chili pepper (Capsicum annuum)", "variant": None, "table": "6.1"},
+        ("sugarcane", None): {"name": "Sugar cane (Saccharum officinarum)", "variant": None, "table": "6.2"},
+        ("greengram", None): {"name": "Black and green gram (Vigna mungo)", "variant": "Green gram", "table": "6.2"},
+        ("blackgram", None): {"name": "Black and green gram (Vigna mungo)", "variant": "Black gram (dry)", "table": "6.2"},
+        ("redgram", None): None,
+        ("chickpea", None): {"name": "Chickpea, garbanzo (Cicer arietinum)", "variant": None, "table": "6.2"}
     }
 
     results = []
@@ -464,92 +736,102 @@ def run_cross_validation(table_rows, shipped_crops):
         v_id = sc.get("variant")
         target = shipped_map.get((c_id, v_id))
 
+        # Parse cited table from shipped source string
+        src_text = sc.get("source", "")
+        m_cites = re.search(r"Table\s+([0-9]+\.[0-9]+)", src_text)
+        file_cites = m_cites.group(1) if m_cites else None
+
         if target is None:
-            if c_id == "redgram":
-                res = {
-                    "shipped_crop": c_id,
-                    "shipped_variant": v_id,
-                    "shipped_kc": (sc["kc_ini"], sc["kc_mid"], sc["kc_end"]),
-                    "shipped_height": sc.get("max_height_m"),
-                    "shipped_root": sc.get("root_depth_m"),
-                    "book_match": None,
-                    "status": "UNSOURCED",
-                    "reason": "Redgram (pigeonpea) is absent from FAO-56 Table 6.2 and all book tables; cited page 410 does not exist.",
-                    "differs": True
-                }
-            else:
-                res = {
-                    "shipped_crop": c_id,
-                    "shipped_variant": v_id,
-                    "shipped_kc": (sc["kc_ini"], sc["kc_mid"], sc["kc_end"]),
-                    "shipped_height": sc.get("max_height_m"),
-                    "shipped_root": sc.get("root_depth_m"),
-                    "book_match": None,
-                    "status": "NOT_IN_TABLE_6_2",
-                    "reason": "Chilli pepper is in Table 6.1 (p. 166), not Table 6.2.",
-                    "differs": True
-                }
-            results.append(res)
+            results.append({
+                "shipped_crop": c_id,
+                "shipped_variant": v_id,
+                "shipped_kc": (sc["kc_ini"], sc["kc_mid"], sc["kc_end"]),
+                "shipped_height": sc.get("max_height_m"),
+                "shipped_root": sc.get("root_depth_m"),
+                "book_table": None,
+                "book_page": None,
+                "book_row_source": None,
+                "book_match": None,
+                "book_kc": None,
+                "book_height": None,
+                "book_root": None,
+                "kc_verdict": "DIFFERS",
+                "height_verdict": "DIFFERS",
+                "root_verdict": "DIFFERS",
+                "file_cites_table": file_cites,
+                "found_in_table": None,
+                "citation_differs": False,
+                "status": "UNSOURCED",
+                "reason": "Redgram (pigeonpea / Cajanus cajan) is completely absent from all FAO-56 tables; cited page 410 does not exist in the book.",
+                "differs": True
+            })
             continue
 
-        # Find matching row in table_rows
         match = None
-        for r in table_rows:
-            if r["crop"] == target["name"] and r["variant"] == target["variant"]:
-                match = r
-                break
+        for r in all_book_rows:
+            if r["crop"] == target["name"] and r.get("table_id") == target["table"]:
+                if target["variant"] is None and r["variant"] is None:
+                    match = r
+                    break
+                elif target["variant"] and r["variant"] == target["variant"]:
+                    match = r
+                    break
 
         if match:
-            # Tag the matching row in table_rows
             match["shipped"] = True
             match["shipped_crop_id"] = c_id
             match["shipped_constant_status"] = sc.get("constant_status", {})
 
-            # Compare parameters
+            # Rule (a) Kc verdict: all 3 must match
             kc_match = (
                 abs(sc["kc_ini"] - match["kc_ini"]) < 1e-4 and
                 abs(sc["kc_mid"] - match["kc_mid"]) < 1e-4 and
                 abs(sc["kc_end"] - match["kc_end"]) < 1e-4
             )
-            # Height comparison
+            kc_verdict = "MATCH" if kc_match else "DIFFERS"
+
+            # Rule (b) Height verdict: MATCH if equal; WITHIN_RANGE if shipped height lies in range; DIFFERS if outside
             h_shipped = sc.get("max_height_m")
             h_book = match["max_height_m"]
-            h_diff = False
-            if h_book:
-                if h_book["min"] == h_book["max"]:
-                    if abs(h_shipped - h_book["min"]) > 1e-4:
-                        h_diff = True
-                else:
-                    # Shipped is single scalar, book is range
-                    h_diff = True
+            if h_book is None:
+                height_verdict = "DIFFERS"
+            elif abs(h_shipped - h_book["min"]) < 1e-4 and abs(h_shipped - h_book["max"]) < 1e-4:
+                height_verdict = "MATCH"
+            elif h_book["min"] - 1e-4 <= h_shipped <= h_book["max"] + 1e-4:
+                height_verdict = "WITHIN_RANGE"
+            else:
+                height_verdict = "DIFFERS"
 
-            # Root comparison
+            # Rule (c) Root verdict: compare shipped root_depth_m.max with book maximum root depth (upper end)
             zr_shipped = sc.get("root_depth_m")
+            zr_shipped_max = zr_shipped.get("max") if isinstance(zr_shipped, dict) else zr_shipped
             zr_book = match["root_depth_m"]
-            zr_diff = False
-            if zr_book:
-                if zr_book["min"] == zr_book["max"]:
-                    # Book is single value, shipped might be range
-                    if isinstance(zr_shipped, dict):
-                        if abs(zr_shipped.get("min", 0) - zr_book["min"]) > 1e-4 or abs(zr_shipped.get("max", 0) - zr_book["max"]) > 1e-4:
-                            zr_diff = True
-                    elif abs(zr_shipped - zr_book["min"]) > 1e-4:
-                        zr_diff = True
-                else:
-                    if isinstance(zr_shipped, dict):
-                        if abs(zr_shipped.get("min", 0) - zr_book["min"]) > 1e-4 or abs(zr_shipped.get("max", 0) - zr_book["max"]) > 1e-4:
-                            zr_diff = True
+            zr_book_max = zr_book.get("max") if isinstance(zr_book, dict) else zr_book
+            if zr_book_max is not None and abs(zr_shipped_max - zr_book_max) < 1e-4:
+                root_verdict = "MATCH"
+            else:
+                root_verdict = "DIFFERS"
 
-            differs = (not kc_match) or h_diff or zr_diff
-            match["differs_from_book"] = differs
+            # Rule (e) Citation check
+            found_in_tbl = match["table_id"]
+            cit_diff = (file_cites is not None and file_cites != found_in_tbl)
 
-            mismatch_reasons = []
-            if not kc_match:
-                mismatch_reasons.append(f"Kc: shipped=({sc['kc_ini']},{sc['kc_mid']},{sc['kc_end']}) vs book=({match['kc_ini']},{match['kc_mid']},{match['kc_end']})")
-            if h_diff:
-                mismatch_reasons.append(f"Height: shipped={h_shipped}m vs book={h_book['min']}-{h_book['max']}m")
-            if zr_diff:
-                mismatch_reasons.append(f"Root: shipped={zr_shipped}m vs book={zr_book['min']}-{zr_book['max']}m")
+            # Overall status: MATCH if kc is MATCH and height is MATCH/WITHIN_RANGE and root is MATCH
+            overall_diff = (kc_verdict == "DIFFERS") or (height_verdict == "DIFFERS") or (root_verdict == "DIFFERS")
+            match["differs_from_book"] = overall_diff
+
+            mismatch_notes = []
+            if kc_verdict == "DIFFERS":
+                mismatch_notes.append(f"Kc: shipped ({sc['kc_ini']},{sc['kc_mid']},{sc['kc_end']}) vs book ({match['kc_ini']},{match['kc_mid']},{match['kc_end']})")
+            if height_verdict == "DIFFERS":
+                mismatch_notes.append(f"Height: shipped {h_shipped}m vs book {h_book['min']}-{h_book['max']}m")
+            elif height_verdict == "WITHIN_RANGE":
+                mismatch_notes.append(f"Height: shipped {h_shipped}m is within book range {h_book['min']}–{h_book['max']}m")
+            if root_verdict == "DIFFERS":
+                mismatch_notes.append(f"Root: shipped max {zr_shipped_max}m vs book max {zr_book_max}m")
+
+            if cit_diff:
+                mismatch_notes.append(f"Citation mismatch: file cites Table {file_cites} but row is in Table {found_in_tbl}")
 
             results.append({
                 "shipped_crop": c_id,
@@ -557,65 +839,76 @@ def run_cross_validation(table_rows, shipped_crops):
                 "shipped_kc": (sc["kc_ini"], sc["kc_mid"], sc["kc_end"]),
                 "shipped_height": h_shipped,
                 "shipped_root": zr_shipped,
+                "book_table": match["table_id"],
+                "book_page": match["printed_page"],
+                "book_row_source": match["source"],
                 "book_match": match["display_name"],
                 "book_kc": (match["kc_ini"], match["kc_mid"], match["kc_end"]),
                 "book_height": h_book,
                 "book_root": zr_book,
-                "status": "MATCH" if not differs else "DIFFERS",
-                "reason": "; ".join(mismatch_reasons) if mismatch_reasons else "Exact match on Kc, height, and root depth",
-                "differs": differs
+                "kc_verdict": kc_verdict,
+                "height_verdict": height_verdict,
+                "root_verdict": root_verdict,
+                "file_cites_table": file_cites,
+                "found_in_table": found_in_tbl,
+                "citation_differs": cit_diff,
+                "status": "DIFFERS" if overall_diff else "MATCH",
+                "reason": "; ".join(mismatch_notes) if mismatch_notes else "Exact agreement across Kc, height, and root depth",
+                "differs": overall_diff
             })
 
     return results
 
-def run_sanity_checks(table_rows, txt_path):
-    num_parsed = len(table_rows)
-    all_3_kc = sum(1 for r in table_rows if r["kc_ini"] is not None and r["kc_mid"] is not None and r["kc_end"] is not None)
-    uncertain_parses = sum(1 for r in table_rows if r["parse_status"] == "uncertain")
-    out_of_bounds_kc = []
+def run_sanity_checks(table_rows_by_id, all_lines):
+    random.seed(42)
+    report = {}
 
-    for r in table_rows:
-        for k in ["kc_ini", "kc_mid", "kc_end"]:
-            v = r[k]
-            if v is not None and (v < 0.1 or v > 1.6):
-                out_of_bounds_kc.append((r["display_name"], k, v))
+    for tbl_id, rows in table_rows_by_id.items():
+        n = len(rows)
+        all_3 = sum(1 for r in rows if r["kc_ini"] is not None and r["kc_mid"] is not None and r["kc_end"] is not None)
+        unc = sum(1 for r in rows if r["parse_status"] == "uncertain")
+        oob = []
+        for r in rows:
+            for k in ["kc_ini", "kc_mid", "kc_end"]:
+                v = r[k]
+                if v is not None and (v < 0.1 or v > 1.6):
+                    oob.append((r["display_name"], k, v))
 
-    # Spot check 10 randomly chosen rows against .txt
-    random.seed(42)  # Deterministic seed for rerunnability
-    sample_indices = sorted(random.sample(range(num_parsed), 10))
-    spot_checks = []
-
-    if os.path.exists(txt_path):
-        with open(txt_path, "r", encoding="utf-8", errors="replace") as f:
-            all_lines = f.readlines()
-
+        # 10 random spot checks per table
+        sample_indices = sorted(random.sample(range(n), min(10, n)))
+        spots = []
         for idx in sample_indices:
-            row = table_rows[idx]
+            row = rows[idx]
             l_start, l_end = row["line_range"]
-            actual_lines = [all_lines[ln - 1].rstrip() for ln in range(l_start, l_end + 1)]
-            spot_checks.append({
+            actual = [all_lines[ln - 1].rstrip() for ln in range(l_start, min(l_end + 1, len(all_lines)))]
+            spots.append({
                 "index": idx,
                 "crop": row["display_name"],
-                "expected_lines": f"{l_start}-{l_end}",
+                "table_id": tbl_id,
                 "page": row["printed_page"],
-                "txt_lines": actual_lines,
+                "expected_lines": f"{l_start}-{l_end}",
+                "txt_lines": actual,
                 "parsed_kc": (row["kc_ini"], row["kc_mid"], row["kc_end"]),
                 "parsed_h": row["max_height_m"],
-                "parsed_zr": row["root_depth_m"]
+                "parsed_zr": row["root_depth_m"],
+                "parse_status": row["parse_status"]
             })
 
-    return {
-        "num_parsed": num_parsed,
-        "all_3_kc": all_3_kc,
-        "uncertain_parses": uncertain_parses,
-        "out_of_bounds_kc": out_of_bounds_kc,
-        "spot_checks": spot_checks
-    }
+        report[tbl_id] = {
+            "num_parsed": n,
+            "all_3_kc": all_3,
+            "uncertain_parses": unc,
+            "out_of_bounds_kc": oob,
+            "spot_checks": spots
+        }
+
+    return report
 
 def build_explorer_html(dataset, output_html_path):
-    data_json_str = json.dumps(dataset, indent=None)
+    data_json_str = json.dumps(dataset)
+    m = dataset["meta"]
 
-    html_content = f"""<!DOCTYPE html>
+    template = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -626,13 +919,12 @@ def build_explorer_html(dataset, output_html_path):
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
   <style>
-    /* CSS Reset & System Fallbacks */
-    *, *::before, *::after {{
+    *, *::before, *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-    }}
-    :root {{
+    }
+    :root {
       --bg-surface: #FAF9F5;
       --card-surface: #FFFFFF;
       --ink: #1F1E1D;
@@ -646,8 +938,8 @@ def build_explorer_html(dataset, output_html_path):
       --badge-unsourced: #C62828;
       --badge-uncertain: #6A1B9A;
       --badge-differs: #BF360C;
-    }}
-    body {{
+    }
+    body {
       font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       font-size: 18px;
       line-height: 1.6;
@@ -655,24 +947,24 @@ def build_explorer_html(dataset, output_html_path):
       background-color: var(--bg-surface);
       padding: 24px;
       min-width: 320px;
-    }}
-    a {{
+    }
+    a {
       color: var(--ink);
       text-decoration: underline;
       text-underline-offset: 3px;
-    }}
-    a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {{
+    }
+    a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
       outline: 2px solid var(--focus-ring);
       outline-offset: 2px;
-    }}
-    .container {{
+    }
+    .container {
       max-width: 1400px;
       margin: 0 auto;
-    }}
-    header {{
+    }
+    header {
       margin-bottom: 28px;
-    }}
-    .back-nav {{
+    }
+    .back-nav {
       display: inline-block;
       margin-bottom: 16px;
       font-size: 18px;
@@ -683,49 +975,48 @@ def build_explorer_html(dataset, output_html_path):
       background: var(--card-surface);
       border: 1px solid var(--hairline);
       border-radius: 8px;
-    }}
-    .back-nav:hover {{
+    }
+    .back-nav:hover {
       background: #F4F1EA;
-    }}
-    h1 {{
+    }
+    h1 {
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 38px;
       font-weight: 700;
       line-height: 1.25;
       color: var(--ink);
       margin-bottom: 12px;
-    }}
-    .deck-subhead {{
+    }
+    .deck-subhead {
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 24px;
       font-weight: 600;
       color: var(--accent-deep);
       margin-bottom: 16px;
-    }}
-    /* Prominent Coverage Card */
-    .coverage-card {{
+    }
+    .coverage-card {
       background: var(--card-surface);
       border: 1px solid var(--hairline);
       border-radius: 12px;
       padding: 24px;
       margin-bottom: 24px;
-    }}
-    .coverage-lead {{
+    }
+    .coverage-lead {
       font-size: 19px;
       font-weight: 600;
       color: var(--ink);
       margin-bottom: 12px;
-    }}
-    .coverage-detail {{
+    }
+    .coverage-detail {
       font-size: 18px;
       color: var(--secondary-text);
       line-height: 1.55;
       margin-bottom: 10px;
-    }}
-    .coverage-detail strong {{
+    }
+    .coverage-detail strong {
       color: var(--ink);
-    }}
-    .coverage-warning {{
+    }
+    .coverage-warning {
       font-size: 18px;
       color: var(--ink);
       background: #FDF4E7;
@@ -733,10 +1024,8 @@ def build_explorer_html(dataset, output_html_path):
       padding: 12px 16px;
       border-radius: 4px;
       margin-top: 14px;
-    }}
-
-    /* Controls Section */
-    .controls-card {{
+    }
+    .controls-card {
       background: var(--card-surface);
       border: 1px solid var(--hairline);
       border-radius: 12px;
@@ -746,19 +1035,19 @@ def build_explorer_html(dataset, output_html_path):
       flex-wrap: wrap;
       gap: 16px;
       align-items: center;
-    }}
-    .control-group {{
+    }
+    .control-group {
       display: flex;
       flex-direction: column;
       gap: 6px;
-      flex: 1 1 240px;
-    }}
-    .control-label {{
+      flex: 1 1 200px;
+    }
+    .control-label {
       font-size: 18px;
       font-weight: 600;
       color: var(--ink);
-    }}
-    input[type="search"], select {{
+    }
+    input[type="search"], select {
       font-family: inherit;
       font-size: 18px;
       padding: 10px 14px;
@@ -767,14 +1056,14 @@ def build_explorer_html(dataset, output_html_path):
       background: #FFFFFF;
       color: var(--ink);
       width: 100%;
-    }}
-    .toggle-group {{
+    }
+    .toggle-group {
       display: flex;
       align-items: center;
       gap: 10px;
       padding-top: 24px;
-    }}
-    .toggle-label {{
+    }
+    .toggle-label {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -782,52 +1071,48 @@ def build_explorer_html(dataset, output_html_path):
       font-weight: 600;
       cursor: pointer;
       user-select: none;
-    }}
-    input[type="checkbox"] {{
+    }
+    input[type="checkbox"] {
       width: 20px;
       height: 20px;
       cursor: pointer;
       accent-color: var(--accent-fill);
-    }}
-
-    /* Stats Line */
-    .results-bar {{
+    }
+    .results-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 16px;
       padding: 0 4px;
-    }}
-    .row-count {{
+    }
+    .row-count {
       font-size: 18px;
       font-weight: 600;
       color: var(--ink);
-    }}
-    .filter-reset {{
+    }
+    .filter-reset {
       font-size: 18px;
       color: var(--secondary-text);
       cursor: pointer;
       background: none;
       border: none;
       text-decoration: underline;
-    }}
-
-    /* Table Container */
-    .table-container {{
+    }
+    .table-container {
       background: var(--card-surface);
       border: 1px solid var(--hairline);
       border-radius: 12px;
       overflow-x: auto;
       margin-bottom: 32px;
       -webkit-overflow-scrolling: touch;
-    }}
-    table {{
+    }
+    table {
       width: 100%;
       border-collapse: collapse;
       text-align: left;
       font-size: 18px;
-    }}
-    th {{
+    }
+    th {
       background: #F5F3EC;
       color: var(--ink);
       font-weight: 700;
@@ -836,128 +1121,127 @@ def build_explorer_html(dataset, output_html_path):
       white-space: nowrap;
       cursor: pointer;
       user-select: none;
-    }}
-    th:hover {{
+    }
+    th:hover {
       background: #EDEAE1;
-    }}
-    th[aria-sort="ascending"]::after {{
+    }
+    th[aria-sort="ascending"]::after {
       content: " ▲";
       font-size: 13px;
-    }}
-    th[aria-sort="descending"]::after {{
+    }
+    th[aria-sort="descending"]::after {
       content: " ▼";
       font-size: 13px;
-    }}
-    td {{
+    }
+    td {
       padding: 14px 16px;
       border-bottom: 1px solid var(--hairline);
-      vertical-align: middle;
-      color: var(--ink);
-    }}
-    tr:last-child td {{
+      vertical-align: top;
+    }
+    tr:last-child td {
       border-bottom: none;
-    }}
-    tr:hover td {{
-      background-color: #FAF8F2;
-    }}
-    tr.shipped-row {{
-      background-color: #FFF9F0;
-    }}
-    tr.shipped-row:hover td {{
-      background-color: #FFF2DF;
-    }}
-
-    /* Badges */
-    .badge {{
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
+    }
+    tr.shipped-row {
+      background-color: #FBF7EE;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 14px;
+      font-weight: 600;
       padding: 3px 8px;
       border-radius: 6px;
-      font-size: 15px;
-      font-weight: 600;
-      white-space: nowrap;
-      margin-right: 4px;
-      margin-bottom: 2px;
-    }}
-    .badge-shipped {{
-      background: #FFE8D6;
-      color: #7A3508;
-      border: 1px solid #F5C7A9;
-    }}
-    .badge-differs {{
-      background: #FFEBEE;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+    .badge-shipped {
+      background-color: #FBEBD6;
+      color: var(--accent-deep);
+    }
+    .badge-differs {
+      background-color: #FBE9E7;
       color: var(--badge-differs);
-      border: 1px solid #FFCDD2;
-    }}
-    .badge-uncertain {{
-      background: #F3E5F5;
+    }
+    .badge-uncertain {
+      background-color: #F3E5F5;
       color: var(--badge-uncertain);
-      border: 1px solid #E1BEE7;
-    }}
-    .badge-status-measured {{
+    }
+    .badge-citation {
+      background-color: #FFF3E0;
+      color: #E65100;
+      font-weight: 700;
+      border: 1px solid #FFE0B2;
+    }
+    .source-text {
+      font-family: monospace;
+      font-size: 15px;
+      color: var(--secondary-text);
+      word-break: break-word;
+    }
+    .badge-status-measured {
       color: var(--badge-measured);
       font-weight: 600;
-    }}
-    .badge-status-assumed {{
+    }
+    .badge-status-assumed {
       color: var(--badge-assumed);
       font-weight: 600;
-    }}
-    .badge-status-unsourced {{
+    }
+    .badge-status-unsourced {
       color: var(--badge-unsourced);
       font-weight: 600;
-    }}
-    .source-text {{
-      font-size: 16px;
-      color: var(--secondary-text);
-      display: block;
-    }}
-
-    /* Cross validation section */
-    .validation-section {{
-      background: var(--card-surface);
-      border: 1px solid var(--hairline);
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 32px;
-    }}
-    .validation-section h2 {{
+    }
+    .validation-section {
+      margin-top: 40px;
+    }
+    .validation-section h2 {
       font-family: "Source Serif 4", Georgia, serif;
-      font-size: 26px;
+      font-size: 28px;
       font-weight: 700;
       color: var(--ink);
       margin-bottom: 12px;
-    }}
-
-    /* Reduced Motion */
-    @media (prefers-reduced-motion: reduce) {{
-      *, *::before, *::after {{
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
-      }}
-    }}
+    }
+    .rules-card {
+      background: #FDF9F0;
+      border: 1px solid #EFE4D0;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      font-size: 17px;
+      line-height: 1.6;
+    }
+    .rules-card ul {
+      margin-left: 24px;
+      margin-top: 8px;
+    }
+    .rules-card li {
+      margin-bottom: 4px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <a href="./" class="back-nav">← Back to Deck</a>
-      <div class="deck-subhead">Jadal Agronomic Baseline · FAO-56 Rev.1 (2025)</div>
+      <a href="index.html" class="back-nav">← Back to Presentation Deck</a>
       <h1>FAO-56 Crop Parameter Explorer</h1>
+      <div class="deck-subhead">System-1 Ground Truth &amp; Model Constant Provenance Audit</div>
     </header>
 
     <section class="coverage-card" aria-labelledby="coverage-heading">
       <h2 id="coverage-heading" class="coverage-lead">
-        {len(dataset['table_6_2_rows'])} crop rows from Table 6.2 as parsed from a local copy of FAO-56 Rev.1 (2025), plus {len(dataset['tracked_rows'])} rows from the three research extracts in this repo; Jadal ships 10 crops (11 rows) in crop-params.json.
+        __BOOK_TABLES_COUNT__ distinct crop rows parsed across four tables from local FAO-56 Rev.1 (2025): Table 6.1 (vegetables, __T61_COUNT__ rows), Table 6.2 (field crops, __T62_COUNT__ rows), Table 6.3 (fruit trees, shrubs &amp; vines, __T63_COUNT__ rows), Table 6.4 (grasses &amp; grasslands, __T64_COUNT__ rows); plus __TRACKED_COUNT__ rows from three tracked research extracts in this repo.
       </h2>
       <p class="coverage-detail">
         <strong>Tracked Repo Extracts Breakdown:</strong>
         docs/research/fao56-book-reference.md §3 (17 rows), docs/research/fao56-crop-tables.md §2.1 (23 rows), docs/research/fao56-model.md §3 (9 rows).
       </p>
+      <p class="coverage-detail">
+        <strong>Unparsed Scope:</strong> Tables 6.5 and later (wetlands, specialized ecosystems) and the general book text are not crop coefficient lists of this kind and are not parsed.
+      </p>
+      <p class="coverage-detail">
+        <strong>Counting Methodology:</strong> We report distinct parameter rows (__BOOK_TABLES_COUNT__ book rows + __TRACKED_COUNT__ repo extract rows = __TOTAL_COUNT__ total rows), not distinct botanical species. Jadal ships 10 distinct crops across 11 rows in crop-params.json.
+      </p>
       <div class="coverage-warning">
-        <strong>Honesty &amp; Coverage Disclosure:</strong> The book has more than this table and the product does not ingest the whole book. Verify any value against the book before relying on it.
+        <strong>Honesty &amp; Coverage Disclosure:</strong> The product does not ingest the whole book. Verify any value against the book before relying on it.
       </div>
     </section>
 
@@ -967,23 +1251,26 @@ def build_explorer_html(dataset, output_html_path):
         <input type="search" id="search-input" placeholder="Type crop name, group, or source..." autocomplete="off">
       </div>
       <div class="control-group">
-        <label for="group-select" class="control-label">Group Heading Filter</label>
-        <select id="group-select">
-          <option value="ALL">All Groups ({len(dataset['all_rows'])})</option>
+        <label for="table-select" class="control-label">Table Filter</label>
+        <select id="table-select">
+          <option value="ALL">All Tables (__TOTAL_COUNT__ rows)</option>
+          <option value="6.1">Table 6.1: Vegetables (__T61_COUNT__ rows)</option>
+          <option value="6.2">Table 6.2: Field Crops (__T62_COUNT__ rows)</option>
+          <option value="6.3">Table 6.3: Fruit Trees, Shrubs &amp; Vines (__T63_COUNT__ rows)</option>
+          <option value="6.4">Table 6.4: Grasses &amp; Grasslands (__T64_COUNT__ rows)</option>
+          <option value="tracked">Tracked Repo Extracts (__TRACKED_COUNT__ rows)</option>
         </select>
       </div>
       <div class="control-group">
-        <label for="source-select" class="control-label">Data Source</label>
-        <select id="source-select">
-          <option value="ALL">All Sources</option>
-          <option value="table_6_2">Table 6.2 (FAO-56 Rev.1 2025)</option>
-          <option value="tracked_doc">Tracked Repo Docs (3 Extracts)</option>
+        <label for="group-select" class="control-label">Group Filter</label>
+        <select id="group-select">
+          <option value="ALL">All Groups</option>
         </select>
       </div>
       <div class="toggle-group">
         <label class="toggle-label" for="shipped-toggle">
           <input type="checkbox" id="shipped-toggle">
-          <span>Shipped in Jadal only</span>
+          <span>Shipped in Jadal only (11)</span>
         </label>
       </div>
     </section>
@@ -997,6 +1284,7 @@ def build_explorer_html(dataset, output_html_path):
       <table id="crop-table">
         <thead>
           <tr>
+            <th data-col="table_id" tabindex="0" role="button" aria-sort="none">Table</th>
             <th data-col="display_name" tabindex="0" role="button" aria-sort="none">Crop Name</th>
             <th data-col="group" tabindex="0" role="button" aria-sort="none">Group</th>
             <th data-col="kc_ini" tabindex="0" role="button" aria-sort="none">Kc ini</th>
@@ -1004,36 +1292,43 @@ def build_explorer_html(dataset, output_html_path):
             <th data-col="kc_end" tabindex="0" role="button" aria-sort="none">Kc end</th>
             <th data-col="height" tabindex="0" role="button" aria-sort="none">Max Height (h, m)</th>
             <th data-col="root" tabindex="0" role="button" aria-sort="none">Root Depth (Zr, m)</th>
-            <th data-col="stage_lengths" tabindex="0" role="button" aria-sort="none">Stage Lengths</th>
             <th data-col="source" tabindex="0" role="button" aria-sort="none">Source &amp; Citation</th>
             <th data-col="status" tabindex="0" role="button" aria-sort="none">Status / Badges</th>
           </tr>
         </thead>
         <tbody id="table-body">
-          <!-- Rows inserted by JS -->
         </tbody>
       </table>
     </main>
 
     <section class="validation-section" aria-labelledby="validation-heading">
-      <h2 id="validation-heading">Cross-Validation: Shipped crop-params.json vs. FAO-56 Table 6.2</h2>
-      <p class="coverage-detail" style="margin-bottom: 16px;">
-        Comparison between the 11 shipped rows in <code>packages/core/src/data/crop-params.json</code> and the unabridged FAO-56 Table 6.2 (pp. 168–170). Mismatches are preserved as findings and shown as "differs from book".
-      </p>
+      <h2 id="validation-heading">Cross-Validation: Shipped crop-params.json vs. FAO-56 Rev.1 (2025)</h2>
+      
+      <div class="rules-card">
+        <strong>Cross-Validation Verdict Rules:</strong>
+        <ul>
+          <li><strong>(a) Kc:</strong> All three values (ini, mid, end) must be equal to count as <strong>MATCH</strong>, else <strong>DIFFERS</strong>.</li>
+          <li><strong>(b) Height:</strong> Shipped file stores one scalar height; book prints a range for some crops. <strong>MATCH</strong> if equal to book value; <strong>WITHIN_RANGE</strong> if shipped height lies inside the book's min to max range (representation difference, not an error); <strong>DIFFERS</strong> only if outside range.</li>
+          <li><strong>(c) Root Depth:</strong> Book column is maximum root depth. Shipped <code>root_depth_m.max</code> is compared with book's maximum root depth (upper end of range); shipped min is a project growth parameter and is not compared. <strong>MATCH</strong> or <strong>DIFFERS</strong>.</li>
+          <li><strong>(d) Comprehensive Search:</strong> Shipped crops are looked up across ALL parsed tables (e.g. chilli is found in Table 6.1, p. 166).</li>
+          <li><strong>(e) Provenance &amp; Citation Check:</strong> Compares file cited table against actual book table. Mismatches recorded as provenance findings.</li>
+        </ul>
+      </div>
+
       <div class="table-container">
         <table>
           <thead>
             <tr>
-              <th>Shipped Crop (ID &amp; Variant)</th>
-              <th>Shipped Kc (ini / mid / end)</th>
-              <th>Shipped Height / Root</th>
-              <th>Counterpart in Table 6.2</th>
-              <th>Book Parameters</th>
-              <th>Validation Finding</th>
+              <th>Shipped Crop &amp; Variant</th>
+              <th>Book Source</th>
+              <th>Kc Check</th>
+              <th>Height Check</th>
+              <th>Root Depth Check</th>
+              <th>Citation Check</th>
+              <th>Overall Finding</th>
             </tr>
           </thead>
           <tbody id="validation-body">
-            <!-- Validation rows generated by python/JS -->
           </tbody>
         </table>
       </div>
@@ -1041,208 +1336,229 @@ def build_explorer_html(dataset, output_html_path):
   </div>
 
   <script>
-    const DATA = {data_json_str};
+    const DATA = __DATA_JSON__;
 
-    let currentSort = {{ col: "display_name", dir: "asc" }};
+    let currentSort = { col: "display_name", dir: "asc" };
 
-    function formatRange(r) {{
+    function formatRange(r) {
       if (!r) return "—";
+      if (typeof r === "number") return r.toFixed(2);
       if (r.min === r.max) return r.min.toFixed(2);
-      return `${{r.min.toFixed(2)}} – ${{r.max.toFixed(2)}}`;
-    }}
+      return `${r.min.toFixed(2)} – ${r.max.toFixed(2)}`;
+    }
 
-    function initExplorer() {{
+    function initExplorer() {
       const groupSelect = document.getElementById("group-select");
       const groups = new Set();
-      DATA.all_rows.forEach(r => {{ if (r.group) groups.add(r.group); }});
-      Array.from(groups).sort().forEach(g => {{
+      DATA.all_rows.forEach(r => { if (r.group) groups.add(r.group); });
+      Array.from(groups).sort().forEach(g => {
         const opt = document.createElement("option");
         opt.value = g;
         opt.textContent = g;
         groupSelect.appendChild(opt);
-      }});
+      });
 
       // Populate validation table
       const valBody = document.getElementById("validation-body");
-      DATA.cross_validation.forEach(cv => {{
+      DATA.cross_validation.forEach(cv => {
         const tr = document.createElement("tr");
-        const cropDesc = cv.shipped_variant ? `${{cv.shipped_crop}} (${{cv.shipped_variant}})` : cv.shipped_crop;
-        const kcDesc = `${{cv.shipped_kc[0]}} / ${{cv.shipped_kc[1]}} / ${{cv.shipped_kc[2]}}`;
-        const zrStr = typeof cv.shipped_root === "object" && cv.shipped_root ? `${{cv.shipped_root.min}}–${{cv.shipped_root.max}} m` : (cv.shipped_root ? `${{cv.shipped_root}} m` : "—");
-        const hStr = cv.shipped_height ? `${{cv.shipped_height}} m` : "—";
+        const cropDesc = cv.shipped_variant ? `${cv.shipped_crop} (${cv.shipped_variant})` : cv.shipped_crop;
+        const shpKc = `${cv.shipped_kc[0]} / ${cv.shipped_kc[1]} / ${cv.shipped_kc[2]}`;
+        const bkKc = cv.book_kc ? `${cv.book_kc[0]} / ${cv.book_kc[1]} / ${cv.book_kc[2]}` : "—";
+        const shpRootMax = typeof cv.shipped_root === "object" && cv.shipped_root ? `${cv.shipped_root.max} m (max)` : `${cv.shipped_root || "—"} m`;
+        const bkRootMax = cv.book_root ? (cv.book_root.max !== undefined ? `${cv.book_root.max} m` : formatRange(cv.book_root) + " m") : "—";
 
-        const bookKcStr = cv.book_kc ? `${{cv.book_kc[0]}} / ${{cv.book_kc[1]}} / ${{cv.book_kc[2]}}` : "—";
-        const bookHStr = formatRange(cv.book_height);
-        const bookZrStr = formatRange(cv.book_root);
+        // Badges
+        let kcBadge = cv.kc_verdict === "MATCH" ? '<span class="badge" style="background:#E8F5E9;color:#2E7D32;">● MATCH</span>' : '<span class="badge badge-differs">DIFFERS</span>';
+        let hBadge = cv.height_verdict === "MATCH" ? '<span class="badge" style="background:#E8F5E9;color:#2E7D32;">● MATCH</span>' : (cv.height_verdict === "WITHIN_RANGE" ? '<span class="badge" style="background:#E3F2FD;color:#1565C0;">WITHIN RANGE</span>' : '<span class="badge badge-differs">DIFFERS</span>');
+        let rBadge = cv.root_verdict === "MATCH" ? '<span class="badge" style="background:#E8F5E9;color:#2E7D32;">● MATCH</span>' : '<span class="badge badge-differs">DIFFERS</span>';
 
-        let badgeHtml = "";
-        if (cv.status === "MATCH") {{
-          badgeHtml = '<span class="badge" style="background:#E8F5E9;color:#2E7D32;">● EXACT MATCH</span>';
-        }} else if (cv.status === "DIFFERS") {{
-          badgeHtml = '<span class="badge badge-differs">DIFFERS FROM BOOK</span>';
-        }} else if (cv.status === "UNSOURCED") {{
-          badgeHtml = '<span class="badge" style="background:#FFEBEE;color:#C62828;">✕ UNSOURCED</span>';
-        }} else {{
-          badgeHtml = '<span class="badge" style="background:#FFF3E0;color:#BF360C;">TABLE 6.1 PROXY</span>';
-        }}
+        let citBadge = cv.citation_differs ? `<span class="badge badge-citation">file cites Table ${cv.file_cites_table}; value is in Table ${cv.found_in_table}</span>` : '<span style="color:#2E7D32;font-size:15px;">✓ Cites Table ' + (cv.file_cites_table || '—') + '</span>';
+
+        let statusBadge = "";
+        if (cv.status === "MATCH") {
+          statusBadge = '<span class="badge" style="background:#E8F5E9;color:#2E7D32;">● MATCH</span>';
+        } else if (cv.status === "UNSOURCED") {
+          statusBadge = '<span class="badge" style="background:#FFEBEE;color:#C62828;">✕ UNSOURCED</span>';
+          kcBadge = "—"; hBadge = "—"; rBadge = "—"; citBadge = "—";
+        } else {
+          statusBadge = '<span class="badge badge-differs">DIFFERS</span>';
+        }
 
         tr.innerHTML = `
-          <td><strong>${{cropDesc}}</strong></td>
-          <td>${{kcDesc}}</td>
-          <td>h: ${{hStr}}, Zr: ${{zrStr}}</td>
-          <td>${{cv.book_match || "<em>No Table 6.2 match</em>"}}</td>
-          <td>Kc: ${{bookKcStr}}<br>h: ${{bookHStr}}, Zr: ${{bookZrStr}}</td>
-          <td>${{badgeHtml}}<br><small style="color:var(--secondary-text);">${{cv.reason}}</small></td>
+          <td><strong>${cropDesc}</strong></td>
+          <td><small>${cv.book_row_source || "<em>None</em>"}</small></td>
+          <td>${kcBadge}<br><small>${shpKc} vs ${bkKc}</small></td>
+          <td>${hBadge}<br><small>${cv.shipped_height ?? "—"}m vs ${formatRange(cv.book_height)}m</small></td>
+          <td>${rBadge}<br><small>${shpRootMax} vs ${bkRootMax}</small></td>
+          <td>${citBadge}</td>
+          <td>${statusBadge}<br><small style="color:var(--secondary-text);">${cv.reason}</small></td>
         `;
         valBody.appendChild(tr);
-      }});
+      });
 
       // Event listeners
       document.getElementById("search-input").addEventListener("input", filterAndRender);
+      document.getElementById("table-select").addEventListener("change", filterAndRender);
       document.getElementById("group-select").addEventListener("change", filterAndRender);
-      document.getElementById("source-select").addEventListener("change", filterAndRender);
       document.getElementById("shipped-toggle").addEventListener("change", filterAndRender);
-      document.getElementById("reset-filters").addEventListener("click", () => {{
+      document.getElementById("reset-filters").addEventListener("click", () => {
         document.getElementById("search-input").value = "";
+        document.getElementById("table-select").value = "ALL";
         document.getElementById("group-select").value = "ALL";
-        document.getElementById("source-select").value = "ALL";
         document.getElementById("shipped-toggle").checked = false;
         filterAndRender();
-      }});
+      });
 
       // Sort headers
-      document.querySelectorAll("th[data-col]").forEach(th => {{
-        function triggerSort() {{
+      document.querySelectorAll("th[data-col]").forEach(th => {
+        function triggerSort() {
           const col = th.getAttribute("data-col");
-          if (currentSort.col === col) {{
+          if (currentSort.col === col) {
             currentSort.dir = currentSort.dir === "asc" ? "desc" : "asc";
-          }} else {{
+          } else {
             currentSort.col = col;
             currentSort.dir = "asc";
-          }}
+          }
           updateSortHeaders();
           filterAndRender();
-        }}
+        }
         th.addEventListener("click", triggerSort);
-        th.addEventListener("keydown", (e) => {{
-          if (e.key === "Enter" || e.key === " ") {{
+        th.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             triggerSort();
-          }}
-        }});
-      }});
+          }
+        });
+      });
 
       filterAndRender();
-    }}
+    }
 
-    function updateSortHeaders() {{
-      document.querySelectorAll("th[data-col]").forEach(th => {{
+    function updateSortHeaders() {
+      document.querySelectorAll("th[data-col]").forEach(th => {
         const col = th.getAttribute("data-col");
-        if (col === currentSort.col) {{
+        if (col === currentSort.col) {
           th.setAttribute("aria-sort", currentSort.dir === "asc" ? "ascending" : "descending");
-        }} else {{
+        } else {
           th.setAttribute("aria-sort", "none");
-        }}
-      }});
-    }}
+        }
+      });
+    }
 
-    function filterAndRender() {{
+    function filterAndRender() {
       const query = document.getElementById("search-input").value.toLowerCase().trim();
+      const tableVal = document.getElementById("table-select").value;
       const groupVal = document.getElementById("group-select").value;
-      const sourceVal = document.getElementById("source-select").value;
       const shippedOnly = document.getElementById("shipped-toggle").checked;
 
-      let filtered = DATA.all_rows.filter(r => {{
+      let filtered = DATA.all_rows.filter(r => {
+        if (tableVal !== "ALL") {
+          if (tableVal === "tracked" && r.source_type !== "tracked_doc") return false;
+          if (tableVal !== "tracked" && r.table_id !== tableVal) return false;
+        }
         if (groupVal !== "ALL" && r.group !== groupVal) return false;
-        if (sourceVal !== "ALL" && r.source_type !== sourceVal) return false;
         if (shippedOnly && !r.shipped) return false;
-        if (query) {{
-          const haystack = `${{r.display_name}} ${{r.group}} ${{r.source}}`.toLowerCase();
+        if (query) {
+          const haystack = `${r.display_name} ${r.group} ${r.source}`.toLowerCase();
           if (!haystack.includes(query)) return false;
-        }}
+        }
         return true;
-      }});
+      });
 
       // Sorting
-      filtered.sort((a, b) => {{
+      filtered.sort((a, b) => {
         let vA, vB;
-        if (currentSort.col === "display_name") {{
+        if (currentSort.col === "display_name") {
           vA = a.display_name.toLowerCase(); vB = b.display_name.toLowerCase();
-        }} else if (currentSort.col === "group") {{
+        } else if (currentSort.col === "table_id") {
+          vA = (a.table_id || "tracked"); vB = (b.table_id || "tracked");
+        } else if (currentSort.col === "group") {
           vA = (a.group || "").toLowerCase(); vB = (b.group || "").toLowerCase();
-        }} else if (currentSort.col === "kc_ini") {{
+        } else if (currentSort.col === "kc_ini") {
           vA = a.kc_ini ?? -999; vB = b.kc_ini ?? -999;
-        }} else if (currentSort.col === "kc_mid") {{
+        } else if (currentSort.col === "kc_mid") {
           vA = a.kc_mid ?? -999; vB = b.kc_mid ?? -999;
-        }} else if (currentSort.col === "kc_end") {{
+        } else if (currentSort.col === "kc_end") {
           vA = a.kc_end ?? -999; vB = b.kc_end ?? -999;
-        }} else if (currentSort.col === "height") {{
+        } else if (currentSort.col === "height") {
           vA = a.max_height_m ? a.max_height_m.min : -999; vB = b.max_height_m ? b.max_height_m.min : -999;
-        }} else if (currentSort.col === "root") {{
+        } else if (currentSort.col === "root") {
           vA = a.root_depth_m ? a.root_depth_m.min : -999; vB = b.root_depth_m ? b.root_depth_m.min : -999;
-        }} else if (currentSort.col === "stage_lengths") {{
-          vA = (a.stage_lengths || "").toLowerCase(); vB = (b.stage_lengths || "").toLowerCase();
-        }} else if (currentSort.col === "source") {{
+        } else if (currentSort.col === "source") {
           vA = a.source.toLowerCase(); vB = b.source.toLowerCase();
-        }} else {{
+        } else {
           vA = (a.shipped ? 1 : 0); vB = (b.shipped ? 1 : 0);
-        }}
+        }
 
         if (vA < vB) return currentSort.dir === "asc" ? -1 : 1;
         if (vA > vB) return currentSort.dir === "asc" ? 1 : -1;
         return 0;
-      }});
+      });
 
       // Render
       const tbody = document.getElementById("table-body");
       tbody.innerHTML = "";
 
-      filtered.forEach(r => {{
+      filtered.forEach(r => {
         const tr = document.createElement("tr");
         if (r.shipped) tr.classList.add("shipped-row");
 
         let badges = "";
-        if (r.shipped) {{
-          badges += '<span class="badge badge-shipped">★ Shipped in Jadal</span>';
-        }}
-        if (r.differs_from_book) {{
-          badges += '<span class="badge badge-differs">Differs from book</span>';
-        }}
-        if (r.parse_status === "uncertain") {{
-          badges += '<span class="badge badge-uncertain">Parse uncertain</span>';
-        }}
+        if (r.shipped) {
+          badges += '<span class="badge badge-shipped">★ Shipped in Jadal</span> ';
+        }
+        if (r.differs_from_book) {
+          badges += '<span class="badge badge-differs">Differs from book</span> ';
+        }
+        if (r.parse_status === "uncertain") {
+          badges += '<span class="badge badge-uncertain">Parse uncertain</span> ';
+        }
+
+        // Provenance citation badge next to chilli
+        if (r.crop && r.crop.includes("Chili pepper") && r.shipped) {
+          badges += '<br><span class="badge badge-citation">file cites Table 6.2; value is in Table 6.1</span>';
+        }
+
+        // Rice root tag finding
+        if (r.crop && r.crop.includes("Rice") && r.variant === "Flooded" && r.shipped) {
+          badges += '<br><small style="color:var(--badge-differs);font-weight:600;">Note: tag MEASURED overstates agreement for flooded rice root depth (shipped max 1.0m vs book max 0.50m)</small>';
+        }
 
         // Constant status badges for shipped crops
-        if (r.shipped && r.shipped_constant_status) {{
+        if (r.shipped && r.shipped_constant_status) {
           const st = r.shipped_constant_status;
           let mCount = 0, aCount = 0, uCount = 0;
-          Object.values(st).forEach(val => {{
+          Object.values(st).forEach(val => {
             if (val === "MEASURED") mCount++;
             else if (val === "ASSUMED") aCount++;
             else if (val === "UNSOURCED") uCount++;
-          }});
-          badges += `<br><small class="badge-status-measured">● ${{mCount}} MEASURED</small> `;
-          badges += `<small class="badge-status-assumed">○ ${{aCount}} ASSUMED</small> `;
-          if (uCount > 0) badges += `<small class="badge-status-unsourced">✕ ${{uCount}} UNSOURCED</small>`;
-        }}
+          });
+          badges += `<br><small class="badge-status-measured">● ${mCount} MEASURED</small> `;
+          badges += `<small class="badge-status-assumed">○ ${aCount} ASSUMED</small> `;
+          if (uCount > 0) badges += `<small class="badge-status-unsourced">✕ ${uCount} UNSOURCED</small>`;
+        }
+
+        const tblLabel = r.table_id ? `Table ${r.table_id}` : "Repo Doc";
+        const extraNote = r.kc_avg ? `<br><small style="color:var(--secondary-text)">Kc avg: ${r.kc_avg}</small>` : (r.fc ? `<br><small style="color:var(--secondary-text)">fc: ${r.fc}</small>` : "");
 
         tr.innerHTML = `
-          <td><strong>${{r.display_name}}</strong></td>
-          <td><small style="color:var(--secondary-text);">${{r.group}}</small></td>
-          <td>${{r.kc_ini !== null ? r.kc_ini.toFixed(2) : "—"}}</td>
-          <td>${{r.kc_mid !== null ? r.kc_mid.toFixed(2) : "—"}}</td>
-          <td>${{r.kc_end !== null ? r.kc_end.toFixed(2) : "—"}}</td>
-          <td>${{formatRange(r.max_height_m)}}</td>
-          <td>${{formatRange(r.root_depth_m)}}</td>
-          <td><small>${{r.stage_lengths || "—"}}</small></td>
-          <td><span class="source-text">${{r.source}}</span></td>
-          <td>${{badges || "—"}}</td>
+          <td><strong>${tblLabel}</strong></td>
+          <td><strong>${r.display_name}</strong>${extraNote}</td>
+          <td><small style="color:var(--secondary-text);">${r.group}</small></td>
+          <td>${r.kc_ini !== null ? r.kc_ini.toFixed(2) : "—"}</td>
+          <td>${r.kc_mid !== null ? r.kc_mid.toFixed(2) : "—"}</td>
+          <td>${r.kc_end !== null ? r.kc_end.toFixed(2) : "—"}</td>
+          <td>${formatRange(r.max_height_m)}</td>
+          <td>${formatRange(r.root_depth_m)}</td>
+          <td><span class="source-text">${r.source}</span></td>
+          <td>${badges || "—"}</td>
         `;
         tbody.appendChild(tr);
-      }});
+      });
 
-      document.getElementById("row-count").textContent = `Showing ${{filtered.length}} of ${{DATA.all_rows.length}} crop parameter rows`;
-    }}
+      document.getElementById("row-count").textContent = `Showing ${filtered.length} of ${DATA.all_rows.length} crop parameter rows`;
+    }
 
     document.addEventListener("DOMContentLoaded", initExplorer);
   </script>
@@ -1250,62 +1566,106 @@ def build_explorer_html(dataset, output_html_path):
 </html>
 """
 
+    rendered = (template
+        .replace("__BOOK_TABLES_COUNT__", str(m["book_tables_count"]))
+        .replace("__T61_COUNT__", str(m["table_6_1_count"]))
+        .replace("__T62_COUNT__", str(m["table_6_2_count"]))
+        .replace("__T63_COUNT__", str(m["table_6_3_count"]))
+        .replace("__T64_COUNT__", str(m["table_6_4_count"]))
+        .replace("__TRACKED_COUNT__", str(m["tracked_docs_count"]))
+        .replace("__TOTAL_COUNT__", str(m["total_count"]))
+        .replace("__DATA_JSON__", data_json_str))
+
     with open(output_html_path, "w", encoding="utf-8") as f:
-        f.write(html_content)
+        f.write(rendered)
 
 def main():
     txt_path = os.environ.get("FAO56_TXT", "/home/parshu/projects/cis/jadal/.ref/fao56-book/FAO56-full.txt")
     print(f"Loading FAO56 text from: {txt_path}")
+    with open(txt_path, "r", encoding="utf-8", errors="replace") as f:
+        all_lines = [l.rstrip("\r\n") for l in f.readlines()]
 
-    # 1. Parse Table 6.2
-    table_6_2_rows, txt_found = parse_table_6_2_rows(txt_path)
-    print(f"Table 6.2 rows parsed: {len(table_6_2_rows)} (source found: {txt_found})")
+    # 1. Parse Tables
+    table_6_1_rows, found_1 = parse_table_6_1_rows(all_lines)
+    print(f"Table 6.1 rows: {len(table_6_1_rows)}")
+
+    table_6_2_rows, found_2 = parse_table_6_2_rows(txt_path)
+    print(f"Table 6.2 rows: {len(table_6_2_rows)}")
+
+    table_6_3_rows, found_3 = parse_table_6_3_rows(all_lines)
+    print(f"Table 6.3 rows: {len(table_6_3_rows)}")
+
+    table_6_4_rows, found_4 = parse_table_6_4_rows(all_lines)
+    print(f"Table 6.4 rows: {len(table_6_4_rows)}")
+
+    book_rows = table_6_1_rows + table_6_2_rows + table_6_3_rows + table_6_4_rows
+    print(f"Total book rows: {len(book_rows)}")
 
     # 2. Parse Tracked Docs
     tracked_rows, doc_counts = parse_tracked_docs()
-    print(f"Tracked doc rows parsed: {len(tracked_rows)}")
-    for doc, cnt in doc_counts.items():
-        print(f"  {doc}: {cnt} rows")
+    print(f"Tracked doc rows: {len(tracked_rows)}")
 
-    # 3. Load Shipped Crops & Cross-validate
+    all_rows = book_rows + tracked_rows
+    print(f"Total explorer rows: {len(all_rows)}")
+
+    # 3. Load Shipped Crops & Cross-validate across ALL book tables
     shipped_crops = load_shipped_crops()
     print(f"Shipped crops loaded: {len(shipped_crops)} rows")
-    cross_validation = run_cross_validation(table_6_2_rows, shipped_crops)
+    cross_validation = run_cross_validation(book_rows, shipped_crops)
 
-    # 4. Sanity Checks
-    sanity = run_sanity_checks(table_6_2_rows, txt_path)
-    print("Sanity Checks for Table 6.2:")
-    print(f"  Total parsed rows: {sanity['num_parsed']}")
-    print(f"  Rows with all 3 Kc values: {sanity['all_3_kc']}")
-    print(f"  Rows marked parse='uncertain': {sanity['uncertain_parses']}")
-    print(f"  Kc values outside [0.1, 1.6]: {sanity['out_of_bounds_kc']}")
-
-    print("\nSpot Checks (10 randomly selected parsed rows vs .txt):")
-    for sc in sanity["spot_checks"]:
-        print(f"  [{sc['index']}] {sc['crop']} (p.{sc['page']}, lines {sc['expected_lines']})")
-        print(f"      Parsed: Kc=({sc['parsed_kc'][0]}, {sc['parsed_kc'][1]}, {sc['parsed_kc'][2]}), h={sc['parsed_h']}, zr={sc['parsed_zr']}")
-        print(f"      Line text: {repr(sc['txt_lines'][0])}")
-
-    all_rows = table_6_2_rows + tracked_rows
+    # 4. Sanity Checks per table
+    table_dict = {
+        "6.1": table_6_1_rows,
+        "6.2": table_6_2_rows,
+        "6.3": table_6_3_rows,
+        "6.4": table_6_4_rows
+    }
+    sanity_report = run_sanity_checks(table_dict, all_lines)
+    for tid, rep in sanity_report.items():
+        print(f"Sanity checks Table {tid}: parsed={rep['num_parsed']}, all_3_kc={rep['all_3_kc']}, uncertain={rep['uncertain_parses']}, oob_kc={len(rep['out_of_bounds_kc'])}")
 
     dataset = {
         "meta": {
             "title": "FAO-56 Crop Parameter Catalog",
+            "table_6_1_count": len(table_6_1_rows),
             "table_6_2_count": len(table_6_2_rows),
+            "table_6_3_count": len(table_6_3_rows),
+            "table_6_4_count": len(table_6_4_rows),
+            "book_tables_count": len(book_rows),
             "tracked_docs_count": len(tracked_rows),
             "total_count": len(all_rows),
             "doc_counts": doc_counts,
             "shipped_count": len(shipped_crops),
-            "txt_found": txt_found,
+            "txt_found": found_1 and found_2 and found_3 and found_4,
             "sanity_checks": {
-                "num_parsed": sanity["num_parsed"],
-                "all_3_kc": sanity["all_3_kc"],
-                "uncertain_parses": sanity["uncertain_parses"],
-                "out_of_bounds_kc": sanity["out_of_bounds_kc"]
-            }
+                k: {
+                    "num_parsed": v["num_parsed"],
+                    "all_3_kc": v["all_3_kc"],
+                    "uncertain_parses": v["uncertain_parses"],
+                    "out_of_bounds_kc": v["out_of_bounds_kc"]
+                } for k, v in sanity_report.items()
+            },
+            "findings": [
+                {
+                    "id": "chilli_citation",
+                    "crop": "chilli",
+                    "summary": "file cites Table 6.2; value is in Table 6.1",
+                    "detail": "crop-params.json cites Table 6.2 (p. 168-170) for chilli, but the row is in Table 6.1 p. 166 (Chili pepper, Capsicum annuum, line 11829). All numeric values match the book exactly (Kc 0.60/1.10/0.80, height 0.75m, root 0.50-1.20m)."
+                },
+                {
+                    "id": "flooded_rice_root",
+                    "crop": "rice (flooded)",
+                    "summary": "tag MEASURED overstates agreement for flooded rice root depth",
+                    "detail": "constant_status marks root_depth_m as MEASURED for flooded rice in crop-params.json, but the shipped maximum root depth is 1.0 m whereas the book maximum root depth is 0.50 m (Table 6.2 line 12052, p. 170)."
+                }
+            ]
         },
         "cross_validation": cross_validation,
+        "table_6_1_rows": table_6_1_rows,
         "table_6_2_rows": table_6_2_rows,
+        "table_6_3_rows": table_6_3_rows,
+        "table_6_4_rows": table_6_4_rows,
+        "book_rows": book_rows,
         "tracked_rows": tracked_rows,
         "all_rows": all_rows
     }
