@@ -436,6 +436,8 @@
       "tailGets": "Last farm gets",
       "gap": "Fairness gap (lower is fairer)",
       "needMetLabel": "{pct} of need met",
+      "needMetLabelOver": "{pct} of need met, over-allocated",
+      "overAllocated": "Over-allocated",
       "approveQuestion": "Approve this schedule for {n} farmers? They are called right away.",
       "approveYes": "Yes, approve and call",
       "equal_water": {
@@ -565,7 +567,9 @@
     "equalWaterHint": "Turns are sized so each farm gets its share.",
     "needMetList": "How much of each farm's water need is met",
     "rowLabel": "{name}, {outlet}: {pct}% of need met",
+    "rowLabelOver": "{name}, {outlet}: {pct}% of need met, over-allocated",
     "pctMet": "{pct}% of need met",
+    "overAllocated": "Over-allocated",
     "fairnessNote": "Under equal hours the tail farms fall short. Equal water closes the gap. Fairness gap: {hours} with equal hours, {water} with equal water (lower is fairer).",
     "overrunTitle": "What if a turn runs over?",
     "overrunSub": "If one farmer keeps the water past their turn, farms further down the canal lose water.",

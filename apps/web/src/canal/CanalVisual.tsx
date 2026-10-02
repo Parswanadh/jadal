@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "../i18n/I18nContext";
 import { useFormat } from "../lib/useFormat";
+import { barWidthPct, isOverAllocated, needMetBand } from "../lib/needMetDisplay";
 import PageHeader from "../components/PageHeader";
 import UnitHint from "../components/UnitHint";
 import { getNeedMet, getOverrunCase, loadCanalVisual, outletById } from "./api";
@@ -166,20 +167,36 @@ function CanalVisualView({ data }: { data: CanalVisualData }) {
           </div>
 
           <ol className="canal-bars" aria-label={t("canal.needMetList")}>
-            {needRows.map((r) => (
-              <li key={r.outlet_id} aria-label={t("canal.rowLabel", { name: r.farmer_name, outlet: outletLabel(r.outlet_id), pct: r.pct })}>
-                <span className="canal-farmer">
-                  <strong>{r.farmer_name}</strong>
-                  <span className="canal-outlet-tag">{outletLabel(r.outlet_id)}</span>
-                </span>
-                <span className="canal-track" aria-hidden="true">
-                  <span className="canal-fill" data-band={r.pct < 60 ? "low" : r.pct < 90 ? "mid" : "high"} style={{ width: `${r.pct}%` }} />
-                </span>
-                <span className="canal-pct" aria-live="polite">
-                  {t("canal.pctMet", { pct: r.pct })}
-                </span>
-              </li>
-            ))}
+            {needRows.map((r) => {
+              const over = isOverAllocated(r.pct);
+              return (
+                <li
+                  key={r.outlet_id}
+                  aria-label={
+                    over
+                      ? t("canal.rowLabelOver", { name: r.farmer_name, outlet: outletLabel(r.outlet_id), pct: r.pct })
+                      : t("canal.rowLabel", { name: r.farmer_name, outlet: outletLabel(r.outlet_id), pct: r.pct })
+                  }
+                >
+                  <span className="canal-farmer">
+                    <strong>{r.farmer_name}</strong>
+                    <span className="canal-outlet-tag">{outletLabel(r.outlet_id)}</span>
+                  </span>
+                  <span className="canal-track" aria-hidden="true">
+                    <span
+                      className="canal-fill"
+                      data-band={needMetBand(r.pct)}
+                      data-over={over ? "true" : undefined}
+                      style={{ width: `${barWidthPct(r.pct)}%` }}
+                    />
+                  </span>
+                  <span className="canal-pct" aria-live="polite">
+                    {t("canal.pctMet", { pct: r.pct })}
+                    {over && <span className="pill pill-warn canal-over-pill">{t("canal.overAllocated")}</span>}
+                  </span>
+                </li>
+              );
+            })}
           </ol>
           <p className="canal-note">
             {t("canal.fairnessNote", {

@@ -9,6 +9,7 @@ import EmptyState from "../components/EmptyState";
 import UnitHint from "../components/UnitHint";
 import { api } from "./api";
 import type { RosterProposal, TurnRow } from "./types";
+import { barWidthPct, isOverAllocated } from "../lib/needMetDisplay";
 
 interface Props {
   water: RosterProposal | null;
@@ -107,7 +108,10 @@ function Option({ plan, mode, gini, recommended, anyApproved, changedTurns, f, o
         {tail && (
           <div>
             <dt>{t("coord.roster.tailGets")}</dt>
-            <dd className="num">{f.pct(tail.needMetPct)}</dd>
+            <dd className="num">
+              {f.pct(tail.needMetPct)}
+              {isOverAllocated(tail.needMetPct) && <span className="pill pill-warn">{t("coord.roster.overAllocated")}</span>}
+            </dd>
           </div>
         )}
         <div>
@@ -178,10 +182,26 @@ function Option({ plan, mode, gini, recommended, anyApproved, changedTurns, f, o
                   </td>
                   <td className="num">{f.m3(x.plannedVolumeM3)}</td>
                   <td className="num">
-                    <span className="meter" role="img" aria-label={t("coord.roster.needMetLabel", { pct: f.pct(x.needMetPct) })}>
-                      <span className="meter-fill" style={{ width: `${String(Math.min(100, x.needMetPct))}%` }} />
-                    </span>
-                    {f.pct(x.needMetPct)}
+                    {(() => {
+                      const over = isOverAllocated(x.needMetPct);
+                      return (
+                        <>
+                          <span
+                            className="meter"
+                            role="img"
+                            aria-label={
+                              over
+                                ? t("coord.roster.needMetLabelOver", { pct: f.pct(x.needMetPct) })
+                                : t("coord.roster.needMetLabel", { pct: f.pct(x.needMetPct) })
+                            }
+                          >
+                            <span className="meter-fill" data-over={over ? "true" : undefined} style={{ width: `${String(barWidthPct(x.needMetPct))}%` }} />
+                          </span>
+                          {f.pct(x.needMetPct)}
+                          {over && <span className="pill pill-warn">{t("coord.roster.overAllocated")}</span>}
+                        </>
+                      );
+                    })()}
                   </td>
                   <td>
                     {editing ? (
