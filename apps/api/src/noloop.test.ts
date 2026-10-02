@@ -37,17 +37,16 @@ import {
   checkOutboundCall,
   destinationKey,
   logCallDecision,
-  pruneCallRateWindows,
+  pruneCallRateHits,
   rateLimitConfig,
   rateLimitKey,
   releaseCall,
-  windowKeyAt,
 } from "./noloop";
 import type { CallDecision } from "./noloop";
 import type { Contact } from "@jadal/contracts";
 import { createEnv, createTestDb, type TestEnv } from "../test/harness";
 import { ShimDatabase, type ShimStatement } from "../test/d1-shim";
-import { CALL_RATE_LIMIT_SQL } from "./db/schema.sql";
+import { CALL_RATE_HIT_SQL } from "./db/schema.sql";
 import { seedScenario } from "../test/fixtures";
 import { runEscalation } from "./campaigns/escalation";
 import { notifyFarmerOfAllocation } from "./coordinator-alert";
@@ -113,11 +112,11 @@ class FlakyDb {
     return this.inner.exec(sql);
   }
 
-  /** The counter rows, so a test can prove what the atomic statement actually did to the table. */
-  async counterRows(): Promise<{ destination: string; window_key: number; n: number; not_live: number }[]> {
+  /** The hit rows, so a test can prove what the atomic statement actually did to the table. */
+  async counterRows(): Promise<{ id: number; destination: string; at: number }[]> {
     const result = await this.inner
-      .prepare(`SELECT destination, window_key, n, not_live FROM ${CALL_RATE_TABLE} ORDER BY window_key`)
-      .all<{ destination: string; window_key: number; n: number; not_live: number }>();
+      .prepare(`SELECT id, destination, at FROM ${CALL_RATE_TABLE} ORDER BY at, id`)
+      .all<{ id: number; destination: string; at: number }>();
     return result.results ?? [];
   }
 }
@@ -134,13 +133,13 @@ function guardEnv(extra: Record<string, unknown> = {}): { DB: FlakyDb } & Record
   return Object.assign({ DB: migratedDb() }, extra);
 }
 
-/** A `FlakyDb` over a fresh in-memory database carrying the counter table. */
+/** A `FlakyDb` over a fresh in-memory database carrying the sliding-window hit log. */
 function migratedDb(): FlakyDb {
   const db = new FlakyDb(new ShimDatabase());
   // `ShimDatabase.exec` runs its statements synchronously underneath (only its return value is a
   // promise), so the table exists before this function returns. That is what lets `guardEnv()` stay
   // synchronous and every existing test keep its shape.
-  void db.exec(CALL_RATE_LIMIT_SQL);
+  void db.exec(CALL_RATE_HIT_SQL);
   return db;
 }
 
@@ -188,74 +187,98 @@ describe("destinationKey", () => {
   });
 });
 
-describe("windowKeyAt", () => {
-  it("maps every instant in one window to one key, and rolls over at the boundary", () => {
-    // Aligned to a window boundary on purpose: the key is a floor, so the test must start on a
-    // multiple of the window or `+59_999` can land in the next window and the assertion would be
-    // measuring the offset rather than the window.
-    const t0 = 1_760_000_000_000 - (1_760_000_000_000 % 60_000);
-    const key = (ms: number): number => windowKeyAt(new Date(ms), 60);
-    expect(key(t0)).toBe(key(t0 + 59_999));
-    expect(key(t0 + 60_000)).toBe(key(t0) + 1);
-    // The window length is not baked into the key, so an operator changing it re-addresses windows
-    // rather than misreading old rows.
-    expect(windowKeyAt(new Date(t0), 30)).toBe(key(t0) * 2);
+describe("the window slides", () => {
+  it("frees slots one at a time, exactly one window after the call that spent each one", async () => {
+    // Three calls inside 25 s, then the window is full. Under the old fixed-window guard the whole
+    // budget would reset when the clock crossed a boundary; here each slot frees only when its own
+    // call is a full window old, so the budget thins rather than snapping back to three.
+    const env = guardEnv();
+    for (const offset of [0, 12, 25]) {
+      expect((await checkOutboundCall(env, PHONE, at(offset))).allowed).toBe(true);
+    }
+    expect((await checkOutboundCall(env, PHONE, at(40))).allowed).toBe(false);
+
+    // At T0+60 the call made at T0 is exactly one window old and no longer counts: one slot frees.
+    const atSixty = await checkOutboundCall(env, PHONE, at(60));
+    expect(atSixty.allowed).toBe(true);
+    expect(atSixty.priorCalls).toBe(2);
+    expect(atSixty.detail).toContain("call 3 of 3");
+
+    // And the window is immediately full again, because the calls at 12 s and 25 s still count.
+    expect((await checkOutboundCall(env, PHONE, at(61))).allowed).toBe(false);
+
+    // At T0+72 the call at 12 s ages out, freeing exactly one more slot.
+    expect((await checkOutboundCall(env, PHONE, at(72))).allowed).toBe(true);
+    expect((await checkOutboundCall(env, PHONE, at(73))).allowed).toBe(false);
+  });
+
+  it("never counts a hit older than the window, and never forgets a newer one", async () => {
+    const env = guardEnv();
+    for (const offset of [0, 12, 25]) await checkOutboundCall(env, PHONE, at(offset));
+    // Twenty-five seconds after the oldest hit has aged out, only the 25 s hit is still within 60 s.
+    const later = await checkOutboundCall(env, PHONE, at(72));
+    expect(later.allowed).toBe(true);
+    expect(later.priorCalls).toBe(1);
+    expect((await env.DB.counterRows()).map((row) => row.at)).toEqual([
+      T0.getTime(),
+      at(12).getTime(),
+      at(25).getTime(),
+      at(72).getTime(),
+    ]);
   });
 });
 
 /* ------------------------------------------------------------------ the SQL itself */
 
 describe("the consume is one atomic statement", () => {
-  it("consumes the budget with a single conditional INSERT ... ON CONFLICT ... WHERE n < ?", () => {
+  it("consumes the budget with a single conditional INSERT ... SELECT ... WHERE (COUNT) < ?", () => {
     const sql = atomicStatements.consume();
     expect(sql).toContain("INSERT INTO");
-    expect(sql).toContain("ON CONFLICT");
-    expect(sql).toContain("DO UPDATE");
-    expect(sql).toContain("WHERE n < ?3");
+    expect(sql).toContain("SELECT ?1, ?2");
+    expect(sql).toMatch(/WHERE \(SELECT COUNT\(\*\)[\s\S]*\) < \?4/);
     expect(sql).toContain("RETURNING");
     // One statement, not a batch: `db.batch()` would still be atomic, but the brief asks for the
-    // check-and-increment to be inseparable, and a single statement is the strongest form of that.
+    // check-and-insert to be inseparable, and a single statement is the strongest form of that.
     expect(sql.split(";").filter((part) => part.trim().length > 0)).toHaveLength(1);
   });
 
   it("has no read-then-write anywhere on the guard's path", () => {
     // The defect being fixed was two statements with a JavaScript decision in between. The guard's
-    // *only* writes are the atomic consume and the release decrement; everything else it runs is a
-    // pure read that cannot permit a call.
-    const writes = [atomicStatements.consume(), atomicStatements.read()].filter((sql) =>
-      /^\s*(INSERT|UPDATE|DELETE)/i.test(sql),
-    );
-    expect(writes).toHaveLength(1);
-    expect(writes[0]).toBe(atomicStatements.consume());
+    // consume is one statement; its descriptive read is a pure SELECT that cannot permit a call, and
+    // its release is a token-scoped DELETE that cannot either.
+    expect(atomicStatements.consume()).toMatch(/^\s*INSERT/i);
+    expect(atomicStatements.read()).toMatch(/^\s*SELECT/i);
+    expect(atomicStatements.read()).not.toMatch(/\b(INSERT|UPDATE|DELETE)\b/i);
   });
 
-  it("doesn't condition the increment on a value read in JavaScript", () => {
-    // `WHERE n < ?3` compares the *stored* column against the ceiling bound into the statement, and
-    // the statement is what increments. If the guard ever consulted a JavaScript-side count first,
-    // this shape would not hold: there would be a SELECT to decide on.
-    expect(atomicStatements.consume()).toMatch(/SET n = n \+ 1\s+WHERE n < \?3/);
+  it("doesn't condition the insert on a value read in JavaScript", () => {
+    // The condition is a COUNT over the hit log, evaluated by SQLite inside the same statement that
+    // inserts. If the guard ever consulted a JavaScript-side count first, this shape would not hold:
+    // there would be a SELECT to decide on.
+    expect(atomicStatements.consume()).toMatch(/WHERE \(SELECT COUNT\(\*\)/);
     expect(atomicStatements.consume()).not.toMatch(/SELECT[\s\S]*\)\s*AS allowed/);
   });
 
-  it("increments the stored counter exactly max times under a simultaneous burst", async () => {
-    // The statement's own behaviour, at the SQL level and without the guard around it: six statements
-    // prepared before any of them runs, then run back to back, with a ceiling of 3.
+  it("inserts exactly max rows under a burst, and the count refuses the rest", async () => {
+    // The statement's own behaviour, at the SQL level and without the guard around it: six identical
+    // attempts, run back to back, with a ceiling of 3.
     const db = new ShimDatabase();
-    await db.exec(`CREATE TABLE ${CALL_RATE_TABLE} (destination TEXT NOT NULL, window_key INTEGER NOT NULL, n INTEGER NOT NULL DEFAULT 0, not_live INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (destination, window_key)) WITHOUT ROWID`);
+    await db.exec(
+      `CREATE TABLE ${CALL_RATE_TABLE} (id INTEGER PRIMARY KEY AUTOINCREMENT, destination TEXT NOT NULL, at INTEGER NOT NULL)`,
+    );
     let spent = 0;
     for (let i = 0; i < 6; i += 1) {
       // A fresh statement per attempt, exactly as the guard uses it: `bind()` is additive on the
       // shim and on D1 alike, so a re-bound statement would stack parameters rather than rebind them.
       const row = await db
         .prepare(atomicStatements.consume())
-        .bind(destinationKey(PHONE), 1, 3)
-        .first<{ n: number }>();
+        .bind(destinationKey(PHONE), 0, 60_000, 3)
+        .first<{ id: number }>();
       if (row !== null) spent += 1;
     }
     expect(spent).toBe(3);
     const row = await db
-      .prepare(`SELECT n FROM ${CALL_RATE_TABLE} WHERE destination = ?1 AND window_key = ?2`)
-      .bind(destinationKey(PHONE), 1)
+      .prepare(`SELECT COUNT(*) AS n FROM ${CALL_RATE_TABLE}`)
       .first<{ n: number }>();
     expect(row?.n).toBe(3);
   });
@@ -292,10 +315,10 @@ describe("checkOutboundCall — simultaneous load", () => {
     expect(refused.every((d) => d.detail.includes("rate limited"))).toBe(true);
     expect(refused.every((d) => d.retryAfterAt !== null)).toBe(true);
 
-    // And the table agrees: exactly three units were consumed, not twelve.
+    // And the hit log agrees: exactly three rows were inserted, not twelve.
     const rows = await env.DB.counterRows();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.n).toBe(3);
+    expect(rows).toHaveLength(3);
+    expect(rows.every((row) => row.destination === destinationKey(PHONE) && row.at === T0.getTime())).toBe(true);
   });
 
   it("allows exactly N when N simultaneous calls are fired with max N", async () => {
@@ -306,7 +329,7 @@ describe("checkOutboundCall — simultaneous load", () => {
       Array.from({ length: 10 }, () => checkOutboundCall(env, PHONE, T0)),
     );
     expect(decisions.filter((d) => d.allowed)).toHaveLength(5);
-    expect((await env.DB.counterRows())[0]?.n).toBe(5);
+    expect(await env.DB.counterRows()).toHaveLength(5);
   });
 
   it("bounds repeated rapid presses: 30 simultaneous requests to one handset dial at most 3 times", async () => {
