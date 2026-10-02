@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { CropPlan, WaterRequest } from "@jadal/contracts";
+import { sendAlert } from "../api";
 import { useI18n } from "../i18n/I18nContext";
 import { useFormat } from "../lib/useFormat";
 import EmptyState from "../components/EmptyState";
 import UnitHint from "../components/UnitHint";
+import AgentCall from "../phone/AgentCall";
 import type { FarmerApi, RequestTypeName } from "./farmerApi";
 import { validateRequest } from "./validate";
 import { statusTone } from "./status";
@@ -14,13 +16,20 @@ const TYPES: RequestTypeName[] = ["urgent", "buffer"];
 interface Props {
   api: FarmerApi;
   farmerId: string;
+  farmerName: string;
   cropPlans: CropPlan[];
   refreshKey: number;
   onRaised: () => void;
 }
 
+interface AgentCallState {
+  contactId: string;
+  simulated: boolean;
+  detail: string;
+}
+
 /** A farmer asks for extra water, and sees what happened to earlier requests. */
-export default function AskWater({ api, farmerId, cropPlans, refreshKey, onRaised }: Props) {
+export default function AskWater({ api, farmerId, farmerName, cropPlans, refreshKey, onRaised }: Props) {
   const { t } = useI18n();
   const f = useFormat();
   const [type, setType] = useState<RequestTypeName>("urgent");
@@ -31,6 +40,8 @@ export default function AskWater({ api, farmerId, cropPlans, refreshKey, onRaise
   const [done, setDone] = useState(false);
   const [sending, setSending] = useState(false);
   const [mine, setMine] = useState<WaterRequest[] | null>(null);
+  const [agentCall, setAgentCall] = useState<AgentCallState | null>(null);
+  const [callFailed, setCallFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +63,8 @@ export default function AskWater({ api, farmerId, cropPlans, refreshKey, onRaise
     const errs = validateRequest(Number(volume), reason);
     setErrors(errs);
     setDone(false);
+    setAgentCall(null);
+    setCallFailed(false);
     if (errs.length > 0) return;
     setSending(true);
     try {
@@ -67,6 +80,21 @@ export default function AskWater({ api, farmerId, cropPlans, refreshKey, onRaise
       setVolume("");
       setReason("");
       onRaised();
+      // An urgent request also asks the agent to call: the alert creates the
+      // contact whose call carries the agent's spoken reply.
+      if (type === "urgent") {
+        try {
+          const alert = await sendAlert({
+            farmer_id: farmerId,
+            channel: "call",
+            severity: "urgent",
+            message: reason.trim() || undefined,
+          });
+          setAgentCall({ contactId: alert.contact_id, simulated: alert.simulated, detail: alert.detail });
+        } catch {
+          setCallFailed(true);
+        }
+      }
     } catch {
       setErrors(["common.loadError"]);
     } finally {
@@ -83,6 +111,19 @@ export default function AskWater({ api, farmerId, cropPlans, refreshKey, onRaise
           <div className="notice notice-ok" role="status">
             <p>{t("ask.success")}</p>
           </div>
+        )}
+        {callFailed && (
+          <div className="notice notice-warn" role="alert">
+            <p>{t("ask.callFailed")}</p>
+          </div>
+        )}
+        {agentCall && (
+          <AgentCall
+            contactId={agentCall.contactId}
+            farmerName={farmerName}
+            simulated={agentCall.simulated}
+            detail={agentCall.detail}
+          />
         )}
         {errors.length > 0 && (
           <div className="notice notice-crit" role="alert">
@@ -106,6 +147,7 @@ export default function AskWater({ api, farmerId, cropPlans, refreshKey, onRaise
               </label>
             ))}
           </fieldset>
+          {type === "urgent" && <p className="field-hint">{t("ask.urgentCallNote")}</p>}
           <div className="field-grid">
             <div className="field">
               <label htmlFor="ask-crop">{t("ask.crop")}</label>

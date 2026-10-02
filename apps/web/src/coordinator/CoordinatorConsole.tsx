@@ -137,6 +137,12 @@ export default function CoordinatorConsole() {
     [refreshAccounts],
   );
 
+  // The audit is a live trail: re-read it whenever the accounts tab is opened,
+  // so a schedule change or an alert sent a moment ago is already there.
+  useEffect(() => {
+    if (tab === "accounts") void refreshAccounts();
+  }, [tab, refreshAccounts]);
+
   const tabLabel = useMemo(() => (k: Tab) => t(`coord.tabs.${k}`), [t]);
 
   return (

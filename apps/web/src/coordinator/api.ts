@@ -5,7 +5,7 @@
 // displayed comes from the API (or its mock).
 
 import { api as client, sendAlert as clientSendAlert, updateTurn as clientUpdateTurn } from "../api";
-import type { AlertChannel } from "../api/extra";
+import type { AlertChannel, AlertSeverity } from "../api/extra";
 import type { AuditView, EntitlementRow, FarmerRegistration, LedgerView, RequestRow, RosterProposal } from "./types";
 
 async function farmerNames(): Promise<Map<string, string>> {
@@ -91,9 +91,19 @@ export const api = {
   },
 
   /** Alert one farmer by call, SMS or WhatsApp. `simulated` says whether anything really left. */
-  async sendAlert(farmerId: string, channel: AlertChannel, message?: string): Promise<{ simulated: boolean; detail: string }> {
+  async sendAlert(
+    farmerId: string,
+    channel: AlertChannel,
+    severity: AlertSeverity,
+    message?: string,
+  ): Promise<{ simulated: boolean; detail: string }> {
     const trimmed = message?.trim();
-    const res = await clientSendAlert({ farmer_id: farmerId, channel, message: trimmed ? trimmed : undefined });
+    const res = await clientSendAlert({
+      farmer_id: farmerId,
+      channel,
+      severity,
+      message: trimmed ? trimmed : undefined,
+    });
     return { simulated: res.simulated, detail: res.detail };
   },
 

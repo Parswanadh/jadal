@@ -29,9 +29,13 @@ export const updateTurnResponseSchema = z.object({
 
 export const alertChannelSchema = z.enum(["call", "sms", "whatsapp"]);
 
+/** How loud the alert is, from a routine notice to an emergency. */
+export const alertSeveritySchema = z.enum(["info", "warning", "urgent", "emergency"]);
+
 export const alertBodySchema = z.object({
   farmer_id: z.string().min(1),
   channel: alertChannelSchema,
+  severity: alertSeveritySchema,
   message: z.string().optional(),
 });
 
@@ -46,5 +50,6 @@ export type TurnTime = z.infer<typeof turnTimeSchema>;
 export type UpdateTurnBody = { start: string; end: string };
 export type UpdateTurnResponse = z.infer<typeof updateTurnResponseSchema>;
 export type AlertChannel = z.infer<typeof alertChannelSchema>;
+export type AlertSeverity = z.infer<typeof alertSeveritySchema>;
 export type AlertBody = z.input<typeof alertBodySchema>;
 export type AlertResponse = z.infer<typeof alertResponseSchema>;

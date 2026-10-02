@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useI18n } from "../i18n/I18nContext";
 import PageHeader from "../components/PageHeader";
 import EmptyState from "../components/EmptyState";
@@ -20,7 +21,12 @@ import {
 
 type CallPhase = "ringing" | "active" | "ended";
 
-function pickVoiceContact(contacts: PhoneContact[]): PhoneContact | null {
+/** The call to show: an explicit `?contact=` wins, otherwise the first voice contact. */
+function pickVoiceContact(contacts: PhoneContact[], wantedId?: string | null): PhoneContact | null {
+  if (wantedId) {
+    const wanted = contacts.find((c) => c.id === wantedId);
+    if (wanted) return wanted;
+  }
   const voice = contacts.find((c) => c.channel === "voice");
   return voice ?? contacts[0] ?? null;
 }
@@ -35,6 +41,9 @@ function PhoneIcon() {
 
 export default function SimulatedPhone() {
   const { lang, t } = useI18n();
+  const [params] = useSearchParams();
+  /** A specific contact to call, e.g. the one an urgent request created. */
+  const wantedContact = params.get("contact");
   const [phase, setPhase] = useState<CallPhase>("ringing");
   const [contacts, setContacts] = useState<PhoneContact[]>([]);
   const [names, setNames] = useState<Map<string, string>>(new Map());
@@ -54,9 +63,10 @@ export default function SimulatedPhone() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [announce, setAnnounce] = useState("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const autoAccepted = useRef(false);
   const fileId = useId();
 
-  const voiceContact = pickVoiceContact(contacts);
+  const voiceContact = pickVoiceContact(contacts, wantedContact);
   const ownerId = voiceContact?.farmer_id ?? null;
   const ownerName = ownerId ? (names.get(ownerId) ?? "") : "";
   const waAlerts = contacts.filter((c) => c.channel === "whatsapp" && c.farmer_id === ownerId);
@@ -83,7 +93,7 @@ export default function SimulatedPhone() {
     setAnnounce(t("phone.callActive"));
     try {
       const fetched = await load();
-      const voice = pickVoiceContact(fetched);
+      const voice = pickVoiceContact(fetched, wantedContact);
       if (voice) {
         setAck(voice.status);
         setTurns([
@@ -102,6 +112,15 @@ export default function SimulatedPhone() {
       setLoading(false);
     }
   };
+
+  // A `?contact=` link (for example from an urgent request) answers the call
+  // straight away, so the agent's reply is on screen without another tap.
+  useEffect(() => {
+    if (!wantedContact || autoAccepted.current || contacts.length === 0) return;
+    autoAccepted.current = true;
+    void acceptCall();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantedContact, contacts.length]);
 
   // Speak the committee message in Telugu when it arrives (feature-detected),
   // so the demo works even where the audio payload is only a tone.

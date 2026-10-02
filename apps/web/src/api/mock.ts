@@ -13,7 +13,7 @@ import type { z } from "zod";
 import scenarioJson from "@jadal/contracts/fixtures/demo-scenario.json";
 import { ApiClientError } from "./errors";
 import { alertBodySchema, alertResponseSchema, updateTurnResponseSchema } from "./extra";
-import type { AlertBody, AlertResponse, UpdateTurnBody, UpdateTurnResponse } from "./extra";
+import type { AlertBody, AlertChannel, AlertResponse, AlertSeverity, UpdateTurnBody, UpdateTurnResponse } from "./extra";
 import { formatDateTime, formatRange } from "../lib/format";
 
 // ASSUMED: illustrative mock values only, used until @jadal/core (Task A) and the intake agent (Task B) supply real numbers.
@@ -79,9 +79,20 @@ interface MockState {
   approvedRosters: Set<string>;
   /** Turn times changed by the coordinator, keyed `${rosterId}:${turnId}`. */
   turnEdits: Map<string, { start: string; end: string }>;
-  alertsSent: number;
+  /** Manual alerts and request-triggered calls, newest last. */
+  alerts: MockAlert[];
   clockHours: number;
   nextId: number;
+}
+
+/** One dispatched alert, as the mock remembers it for the phone and the audit. */
+export interface MockAlert {
+  contact_id: string;
+  farmer_id: string;
+  channel: AlertChannel;
+  severity: AlertSeverity;
+  message?: string;
+  at: string;
 }
 
 function freshState(): MockState {
@@ -94,7 +105,7 @@ function freshState(): MockState {
     entitlementsApproved: false,
     approvedRosters: new Set(),
     turnEdits: new Map(),
-    alertsSent: 0,
+    alerts: [],
     clockHours: 0,
     nextId: 1,
   };
@@ -343,6 +354,8 @@ export async function mockUpdateTurn(rosterId: string, turnId: string, body: Upd
 /**
  * Mock of POST /api/alerts. This build has no telephony, so every alert is
  * reported as simulated; the UI must say so rather than imply a real send.
+ * The alert is remembered so the phone screen can play the agent's reply and
+ * the audit can record the severity.
  */
 export async function mockSendAlert(body: AlertBody): Promise<AlertResponse> {
   const input = alertBodySchema.parse(body);
@@ -351,10 +364,18 @@ export async function mockSendAlert(body: AlertBody): Promise<AlertResponse> {
     state.registered.some((entry) => entry.farmer.id === input.farmer_id);
   if (!known) throw new ApiClientError(404, "That farmer was not found.", "farmer_not_found");
 
-  state.alertsSent += 1;
+  const contact_id = `ct-alert-${state.alerts.length + 1}`;
+  state.alerts.push({
+    contact_id,
+    farmer_id: input.farmer_id,
+    channel: input.channel,
+    severity: input.severity,
+    message: input.message,
+    at: mockNow(),
+  });
   return alertResponseSchema.parse({
     ok: true,
-    contact_id: `ct-alert-${state.alertsSent}`,
+    contact_id,
     simulated: true,
     detail: MOCK_ALERT_DETAIL,
   });
@@ -574,6 +595,49 @@ function nightSentences(): { en: string; te: string } {
   };
 }
 
+function farmerNameOf(farmerId: string): string {
+  return (
+    scenario.farmers.find((f) => f.id === farmerId)?.name ??
+    state.registered.find((entry) => entry.farmer.id === farmerId)?.farmer.name ??
+    "Farmer"
+  );
+}
+
+/** What the agent says on an alert call, in both languages, by severity. */
+function alertSentences(alert: MockAlert): { en: string; te: string } {
+  const name = farmerNameOf(alert.farmer_id);
+  switch (alert.severity) {
+    case "emergency":
+      return {
+        en: `${name}, this is Jadal. This is an emergency. Follow the canal office instructions right away.`,
+        te: `${name} గారు, జాదల్ నుండి మాట్లాడుతున్నాను. ఇది అత్యవసర పరిస్థితి. కాలువ కార్యాలయం సూచనలు వెంటనే పాటించండి.`,
+      };
+    case "urgent":
+      return {
+        en: `${name}, this is Jadal. Your urgent request has reached the committee. We will call again with your turn time.`,
+        te: `${name} గారు, జాదల్ నుండి మాట్లాడుతున్నాను. మీ అత్యవసర అభ్యర్థన కమిటీకి చేరింది. మీ వంతు సమయం త్వరలో మళ్లీ తెలియజేస్తాము.`,
+      };
+    case "warning":
+      return {
+        en: `${name}, this is Jadal. Please check your field: the release may change.`,
+        te: `${name} గారు, జాదల్ నుండి మాట్లాడుతున్నాను. మీ పొలం చూసుకోండి: నీటి విడుదల మారవచ్చు.`,
+      };
+    default:
+      return {
+        en: `${name}, this is Jadal with a routine notice. No action is needed.`,
+        te: `${name} గారు, జాదల్ నుండి ఒక సాధారణ సూచన. ఏమీ చేయాల్సిన అవసరం లేదు.`,
+      };
+  }
+}
+
+/** How an alert severity reads in the audit findings. */
+const ALERT_FINDING_SEVERITY: Record<AlertSeverity, "info" | "warn" | "critical"> = {
+  info: "info",
+  warning: "warn",
+  urgent: "critical",
+  emergency: "critical",
+};
+
 export function mockContacts() {
   const night = nightSentences();
   const list = scenario.farmers.flatMap((f) => {
@@ -590,7 +654,23 @@ export function mockContacts() {
       { ...base, id: `ct-${f.id}-warn`, channel: "voice" as const, purpose: "release_warning" as const, message_te: night.te, message_en: night.en },
     ];
   });
-  return routes.contacts.response.parse(list);
+  // Alerts sent this session show up as contacts too, so the phone screen can
+  // play the agent's reply for them.
+  const alertContacts = state.alerts.map((alert) => {
+    const said = alertSentences(alert);
+    return {
+      id: alert.contact_id,
+      farmer_id: alert.farmer_id,
+      channel: alert.channel === "call" ? ("voice" as const) : alert.channel,
+      purpose: "request_update" as const,
+      status: "queued" as const,
+      attempt: 1,
+      message_te: said.te,
+      message_en: said.en,
+      at: alert.at,
+    };
+  });
+  return routes.contacts.response.parse([...alertContacts, ...list]);
 }
 
 function mockContactById(contactId: string) {
@@ -612,10 +692,14 @@ function mockContactById(contactId: string) {
 export function mockPhoneReply(contactId: string, body: z.input<typeof routes.phoneReply.body>) {
   const input = routes.phoneReply.body.parse(body);
   const contact = { ...mockContactById(contactId), status: "acknowledged" as const, transcript: input.text ?? "Voice reply" };
+  const alert = state.alerts.find((entry) => entry.contact_id === contactId);
+  const said = alert
+    ? alertSentences(alert)
+    : { te: "ధన్యవాదాలు. మీ వంతు ఖరారైంది.", en: "Thank you. Your turn is confirmed." };
   return routes.phoneReply.response.parse({
     contact,
-    agent_reply_te: "ధన్యవాదాలు. మీ వంతు ఖరారైంది.",
-    agent_reply_en: "Thank you. Your turn is confirmed.",
+    agent_reply_te: said.te,
+    agent_reply_en: said.en,
   });
 }
 
@@ -656,6 +740,10 @@ export function mockAudit() {
     balances: mockBalances(),
     findings: [
       ...(state.turnEdits.size > 0 ? [{ severity: "info" as const, text: MOCK_SCHEDULE_CHANGE_TEXT }] : []),
+      ...state.alerts.map((alert) => ({
+        severity: ALERT_FINDING_SEVERITY[alert.severity],
+        text: `Alert queued for ${farmerNameOf(alert.farmer_id)} by ${alert.channel}; ${alert.severity} level.`,
+      })),
       { severity: "info", text: "The books balance: every cubic metre of canal water is accounted for." },
       { severity: "warn", text: "Farms at the tail end get far less water than farms at the head when turns are the same length. Equal water fixes this." },
     ],

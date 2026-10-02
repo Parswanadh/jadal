@@ -45,3 +45,28 @@ export async function postPhoneReply(
   };
   return { result, source: source() };
 }
+
+export interface AgentReply {
+  reply_te: string;
+  reply_en: string;
+  /** base64 audio for the spoken reply, when one is available. */
+  audio_base64?: string;
+  source: ApiSource;
+}
+
+/**
+ * The agent's spoken reply for an outbound call.
+ *
+ * An alert creates a contact; this reads the reply that contact's call carries,
+ * through the same phone-reply route the phone screen uses. In mock mode the
+ * reply is the mock's own bilingual line and a short tone stands in for audio.
+ */
+export async function fetchAgentReply(contactId: string): Promise<AgentReply> {
+  const res = await client.phoneReply(contactId, {});
+  return {
+    reply_te: res.agent_reply_te,
+    reply_en: res.agent_reply_en,
+    audio_base64: res.audio_base64 ?? (isMockMode() ? makeToneWavBase64() : undefined),
+    source: source(),
+  };
+}

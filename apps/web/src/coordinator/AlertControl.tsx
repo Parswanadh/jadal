@@ -1,11 +1,12 @@
 import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { AlertChannel } from '../api/extra';
+import type { AlertChannel, AlertSeverity } from '../api/extra';
 import { useI18n } from '../i18n/I18nContext';
 import { api } from './api';
 import './alert.css';
 
 const CHANNELS: AlertChannel[] = ['call', 'sms', 'whatsapp'];
+const SEVERITIES: AlertSeverity[] = ['info', 'warning', 'urgent', 'emergency'];
 
 interface Props {
   farmerId: string;
@@ -14,12 +15,13 @@ interface Props {
 
 interface SentResult {
   channel: AlertChannel;
+  severity: AlertSeverity;
   simulated: boolean;
   detail: string;
 }
 
 /**
- * Reach one farmer by call, SMS or WhatsApp.
+ * Reach one farmer by call, SMS or WhatsApp, at a chosen warning level.
  *
  * The result is reported exactly as the API returns it: when `simulated` is
  * true the control says so plainly and never implies a real call or message.
@@ -28,6 +30,7 @@ export default function AlertControl({ farmerId, farmerName }: Props) {
   const { t } = useI18n();
   const uid = useId();
   const [channel, setChannel] = useState<AlertChannel>('call');
+  const [severity, setSeverity] = useState<AlertSeverity>('info');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<SentResult | null>(null);
@@ -38,8 +41,8 @@ export default function AlertControl({ farmerId, farmerName }: Props) {
     setBusy(true);
     setFailed(false);
     try {
-      const res = await api.sendAlert(farmerId, channel, message);
-      setResult({ channel, simulated: res.simulated, detail: res.detail });
+      const res = await api.sendAlert(farmerId, channel, severity, message);
+      setResult({ channel, severity, simulated: res.simulated, detail: res.detail });
     } catch {
       setFailed(true);
     } finally {
@@ -67,6 +70,25 @@ export default function AlertControl({ farmerId, farmerName }: Props) {
                 onClick={() => setChannel(option)}
               >
                 {t(`coord.alert.channel.${option}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <span className="field-label" id={`${uid}-severity`}>
+            {t('coord.alert.severityLabel')}
+          </span>
+          <div className="segmented segmented-wrap" role="group" aria-labelledby={`${uid}-severity`}>
+            {SEVERITIES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className="segment"
+                aria-pressed={severity === option}
+                onClick={() => setSeverity(option)}
+              >
+                {t(`coord.alert.severity.${option}`)}
               </button>
             ))}
           </div>
@@ -101,9 +123,13 @@ export default function AlertControl({ farmerId, farmerName }: Props) {
               {result.simulated
                 ? t('coord.alert.simulated', {
                     channel: t(`coord.alert.channel.${result.channel}`),
+                    severity: t(`coord.alert.severity.${result.severity}`),
                     detail: result.detail,
                   })
-                : t('coord.alert.sent', { channel: t(`coord.alert.channel.${result.channel}`) })}
+                : t('coord.alert.sent', {
+                    channel: t(`coord.alert.channel.${result.channel}`),
+                    severity: t(`coord.alert.severity.${result.severity}`),
+                  })}
             </p>
           </div>
         )}

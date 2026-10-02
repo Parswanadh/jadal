@@ -116,7 +116,14 @@ export default function FarmerPortal() {
       <div role="tabpanel">
         {tab === "mywater" && <MyWater api={api} farmerId={farmerId} entry={entry} outlets={outlets} onAsk={() => setTab("ask")} />}
         {tab === "ask" && (
-          <AskWater api={api} farmerId={farmerId} cropPlans={entry?.cropPlans ?? []} refreshKey={refreshKey} onRaised={() => setRefreshKey((k) => k + 1)} />
+          <AskWater
+            api={api}
+            farmerId={farmerId}
+            farmerName={entry?.farmer.name ?? ""}
+            cropPlans={entry?.cropPlans ?? []}
+            refreshKey={refreshKey}
+            onRaised={() => setRefreshKey((k) => k + 1)}
+          />
         )}
         {tab === "pool" && <SharedPool api={api} farmerName={farmerName} refreshKey={refreshKey} />}
         {tab === "register" && <RegistrationForm api={api} outlets={outlets} />}
