@@ -380,19 +380,19 @@
       "max": 1.5
     },
     "depletion_p": 0.6,
-    "source": "KC: FAO-56 Rev.1 (2025) Table 6.2 (p. 168-170), single time-averaged Kc. Verified line-by-line by the auditor. || STAGE_DAYS: ASSUMED - NOT FOUND in FAO-56 Rev.1 (2025), which abolished static calendar stage lengths. Value is the 1998 Table 11 row or a project value. || STAGE_GDD/T_BASE/T_UPPER: ASSUMED - NOT FOUND. ASSUMED - NOT FOUND (Table 6.10 exists but values here do not match it). || DEPLETION_P: FAO-56 Rev.1 (2025) Table 8.2, \"Soil water depletion fraction for no stress (p) for field crops\" (p. 260), values tabulated for ETc ~ 5 mm/day. || PERCOLATION: ASSUMED - not applicable / not found.",
+    "source": "UNSOURCED - the ENTIRE redgram row has no valid FAO-56 source, so every field here is tagged UNSOURCED rather than MEASURED. The row's earlier citation was 'FAO-56 (2025) book reference (p. 410)', but the unabridged FAO-56 Rev.1 (2025) text ends at printed p. 401 (Selected Bibliography): p. 410 does not exist, so that citation was invalid. A grep for 'pigeonpea|Cajanus|red gram|redgram' over the 2025 text returns nothing - the book has no pigeonpea/redgram row. The KC (p. 168-170) and DEPLETION_P (p. 260) clauses the row borrows are generic table pages, not a redgram row; neither the Kc nor the p value is traceable. Numeric values are retained unchanged as an ASSUMED regional/project proxy.",
     "constant_status": {
-      "kc_ini": "MEASURED",
-      "kc_mid": "MEASURED",
-      "kc_end": "MEASURED",
-      "max_height_m": "MEASURED",
-      "root_depth_m": "MEASURED",
-      "stage_days": "ASSUMED",
-      "stage_gdd": "ASSUMED",
-      "t_base_c": "ASSUMED",
-      "t_upper_c": "ASSUMED",
-      "depletion_p": "MEASURED",
-      "percolation_mm_day": "ASSUMED"
+      "kc_ini": "UNSOURCED",
+      "kc_mid": "UNSOURCED",
+      "kc_end": "UNSOURCED",
+      "max_height_m": "UNSOURCED",
+      "root_depth_m": "UNSOURCED",
+      "stage_days": "UNSOURCED",
+      "stage_gdd": "UNSOURCED",
+      "t_base_c": "UNSOURCED",
+      "t_upper_c": "UNSOURCED",
+      "depletion_p": "UNSOURCED",
+      "percolation_mm_day": "UNSOURCED"
     }
   },
   {
