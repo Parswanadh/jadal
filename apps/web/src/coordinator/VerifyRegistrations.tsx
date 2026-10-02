@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useI18n } from "../i18n/I18nContext";
 import { useFormat } from "../lib/useFormat";
 import EmptyState from "../components/EmptyState";
+import AlertControl from "./AlertControl";
 import { api } from "./api";
 import type { FarmerRegistration } from "./types";
 
@@ -91,6 +92,7 @@ export default function VerifyRegistrations({ rows, onVerified }: Props) {
                 >
                   {busy === r.farmer.id ? t("common.working") : t("coord.farmers.verify")}
                 </button>
+                <AlertControl farmerId={r.farmer.id} farmerName={r.farmer.name} />
               </div>
             </li>
           ))}
@@ -108,6 +110,7 @@ export default function VerifyRegistrations({ rows, onVerified }: Props) {
                   <th scope="col">{t("coord.col.land")}</th>
                   <th scope="col">{t("coord.col.crop")}</th>
                   <th scope="col">{t("coord.farmers.phone")}</th>
+                  <th scope="col">{t("coord.col.alert")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -125,6 +128,9 @@ export default function VerifyRegistrations({ rows, onVerified }: Props) {
                     <td>
                       <a href={`tel:${r.farmer.phone}`}>{r.farmer.phone}</a>
                       <span className="sub">{r.farmer.hasSmartphone ? t("coord.farmers.smartphone") : t("coord.farmers.noSmartphone")}</span>
+                    </td>
+                    <td>
+                      <AlertControl farmerId={r.farmer.id} farmerName={r.farmer.name} />
                     </td>
                   </tr>
                 ))}

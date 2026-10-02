@@ -345,7 +345,8 @@
       "delivered": "Delivered",
       "when": "When",
       "moved": "What moved",
-      "change": "Change"
+      "change": "Change",
+      "alert": "Alert"
     },
     "req": {
       "title": "Requests for extra water",

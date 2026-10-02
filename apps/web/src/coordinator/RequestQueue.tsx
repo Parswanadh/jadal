@@ -5,6 +5,7 @@ import { useFormat } from "../lib/useFormat";
 import ConfirmAction from "../components/ConfirmAction";
 import EmptyState from "../components/EmptyState";
 import UnitHint from "../components/UnitHint";
+import AlertControl from "./AlertControl";
 import { api } from "./api";
 import type { RequestRow } from "./types";
 
@@ -105,6 +106,7 @@ export default function RequestQueue({ rows, onDecided }: Props) {
                     confirmLabel={t("coord.req.rejectYes")}
                     onConfirm={() => decide(r, "reject")}
                   />
+                  <AlertControl farmerId={r.farmerId} farmerName={r.farmerName} />
                 </div>
               </li>
             );
