@@ -49,10 +49,37 @@ export interface RosterEngine {
 export const rosterEngine = {
   /**
    * Deterministic head-to-tail packing of irrigation turns into a release window.
-   * - equal_water: turn duration = V / Q_outlet (seconds -> ISO times) packed sequentially,
-   *   accounting for canal travel lag before the first turn at each outlet, reporting unschedulable volume in shortfall_m3.
-   * - equal_hours: legacy warabandi splitting window hours in proportion to demand volume (proportional to plot area),
-   *   ignoring seepage losses; delivered volume = Q_outlet * hours.
+   *
+   * Turn duration (README §8, `docs/research/fao56-crop-tables.md` §4.8 item 3):
+   *   equal_water:  T_i = V_i / Q(x_i)          [s]
+   *   equal_hours:  T_i = (V_i / sum V) . window [s]  (warabandi share, see the branch comment)
+   *
+   *   Delivered volume V = Q(x_i) . T_i .        [m3]
+   *
+   * Units: V in m3; Q(x_i) in m3/s from the hydraulics model; T in s converted to ms for ISO
+   * timestamps. `3600` in the lag term converts the hydraulics model's hours to seconds.
+   *
+   * Ordering (deterministic, README §8 "head-to-tail"):
+   *   1. outlet chainage ascending  2. priority ascending  3. farmer_id alphabetical.
+   * This is a total order, so equal inputs always produce an identical roster — the determinism
+   * property the whole S0 layer rests on. Note that priority is only the SECOND key: a head-end
+   * farmer outranks a tail-end farmer with a better priority.
+   *
+   * Lag accounting: the FIRST turn at each outlet starts no earlier than
+   * `window start + lag(x_i)`, because the wetting front has to arrive. Later turns at the same
+   * outlet reuse the running cursor: once the outlet is wet, no further lag applies.
+   *
+   * Boundaries:
+   *  * Unknown `outlet_id` in a demand: Q = 0 and lag = 0, so the whole demand is shortfall and
+   *    no turn is emitted.
+   *  * `volume_m3 <= 0`: the demand is skipped entirely (no turn, no shortfall). A zero-volume
+   *    demand is not a failed demand.
+   *  * Zero-length or already-closed window (`end <= start`): every positive demand is shortfall.
+   *  * `Q <= 0`: shortfall, no turn — a dry outlet cannot be scheduled.
+   *  * `equal_water` books the remaining window as a partial turn and records the deficit rather
+   *    than dropping the demand.
+   *  * `shortfall_m3` is keyed by `farmer_id`, so a farmer with demands at two outlets has their
+   *    shortfalls summed across both.
    */
   build(input: RosterInput, rosterId: string): Roster {
     const hydList = hydraulics.atOutlets(input.canal, input.outlets, input.window.discharge_m3s);
@@ -139,8 +166,28 @@ export const rosterEngine = {
         currentCursorMs = turnEndMs;
       }
     } else {
-      // equal_hours mode = warabandi: window hours split in proportion to plot area ignoring losses
-      const totalDemandVol = sortedDemands.reduce((sum, d) => sum + d.volume_m3, 0);
+      // equal_hours = warabandi: the window is split among farmers by need, not by volume.
+      //
+      // SOURCE: `packages/core/README.md` §8 defines `equal_hours` as "Warabandi" allocating time
+      // in proportion to demand; `docs/research/deterministic-and-system1.md` line 160+ describes
+      // warabandi as rotational time-sharing. This is the LEGACY comparison mode: it exists so the
+      // coordinator can see what the traditional rule would have delivered next to equal_water.
+      //
+      // ASSUMED: the split is by demand VOLUME (which is proportional to area for a single crop).
+      // README §8 describes `equal_hours` as `T_i = V_i / Q_0` — a time proportional to volume at
+      // the HEAD discharge. That is what the fraction below implements: each farmer's share of the
+      // window is their share of total demand, and the volume delivered is that share of the window
+      // times the flow ACTUALLY reaching their outlet.
+      //
+      // CONSEQUENCE, and the reason this mode is reported as inequitable rather than "equal": the
+      // volume each farmer receives is (their fraction of the window) x Q(x_i), so a tail-end
+      // farmer on a lower Q receives proportionally less water for the same hours. That tail-end
+      // deficit is the real behaviour warabandi exhibits and the thing Jadal exists to fix, so it
+      // is modelled deliberately.
+      //
+      // BOUNDARY: `shortfall_m3` compares what each farmer RECEIVED against what they DEMANDED.
+      // `deliveredVol` is Q(x_i) x duration, so it is capped by the physical flow at the outlet.
+      const positiveDemandVol = sortedDemands.reduce((sum, d) => sum + Math.max(0, d.volume_m3), 0);
       let currentCursorMs = windowStartMs;
       let turnIdx = 0;
 
@@ -148,7 +195,11 @@ export const rosterEngine = {
         const demand = sortedDemands[i]!;
         const hyd = hydMap.get(demand.outlet_id);
         const Q = hyd?.flow_m3s ?? 0;
-        const fraction = totalDemandVol > 0 ? demand.volume_m3 / totalDemandVol : 1 / sortedDemands.length;
+        // Guard both the all-zero case and a net-negative demand set; fall back to an even split.
+        const fraction =
+          positiveDemandVol > 0
+            ? Math.max(0, demand.volume_m3) / positiveDemandVol
+            : 1 / sortedDemands.length;
         const durationMs = fraction * totalWindowMs;
 
         const turnStartMs = currentCursorMs;
@@ -157,8 +208,10 @@ export const rosterEngine = {
           turnEndMs = windowEndMs;
         }
 
+        // A turn whose window has already closed (windowEndMs <= turnStartMs) delivers nothing and
+        // the whole demand is a shortfall, matching the equal_water branch's behaviour.
         const durationSec = Math.max(0, (turnEndMs - turnStartMs) / 1000);
-        const deliveredVol = Q * durationSec;
+        const deliveredVol = Math.max(0, Q) * durationSec;
         const deficit = Math.max(0, demand.volume_m3 - deliveredVol);
 
         if (deficit > 1e-6) {
@@ -195,6 +248,18 @@ export const rosterEngine = {
   /**
    * Calculates the percentage of need met per farmer for a roster.
    * pct = delivered / demand * 100, capped at 100.
+   *
+   * Units: both sides are m3, so pct is dimensionless [%].
+   *
+   * Boundaries:
+   *  * A demand of 0 (or a demand with no positive total) reports 100%: nothing was asked for, so
+   *    nothing was missed. ASSUMED — the alternative (0%) would make a farmer who requested
+   *    nothing look like the worst-served in the equity comparison.
+   *  * The result is keyed by `farmer_id` + `outlet_id` but is returned one row per INPUT demand,
+   *    so a farmer with two demands at the same outlet gets two rows carrying the same pooled
+   *    percentage. That is intentional (the caller zips rows back to demands) but means the
+   *    returned array is NOT a set of distinct (farmer, outlet) pairs.
+   *  * pct is capped at 100 but NOT floored at 0: a roster that somehow over-delivers reports 100.
    */
   needMet(input: RosterInput, roster: Roster): { farmer_id: string; outlet_id: string; pct: number }[] {
     const deliveredByFarmerOutlet = new Map<string, number>();

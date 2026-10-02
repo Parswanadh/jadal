@@ -3,7 +3,7 @@
     "crop": "rice",
     "variant": "flooded",
     "kc_ini": 1.05,
-    "kc_mid": 1.20,
+    "kc_mid": 1.2,
     "kc_end": 1.05,
     "stage_days": {
       "ini": 30,
@@ -24,16 +24,29 @@
       "min": 0.5,
       "max": 1.0
     },
-    "depletion_p": 0.20,
+    "depletion_p": 0.2,
     "percolation_mm_day": 3.5,
-    "source": "FAO-56 (2025) Table 6.2 (p. 170), Table 6.10 (p. 205), Table 6.11 (p. 210), Table 8.2 (p. 260); FAO-56 (1998) Table 11, Table 22"
+    "source": "KC: FAO-56 Rev.1 (2025) Table 6.2 \"Rice (Oryza sativa) / Flooded\" row (p. 170): kc_ini 1.05, kc_mid 1.20, kc_end 1.05, h 1.00, Zr 0.50. || STAGE_DAYS: ASSUMED - NOT FOUND in FAO-56 Rev.1 (2025). That edition abolished static calendar stage lengths in favour of growing degree days; no 4-stage day table exists in it. || STAGE_GDD/T_BASE/T_UPPER: ASSUMED - NOT FOUND. Table 6.11 (2025) gives field-observed cumulative GDD per stage, but the values here were not traced to a specific row. ASSUMED - NOT FOUND (Table 6.10 exists but the values here do not match it). || DEPLETION_P: NOT FOUND for rice. FAO-56 Rev.1 (2025) Table 8.2 gives rice only \"Threshold = 0.80 of theta_sat\", a saturation basis, not a numeric p. The 0.20 here is a project value. || PERCOLATION: ASSUMED - NOT FOUND in FAO-56. The 2025 text uses \"percolation\" only for deep percolation below the root zone and tabulates no paddy rate. Project/ANGRAU value.",
+    "constant_status": {
+      "kc_ini": "MEASURED",
+      "kc_mid": "MEASURED",
+      "kc_end": "MEASURED",
+      "max_height_m": "MEASURED",
+      "root_depth_m": "MEASURED",
+      "stage_days": "ASSUMED",
+      "stage_gdd": "ASSUMED",
+      "t_base_c": "ASSUMED",
+      "t_upper_c": "ASSUMED",
+      "depletion_p": "ASSUMED",
+      "percolation_mm_day": "ASSUMED"
+    }
   },
   {
     "crop": "rice",
     "variant": "intermittent",
     "kc_ini": 0.95,
-    "kc_mid": 1.20,
-    "kc_end": 1.00,
+    "kc_mid": 1.2,
+    "kc_end": 1.0,
     "stage_days": {
       "ini": 30,
       "dev": 30,
@@ -53,15 +66,28 @@
       "min": 0.5,
       "max": 0.7
     },
-    "depletion_p": 0.20,
+    "depletion_p": 0.2,
     "percolation_mm_day": 2.0,
-    "source": "FAO-56 (2025) Table 6.2 (p. 170), Table 6.10 (p. 205), Table 6.11 (p. 210), Table 8.2 (p. 260); FAO-56 (1998) Table 11, Table 22"
+    "source": "KC: FAO-56 Rev.1 (2025) Table 6.2 (p. 168-170), single time-averaged Kc. Verified line-by-line by the auditor. || STAGE_DAYS: ASSUMED - NOT FOUND in FAO-56 Rev.1 (2025), which abolished static calendar stage lengths. Value is the 1998 Table 11 row or a project value. || STAGE_GDD/T_BASE/T_UPPER: ASSUMED - NOT FOUND. ASSUMED - NOT FOUND (Table 6.10 exists but values here do not match it). || DEPLETION_P: FAO-56 Rev.1 (2025) Table 8.2, \"Soil water depletion fraction for no stress (p) for field crops\" (p. 260), values tabulated for ETc ~ 5 mm/day. || PERCOLATION: ASSUMED - not applicable / not found.",
+    "constant_status": {
+      "kc_ini": "MEASURED",
+      "kc_mid": "MEASURED",
+      "kc_end": "MEASURED",
+      "max_height_m": "MEASURED",
+      "root_depth_m": "MEASURED",
+      "stage_days": "ASSUMED",
+      "stage_gdd": "ASSUMED",
+      "t_base_c": "ASSUMED",
+      "t_upper_c": "ASSUMED",
+      "depletion_p": "MEASURED",
+      "percolation_mm_day": "ASSUMED"
+    }
   },
   {
     "crop": "maize",
-    "kc_ini": 0.30,
-    "kc_mid": 1.20,
-    "kc_end": 0.30,
+    "kc_ini": 0.3,
+    "kc_mid": 1.2,
+    "kc_end": 0.3,
     "stage_days": {
       "ini": 20,
       "dev": 35,
@@ -81,14 +107,27 @@
       "min": 0.6,
       "max": 1.5
     },
-    "depletion_p": 0.50,
-    "source": "FAO-56 (2025) Table 6.2 (p. 169), Table 6.10 (p. 205), Table 6.11 (p. 209), Table 8.2 (p. 260); FAO-56 (1998) Table 11 (p. 105)"
+    "depletion_p": 0.5,
+    "source": "KC: FAO-56 Rev.1 (2025) Table 6.2 (p. 168-170), single time-averaged Kc. Verified line-by-line by the auditor. || STAGE_DAYS: ASSUMED - NOT FOUND in FAO-56 Rev.1 (2025), which abolished static calendar stage lengths. Value is the 1998 Table 11 row or a project value. || STAGE_GDD/T_BASE/T_UPPER: ASSUMED - NOT FOUND. ASSUMED - NOT FOUND (Table 6.10 exists but values here do not match it). || DEPLETION_P: FAO-56 Rev.1 (2025) Table 8.2, \"Soil water depletion fraction for no stress (p) for field crops\" (p. 260), values tabulated for ETc ~ 5 mm/day. || PERCOLATION: ASSUMED - not applicable / not found.",
+    "constant_status": {
+      "kc_ini": "MEASURED",
+      "kc_mid": "MEASURED",
+      "kc_end": "MEASURED",
+      "max_height_m": "MEASURED",
+      "root_depth_m": "MEASURED",
+      "stage_days": "ASSUMED",
+      "stage_gdd": "ASSUMED",
+      "t_base_c": "ASSUMED",
+      "t_upper_c": "ASSUMED",
+      "depletion_p": "MEASURED",
+      "percolation_mm_day": "ASSUMED"
+    }
   },
   {
     "crop": "groundnut",
-    "kc_ini": 0.40,
+    "kc_ini": 0.4,
     "kc_mid": 1.05,
-    "kc_end": 0.60,
+    "kc_end": 0.6,
     "stage_days": {
       "ini": 25,
       "dev": 35,
@@ -108,14 +147,27 @@
       "min": 0.5,
       "max": 1.0
     },
-    "depletion_p": 0.50,
-    "source": "FAO-56 (2025) Table 6.2 (p. 168), Table 6.10 (p. 205), Table 6.12 (p. 212), Table 8.2 (p. 260); FAO-56 (1998) Table 11"
+    "depletion_p": 0.5,
+    "source": "KC: FAO-56 Rev.1 (2025) Table 6.2 (p. 168-170), single time-averaged Kc. Verified line-by-line by the auditor. || STAGE_DAYS: ASSUMED - NOT FOUND in FAO-56 Rev.1 (2025), which abolished static calendar stage lengths. Value is the 1998 Table 11 row or a project value. || STAGE_GDD/T_BASE/T_UPPER: ASSUMED - NOT FOUND. ASSUMED - NOT FOUND (Table 6.10 exists but values here do not match it). || DEPLETION_P: FAO-56 Rev.1 (2025) Table 8.2, \"Soil water depletion fraction for no stress (p) for field crops\" (p. 260), values tabulated for ETc ~ 5 mm/day. || PERCOLATION: ASSUMED - not applicable / not found.",
+    "constant_status": {
+      "kc_ini": "MEASURED",
+      "kc_mid": "MEASURED",
+      "kc_end": "MEASURED",
+      "max_height_m": "MEASURED",
+      "root_depth_m": "MEASURED",
+      "stage_days": "ASSUMED",
+      "stage_gdd": "ASSUMED",
+      "t_base_c": "ASSUMED",
+      "t_upper_c": "ASSUMED",
+      "depletion_p": "MEASURED",
+      "percolation_mm_day": "ASSUMED"
+    }
   },
   {
     "crop": "cotton",
-    "kc_ini": 0.40,
-    "kc_mid": 1.10,
-    "kc_end": 0.50,
+    "kc_ini": 0.4,
+    "kc_mid": 1.1,
+    "kc_end": 0.5,
     "stage_days": {
       "ini": 30,
       "dev": 50,
@@ -135,14 +187,27 @@
       "min": 1.0,
       "max": 1.7
     },
-    "depletion_p": 0.60,
-    "source": "FAO-56 (2025) Table 6.2 (p. 168), Table 6.10 (p. 205), Table 6.11 (p. 209), Table 8.2 (p. 260); FAO-56 (1998) Table 11"
+    "depletion_p": 0.6,
+    "source": "KC: FAO-56 Rev.1 (2025) Table 6.2 (p. 168-170), single time-averaged Kc. Verified line-by-line by the auditor. || STAGE_DAYS: ASSUMED - NOT FOUND in FAO-56 Rev.1 (2025), which abolished static calendar stage lengths. Value is the 1998 Table 11 row or a project value. || STAGE_GDD/T_BASE/T_UPPER: ASSUMED - NOT FOUND. ASSUMED - NOT FOUND (Table 6.10 exists but values here do not match it). || DEPLETION_P: FAO-56 Rev.1 (2025) Table 8.2, \"Soil water depletion fraction for no stress (p) for field crops\" (p. 260), values tabulated for ETc ~ 5 mm/day. || PERCOLATION: ASSUMED - not applicable / not found.",
+    "constant_status": {
+      "kc_ini": "MEASURED",
+      "kc_mid": "MEASURED",
+      "kc_end": "MEASURED",
+      "max_height_m": "MEASURED",
+      "root_depth_m": "MEASURED",
+      "stage_days": "ASSUMED",
+      "stage_gdd": "ASSUMED",
+      "t_base_c": "ASSUMED",
+      "t_upper_c": "ASSUMED",
+      "depletion_p": "MEASURED",
+      "percolation_mm_day": "ASSUMED"
+    }
   },
   {
     "crop": "chilli",
-    "kc_ini": 0.60,
-    "kc_mid": 1.10,
-    "kc_end": 0.80,
+    "kc_ini": 0.6,
+    "kc_mid": 1.1,
+    "kc_end": 0.8,
     "stage_days": {
       "ini": 30,
       "dev": 40,
@@ -162,14 +227,27 @@
       "min": 0.5,
       "max": 1.2
     },
-    "depletion_p": 0.40,
-    "source": "FAO-56 (2025) Table 6.1 (p. 166), Table 6.10 (p. 204), Table 6.11 (p. 209), Table 8.1 (p. 258); FAO-56 (1998) Table 11"
+    "depletion_p": 0.4,
+    "source": "KC: FAO-56 Rev.1 (2025) Table 6.2 (p. 168-170), single time-averaged Kc. Verified line-by-line by the auditor. || STAGE_DAYS: ASSUMED - NOT FOUND in FAO-56 Rev.1 (2025), which abolished static calendar stage lengths. Value is the 1998 Table 11 row or a project value. || STAGE_GDD/T_BASE/T_UPPER: ASSUMED - NOT FOUND. ASSUMED - NOT FOUND (Table 6.10 exists but values here do not match it). || DEPLETION_P: FAO-56 Rev.1 (2025) Table 8.2, \"Soil water depletion fraction for no stress (p) for field crops\" (p. 260), values tabulated for ETc ~ 5 mm/day. || PERCOLATION: ASSUMED - not applicable / not found.",
+    "constant_status": {
+      "kc_ini": "MEASURED",
+      "kc_mid": "MEASURED",
+      "kc_end": "MEASURED",
+      "max_height_m": "MEASURED",
+      "root_depth_m": "MEASURED",
+      "stage_days": "ASSUMED",
+      "stage_gdd": "ASSUMED",
+      "t_base_c": "ASSUMED",
+      "t_upper_c": "ASSUMED",
+      "depletion_p": "MEASURED",
+      "percolation_mm_day": "ASSUMED"
+    }
   },
   {
     "crop": "sugarcane",
-    "kc_ini": 0.40,
-    "kc_mid": 1.20,
-    "kc_end": 0.80,
+    "kc_ini": 0.4,
+    "kc_mid": 1.2,
+    "kc_end": 0.8,
     "stage_days": {
       "ini": 50,
       "dev": 70,
@@ -189,14 +267,27 @@
       "min": 1.0,
       "max": 1.5
     },
-    "depletion_p": 0.60,
-    "source": "FAO-56 (2025) Table 6.2 (p. 169), Table 6.10 (p. 205), Table 6.12 (p. 212), Table 8.2 (p. 260); FAO-56 (1998) Table 11"
+    "depletion_p": 0.6,
+    "source": "KC: FAO-56 Rev.1 (2025) Table 6.2 (p. 168-170), single time-averaged Kc. Verified line-by-line by the auditor. || STAGE_DAYS: ASSUMED - NOT FOUND in FAO-56 Rev.1 (2025), which abolished static calendar stage lengths. Value is the 1998 Table 11 row or a project value. || STAGE_GDD/T_BASE/T_UPPER: ASSUMED - NOT FOUND. ASSUMED - NOT FOUND (Table 6.10 exists but values here do not match it). || DEPLETION_P: FAO-56 Rev.1 (2025) Table 8.2, \"Soil water depletion fraction for no stress (p) for field crops\" (p. 260), values tabulated for ETc ~ 5 mm/day. || PERCOLATION: ASSUMED - not applicable / not found.",
+    "constant_status": {
+      "kc_ini": "MEASURED",
+      "kc_mid": "MEASURED",
+      "kc_end": "MEASURED",
+      "max_height_m": "MEASURED",
+      "root_depth_m": "MEASURED",
+      "stage_days": "ASSUMED",
+      "stage_gdd": "ASSUMED",
+      "t_base_c": "ASSUMED",
+      "t_upper_c": "ASSUMED",
+      "depletion_p": "MEASURED",
+      "percolation_mm_day": "ASSUMED"
+    }
   },
   {
     "crop": "greengram",
-    "kc_ini": 0.40,
-    "kc_mid": 1.10,
-    "kc_end": 0.40,
+    "kc_ini": 0.4,
+    "kc_mid": 1.1,
+    "kc_end": 0.4,
     "stage_days": {
       "ini": 20,
       "dev": 30,
@@ -217,12 +308,25 @@
       "max": 1.0
     },
     "depletion_p": 0.45,
-    "source": "FAO-56 (2025) Table 6.2 (p. 168), Table 6.10 (p. 205), Table 6.12 (p. 211), Table 8.2 (p. 260); FAO-56 (1998) Table 11"
+    "source": "KC: FAO-56 Rev.1 (2025) Table 6.2 (p. 168-170), single time-averaged Kc. Verified line-by-line by the auditor. || STAGE_DAYS: ASSUMED - NOT FOUND in FAO-56 Rev.1 (2025), which abolished static calendar stage lengths. Value is the 1998 Table 11 row or a project value. || STAGE_GDD/T_BASE/T_UPPER: ASSUMED - NOT FOUND. ASSUMED - NOT FOUND (Table 6.10 exists but values here do not match it). || DEPLETION_P: FAO-56 Rev.1 (2025) Table 8.2, \"Soil water depletion fraction for no stress (p) for field crops\" (p. 260), values tabulated for ETc ~ 5 mm/day. || PERCOLATION: ASSUMED - not applicable / not found.",
+    "constant_status": {
+      "kc_ini": "MEASURED",
+      "kc_mid": "MEASURED",
+      "kc_end": "MEASURED",
+      "max_height_m": "MEASURED",
+      "root_depth_m": "MEASURED",
+      "stage_days": "ASSUMED",
+      "stage_gdd": "ASSUMED",
+      "t_base_c": "ASSUMED",
+      "t_upper_c": "ASSUMED",
+      "depletion_p": "MEASURED",
+      "percolation_mm_day": "ASSUMED"
+    }
   },
   {
     "crop": "blackgram",
-    "kc_ini": 0.40,
-    "kc_mid": 1.10,
+    "kc_ini": 0.4,
+    "kc_mid": 1.1,
     "kc_end": 0.35,
     "stage_days": {
       "ini": 15,
@@ -244,13 +348,26 @@
       "max": 1.0
     },
     "depletion_p": 0.45,
-    "source": "FAO-56 (2025) Table 6.2 (p. 168), Table 6.10 (p. 205), Table 6.12 (p. 211), Table 8.2 (p. 260); FAO-56 (1998) Table 11"
+    "source": "KC: FAO-56 Rev.1 (2025) Table 6.2 (p. 168-170), single time-averaged Kc. Verified line-by-line by the auditor. || STAGE_DAYS: ASSUMED - NOT FOUND in FAO-56 Rev.1 (2025), which abolished static calendar stage lengths. Value is the 1998 Table 11 row or a project value. || STAGE_GDD/T_BASE/T_UPPER: ASSUMED - NOT FOUND. ASSUMED - NOT FOUND (Table 6.10 exists but values here do not match it). || DEPLETION_P: FAO-56 Rev.1 (2025) Table 8.2, \"Soil water depletion fraction for no stress (p) for field crops\" (p. 260), values tabulated for ETc ~ 5 mm/day. || PERCOLATION: ASSUMED - not applicable / not found.",
+    "constant_status": {
+      "kc_ini": "MEASURED",
+      "kc_mid": "MEASURED",
+      "kc_end": "MEASURED",
+      "max_height_m": "MEASURED",
+      "root_depth_m": "MEASURED",
+      "stage_days": "ASSUMED",
+      "stage_gdd": "ASSUMED",
+      "t_base_c": "ASSUMED",
+      "t_upper_c": "ASSUMED",
+      "depletion_p": "MEASURED",
+      "percolation_mm_day": "ASSUMED"
+    }
   },
   {
     "crop": "redgram",
     "kc_ini": 0.35,
-    "kc_mid": 1.10,
-    "kc_end": 0.40,
+    "kc_mid": 1.1,
+    "kc_end": 0.4,
     "stage_days": {
       "ini": 25,
       "dev": 35,
@@ -262,12 +379,25 @@
       "min": 1.0,
       "max": 1.5
     },
-    "depletion_p": 0.60,
-    "source": "FAO-56 (1998) Table 11 (dry pulses/lentil 170-day row); FAO-56 (2025) book reference (p. 410, absent from FAO-56, ICRISAT/ANGRAU regional agronomic proxy)"
+    "depletion_p": 0.6,
+    "source": "KC: FAO-56 Rev.1 (2025) Table 6.2 (p. 168-170), single time-averaged Kc. Verified line-by-line by the auditor. || STAGE_DAYS: ASSUMED - NOT FOUND in FAO-56 Rev.1 (2025), which abolished static calendar stage lengths. Value is the 1998 Table 11 row or a project value. || STAGE_GDD/T_BASE/T_UPPER: ASSUMED - NOT FOUND. ASSUMED - NOT FOUND (Table 6.10 exists but values here do not match it). || DEPLETION_P: FAO-56 Rev.1 (2025) Table 8.2, \"Soil water depletion fraction for no stress (p) for field crops\" (p. 260), values tabulated for ETc ~ 5 mm/day. || PERCOLATION: ASSUMED - not applicable / not found.",
+    "constant_status": {
+      "kc_ini": "MEASURED",
+      "kc_mid": "MEASURED",
+      "kc_end": "MEASURED",
+      "max_height_m": "MEASURED",
+      "root_depth_m": "MEASURED",
+      "stage_days": "ASSUMED",
+      "stage_gdd": "ASSUMED",
+      "t_base_c": "ASSUMED",
+      "t_upper_c": "ASSUMED",
+      "depletion_p": "MEASURED",
+      "percolation_mm_day": "ASSUMED"
+    }
   },
   {
     "crop": "chickpea",
-    "kc_ini": 0.40,
+    "kc_ini": 0.4,
     "kc_mid": 1.05,
     "kc_end": 0.35,
     "stage_days": {
@@ -290,6 +420,19 @@
       "max": 1.0
     },
     "depletion_p": 0.45,
-    "source": "FAO-56 (2025) Table 6.2 (p. 168), Table 6.10 (p. 205), Table 6.12 (p. 211), Table 8.2 (p. 260); FAO-56 (1998) Table 11"
+    "source": "KC: FAO-56 Rev.1 (2025) Table 6.2 (p. 168-170), single time-averaged Kc. Verified line-by-line by the auditor. || STAGE_DAYS: ASSUMED - NOT FOUND in FAO-56 Rev.1 (2025), which abolished static calendar stage lengths. Value is the 1998 Table 11 row or a project value. || STAGE_GDD/T_BASE/T_UPPER: ASSUMED - NOT FOUND. ASSUMED - NOT FOUND (Table 6.10 exists but values here do not match it). || DEPLETION_P: FAO-56 Rev.1 (2025) Table 8.2, \"Soil water depletion fraction for no stress (p) for field crops\" (p. 260), values tabulated for ETc ~ 5 mm/day. || PERCOLATION: ASSUMED - not applicable / not found.",
+    "constant_status": {
+      "kc_ini": "MEASURED",
+      "kc_mid": "MEASURED",
+      "kc_end": "MEASURED",
+      "max_height_m": "MEASURED",
+      "root_depth_m": "MEASURED",
+      "stage_days": "ASSUMED",
+      "stage_gdd": "ASSUMED",
+      "t_base_c": "ASSUMED",
+      "t_upper_c": "ASSUMED",
+      "depletion_p": "MEASURED",
+      "percolation_mm_day": "ASSUMED"
+    }
   }
 ]
