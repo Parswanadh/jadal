@@ -78,4 +78,29 @@ describe("coordinator api adapter (mock mode)", () => {
     expect(audit.summaryEn).toBeTruthy();
     expect(audit.summaryTe).toBeTruthy();
   });
+
+  it("saves a turn time and reads it back from the next proposal", async () => {
+    const water = await api.proposeRoster("equal_water");
+    const turn = water.turns[0];
+    expect(turn).toBeDefined();
+    const start = "2026-09-15T02:00:00.000Z";
+    const end = "2026-09-15T05:00:00.000Z";
+    expect(await api.updateTurn(water.id, turn?.id ?? "", start, end)).toEqual({ start, end });
+    const again = await api.proposeRoster("equal_water");
+    expect(again.turns.find((t) => t.id === turn?.id)).toMatchObject({ start, end });
+  });
+
+  it("refuses a backwards turn time", async () => {
+    const water = await api.proposeRoster("equal_water");
+    const turn = water.turns[0];
+    await expect(
+      api.updateTurn(water.id, turn?.id ?? "", "2026-09-15T05:00:00.000Z", "2026-09-15T02:00:00.000Z"),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it("alerts one farmer and reports simulated dispatch", async () => {
+    const res = await api.sendAlert("f1", "sms", "Please check your turn.");
+    expect(res.simulated).toBe(true);
+    expect(res.detail).toBeTruthy();
+  });
 });

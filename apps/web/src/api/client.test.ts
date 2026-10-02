@@ -138,3 +138,66 @@ describe("mock builders echo caller input", () => {
     expect(balances.conservation_ok).toBe(true);
   });
 });
+
+// The two coordinator-tool endpoints are outside the frozen contract, so they
+// are pinned here rather than by the per-route loop above.
+describe("coordinator tool endpoints (mock mode)", () => {
+  it("saves a turn time and re-applies it to the next proposal", async () => {
+    vi.stubEnv("VITE_MOCK", "1");
+    await client.demoReset();
+    const before = await client.proposeRoster({ release_window_id: "rw1", mode: "equal_water" });
+    const turn = before.roster.turns[0];
+    expect(turn).toBeDefined();
+    const start = "2026-09-15T01:00:00.000Z";
+    const end = "2026-09-15T04:00:00.000Z";
+    const res = await client.updateTurn(before.roster.id, turn?.id ?? "", { start, end });
+    expect(res.ok).toBe(true);
+    expect(res.turn).toMatchObject({ start, end });
+    const after = await client.proposeRoster({ release_window_id: "rw1", mode: "equal_water" });
+    expect(after.roster.turns.find((t) => t.id === turn?.id)).toMatchObject({ start, end });
+  });
+
+  it("rejects a backwards pair, an unknown turn and an unknown schedule", async () => {
+    vi.stubEnv("VITE_MOCK", "1");
+    await client.demoReset();
+    const good = { start: "2026-09-15T01:00:00.000Z", end: "2026-09-15T04:00:00.000Z" };
+    await expect(
+      client.updateTurn("r-rw1-equal_water", "t-rw1-o1", { start: good.end, end: good.start }),
+    ).rejects.toMatchObject({ status: 400, code: "backwards_times" });
+    await expect(client.updateTurn("r-rw1-equal_water", "no-such-turn", good)).rejects.toMatchObject({
+      status: 404,
+      code: "turn_not_found",
+    });
+    await expect(client.updateTurn("r-nope-equal_water", "t-rw1-o1", good)).rejects.toMatchObject({
+      status: 404,
+      code: "roster_not_found",
+    });
+  });
+
+  it("records a turn change in the audit", async () => {
+    vi.stubEnv("VITE_MOCK", "1");
+    await client.demoReset();
+    expect((await client.audit()).findings.some((f) => /changed by the coordinator/i.test(f.text))).toBe(false);
+    await client.updateTurn("r-rw1-equal_water", "t-rw1-o1", {
+      start: "2026-09-15T01:00:00.000Z",
+      end: "2026-09-15T04:00:00.000Z",
+    });
+    expect((await client.audit()).findings.some((f) => /changed by the coordinator/i.test(f.text))).toBe(true);
+  });
+
+  it("sends an alert and reports simulated mode", async () => {
+    vi.stubEnv("VITE_MOCK", "1");
+    const res = await client.sendAlert({ farmer_id: "f1", channel: "whatsapp", message: "Please check your turn." });
+    expect(res.ok).toBe(true);
+    expect(res.simulated).toBe(true);
+    expect(res.contact_id).toBeTruthy();
+    expect(res.detail).toBeTruthy();
+  });
+
+  it("rejects an alert for a farmer it does not know", async () => {
+    vi.stubEnv("VITE_MOCK", "1");
+    await expect(client.sendAlert({ farmer_id: "no-such-farmer", channel: "call" })).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+});

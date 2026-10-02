@@ -325,7 +325,9 @@ export async function mockUpdateTurn(rosterId: string, turnId: string, body: Upd
   const match = /^r-(.+)-(equal_water|equal_hours)$/.exec(rosterId);
   const windowId = match?.[1];
   const mode = match?.[2] as "equal_water" | "equal_hours" | undefined;
-  if (!windowId || !mode) throw new ApiClientError(404, "That schedule was not found.", "roster_not_found");
+  if (!windowId || !mode || !scenario.release_windows.some((w) => w.id === windowId)) {
+    throw new ApiClientError(404, "That schedule was not found.", "roster_not_found");
+  }
 
   const proposed = mockProposeRoster({ release_window_id: windowId, mode }).roster;
   if (!proposed.turns.some((turn) => turn.id === turnId)) {
