@@ -170,3 +170,24 @@
 .coord .req-decided {
   margin-top: 1.5rem;
 }
+
+/* Turn-time editing, inline in the schedule table */
+.coord .turn-edit {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.coord .turn-edit-field {
+  display: grid;
+  gap: 0.15rem;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.coord .turn-edit-field input {
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.3rem 0.5rem;
+  font-size: var(--text-sm);
+}
+

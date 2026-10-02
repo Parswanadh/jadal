@@ -35,6 +35,7 @@ export default function CoordinatorConsole() {
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [ledger, setLedger] = useState<LedgerView | null>(null);
   const [audit, setAudit] = useState<AuditView | null>(null);
+  const [changedTurns, setChangedTurns] = useState<Set<string>>(new Set());
 
   const load = useCallback(async (): Promise<void> => {
     try {
@@ -111,6 +112,31 @@ export default function CoordinatorConsole() {
     setHours(mark);
   }, []);
 
+  /** Re-read the accounts after a schedule change, so its audit note appears. */
+  const refreshAccounts = useCallback(async (): Promise<void> => {
+    try {
+      const [lg, au] = await Promise.all([api.ledger(), api.audit()]);
+      setLedger(lg);
+      setAudit(au);
+    } catch {
+      // Keep the last good accounts rather than blanking the tab.
+    }
+  }, []);
+
+  const onTurnSaved = useCallback(
+    (rosterId: string, turnId: string, start: string, end: string) => {
+      const patch = (p: RosterProposal | null): RosterProposal | null =>
+        p && p.id === rosterId
+          ? { ...p, turns: p.turns.map((turn) => (turn.id === turnId ? { ...turn, start, end } : turn)) }
+          : p;
+      setWater(patch);
+      setHours(patch);
+      setChangedTurns((prev) => new Set(prev).add(`${rosterId}:${turnId}`));
+      void refreshAccounts();
+    },
+    [refreshAccounts],
+  );
+
   const tabLabel = useMemo(() => (k: Tab) => t(`coord.tabs.${k}`), [t]);
 
   return (
@@ -157,7 +183,16 @@ export default function CoordinatorConsole() {
                 onReload={() => void load()}
               />
             )}
-            {tab === "roster" && <RosterCompare water={water} hours={hours} onApproved={onRosterApproved} onReload={() => void load()} />}
+            {tab === "roster" && (
+              <RosterCompare
+                water={water}
+                hours={hours}
+                changedTurns={changedTurns}
+                onApproved={onRosterApproved}
+                onTurnSaved={onTurnSaved}
+                onReload={() => void load()}
+              />
+            )}
             {tab === "accounts" && <LedgerAudit ledger={ledger} audit={audit} />}
           </>
         )}
