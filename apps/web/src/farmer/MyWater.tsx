@@ -12,14 +12,17 @@ interface Props {
   entry: FarmerDirectoryEntry | null;
   outlets: Outlet[];
   onAsk: () => void;
+  /** Bumped when something happened that may change this farmer's water (a raise). */
+  refreshKey: number;
 }
 
 /** What a farmer cares about first: when is my turn, how much water this week, how much of the season is used. */
-export default function MyWater({ api, farmerId, entry, outlets, onAsk }: Props) {
+export default function MyWater({ api, farmerId, entry, outlets, onAsk, refreshKey }: Props) {
   const { t } = useI18n();
   const f = useFormat();
   const [view, setView] = useState<MyWaterView | null>(null);
   const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!farmerId) return;
@@ -37,7 +40,7 @@ export default function MyWater({ api, farmerId, entry, outlets, onAsk }: Props)
     return () => {
       cancelled = true;
     };
-  }, [api, farmerId]);
+  }, [api, farmerId, refreshKey, reloadKey]);
 
   if (!farmerId) {
     return <EmptyState title={t("mywater.noFarmerTitle")} body={t("mywater.noFarmerBody")} />;
@@ -68,6 +71,11 @@ export default function MyWater({ api, farmerId, entry, outlets, onAsk }: Props)
             <p className="muted">
               {single ? t("mywater.turnWhyShare", { share: f.m3(single.volume_m3) }) : t("mywater.turnWhyNoShare")}
             </p>
+            {!turn.approved && (
+              <button type="button" className="btn" onClick={() => setReloadKey((k) => k + 1)}>
+                {t("mywater.checkAgain")}
+              </button>
+            )}
           </>
         ) : (
           <EmptyState title={t("mywater.noTurnTitle")} body={t("mywater.noTurnBody")} />

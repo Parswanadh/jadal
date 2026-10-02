@@ -2,6 +2,7 @@ import type { Channel, CropPlan, Farmer, Plot, RequestType, WaterRequest } from 
 import type { z } from "zod";
 import { api, isMockMode } from "../api";
 import type { RegisterBody } from "../api";
+import type { Allocation } from "../api/extra";
 
 /**
  * Farmer-portal view of the shared typed API client (src/api/client.ts).
@@ -74,6 +75,12 @@ export interface FarmerApi {
   getMyWater(farmerId: string): Promise<MyWaterView>;
   raiseRequest(input: RaiseRequestInput): Promise<WaterRequest>;
   listRequests(): Promise<WaterRequest[]>;
+  /**
+   * The allocation the coordinator approved, keyed by request id: the granted
+   * volume and the turn window the API scheduled for this farmer. Empty when
+   * nothing has been approved yet.
+   */
+  allocation(farmerId: string): Promise<Record<string, Allocation>>;
 }
 
 export function createFarmerApi(): FarmerApi {
@@ -140,5 +147,35 @@ export function createFarmerApi(): FarmerApi {
     raiseRequest: (input) => api.raiseRequest(input),
 
     listRequests: () => api.listRequests(),
+
+    /**
+     * For every request of this farmer the coordinator approved, pair the
+     * granted volume with the turn window the API scheduled. Anything the API
+     * has not approved yet is left out rather than guessed at.
+     */
+    async allocation(farmerId) {
+      const [requests, windows] = await Promise.all([api.listRequests(), api.releaseWindows()]);
+      const approved = requests.filter(
+        (r) => r.farmer_id === farmerId && r.coordinator_decision?.decision === "approve",
+      );
+      if (approved.length === 0) return {};
+
+      let turn: { start: string; end: string } | null = null;
+      const win = windows[0];
+      if (win) {
+        const { roster } = await api.proposeRoster({ release_window_id: win.id, mode: "equal_water" });
+        const mine = roster.turns.find((t) => t.farmer_id === farmerId);
+        if (mine) turn = { start: mine.start, end: mine.end };
+      }
+      if (!turn) return {};
+
+      const out: Record<string, Allocation> = {};
+      for (const r of approved) {
+        const decided = r.coordinator_decision;
+        if (!decided) continue;
+        out[r.id] = { volume_m3: decided.volume_m3, start: turn.start, end: turn.end };
+      }
+      return out;
+    },
   };
 }

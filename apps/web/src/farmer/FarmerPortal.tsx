@@ -114,7 +114,9 @@ export default function FarmerPortal() {
       </div>
 
       <div role="tabpanel">
-        {tab === "mywater" && <MyWater api={api} farmerId={farmerId} entry={entry} outlets={outlets} onAsk={() => setTab("ask")} />}
+        {tab === "mywater" && (
+          <MyWater api={api} farmerId={farmerId} entry={entry} outlets={outlets} onAsk={() => setTab("ask")} refreshKey={refreshKey} />
+        )}
         {tab === "ask" && (
           <AskWater
             api={api}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { CropPlan, WaterRequest } from "@jadal/contracts";
 import { sendAlert } from "../api";
+import type { Allocation } from "../api/extra";
 import { useI18n } from "../i18n/I18nContext";
 import { useFormat } from "../lib/useFormat";
 import EmptyState from "../components/EmptyState";
@@ -40,6 +41,7 @@ export default function AskWater({ api, farmerId, farmerName, cropPlans, refresh
   const [done, setDone] = useState(false);
   const [sending, setSending] = useState(false);
   const [mine, setMine] = useState<WaterRequest[] | null>(null);
+  const [allocations, setAllocations] = useState<Record<string, Allocation>>({});
   const [agentCall, setAgentCall] = useState<AgentCallState | null>(null);
   const [callFailed, setCallFailed] = useState(false);
 
@@ -52,6 +54,25 @@ export default function AskWater({ api, farmerId, farmerName, cropPlans, refresh
       })
       .catch(() => {
         if (!cancelled) setMine([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, farmerId, refreshKey]);
+
+  // An approved request comes with an allocation: the amount the coordinator
+  // gave, and the turn window it belongs to. Both are read from the API; this
+  // screen never works out a volume or a window of its own.
+  useEffect(() => {
+    if (!farmerId) return;
+    let cancelled = false;
+    api
+      .allocation(farmerId)
+      .then((a) => {
+        if (!cancelled) setAllocations(a);
+      })
+      .catch(() => {
+        if (!cancelled) setAllocations({});
       });
     return () => {
       cancelled = true;
@@ -193,6 +214,14 @@ export default function AskWater({ api, farmerId, farmerName, cropPlans, refresh
                   <span className="small">
                     {t(r.coordinator_decision.decision === "approve" ? "ask.decisionApproved" : "ask.decisionRejected", {
                       m3: f.m3(r.coordinator_decision.volume_m3),
+                    })}
+                  </span>
+                )}
+                {r.coordinator_decision?.decision === "approve" && allocations[r.id] && (
+                  <span className="small">
+                    {t("ask.allocationLine", {
+                      m3: f.m3(allocations[r.id]?.volume_m3 ?? 0),
+                      when: f.range(allocations[r.id]?.start ?? "", allocations[r.id]?.end ?? ""),
                     })}
                   </span>
                 )}
