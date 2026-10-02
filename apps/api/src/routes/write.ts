@@ -17,6 +17,8 @@ import type { Hono } from "hono";
 
 import { routes } from "@jadal/contracts";
 import type {
+  Roster,
+  Turn,
   Contact,
   CropPlan,
   Entitlement,
@@ -162,6 +164,23 @@ function windowForDecision(windows: readonly ReleaseWindow[], at: string): Relea
     if (upcoming !== undefined) return upcoming;
   }
   return windows[0] ?? null;
+}
+
+/**
+ * Parse an ISO 8601 instant from a request body and normalise it to the UTC `Z` form.
+ *
+ * The contract's `IsoTime` is `z.string().datetime()`, which rejects the offset form (`+05:30`) that
+ * the fixture and a browser `datetime-local` control can both produce. This endpoint therefore
+ * accepts any string carrying an ISO date and a wall-clock time and parses it to a real instant. A
+ * bare date (`"2026-09-15"`) is not a turn time and is refused, as is anything `Date.parse` cannot
+ * read.
+ */
+function parseInstant(raw: string, field: "start" | "end"): string {
+  const ms = Date.parse(raw);
+  if (!Number.isFinite(ms) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw)) {
+    throw badRequest("invalid_timestamp", `${field} must be an ISO 8601 timestamp, got ${JSON.stringify(raw)}`);
+  }
+  return new Date(ms).toISOString();
 }
 
 /** Register every `POST` route on `app`. */
@@ -466,5 +485,50 @@ export function registerWriteRoutes(app: Hono<{ Bindings: Env }>): void {
     const body = await parseBody(c, AlertRequestSchema);
     const result = await handleAlert(c.env, body);
     return c.json(parseResponse(AlertResponseSchema, result));
+  });
+
+  app.patch(routes.setTurnTime.path, async (c) => {
+    const body = await parseBody(c, routes.setTurnTime.body);
+    const rosterId = c.req.param("id");
+    const turnId = c.req.param("turnId");
+
+    const roster = await getRoster(c.env, rosterId);
+    if (roster === null) {
+      throw notFound("roster_not_found", `no roster ${rosterId}`);
+    }
+
+    const turn = roster.turns.find((candidate) => candidate.id === turnId);
+    if (turn === undefined) {
+      // 400 rather than 404: the roster exists, the turn id is part of the body of the edit the
+      // caller is trying to make, and the frozen interface specifies 400 for an unknown turn.
+      throw badRequest("turn_not_found", `roster ${rosterId} has no turn ${turnId}`);
+    }
+
+    const start = parseInstant(body.start, "start");
+    const end = parseInstant(body.end, "end");
+    if (Date.parse(end) <= Date.parse(start)) {
+      throw badRequest("invalid_interval", `end (${end}) must be after start (${start})`);
+    }
+
+    const updated: Turn = { ...turn, start, end };
+    const updatedRoster: Roster = {
+      id: roster.id,
+      canal_id: roster.canal_id,
+      release_window_id: roster.release_window_id,
+      status: roster.status,
+      turns: roster.turns.map((candidate) => (candidate.id === turnId ? updated : candidate)),
+      shortfall_m3: roster.shortfall_m3,
+    };
+
+    await appendEvent(c.env, {
+      id: newId("evt"),
+      at: await now(c.env),
+      canal_id: DEMO_CANAL_ID,
+      actor: COORDINATOR_ACTOR,
+      type: "roster.proposed",
+      roster: updatedRoster,
+    });
+
+    return c.json(parseResponse(routes.setTurnTime.response, { ok: true, turn: updated }));
   });
 }

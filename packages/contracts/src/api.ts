@@ -8,6 +8,7 @@ import {
   CropPlan,
   Entitlement,
   Roster,
+  Turn,
   WaterRequest,
   LedgerEntry,
   Contact,
@@ -93,6 +94,21 @@ export const routes = {
     path: "/api/requests/:id/decide",
     body: z.object({ decision: z.enum(["approve", "reject"]), volume_m3: z.number().nonnegative(), note: z.string().optional() }),
     response: WaterRequest,
+  },
+
+  /**
+   * Coordinator edits one turn's time on an existing roster.
+   *
+   * `start`/`end` are ISO 8601 instants; the offset form is accepted and normalised to UTC. An
+   * unparseable timestamp or an interval that does not move forward is a 400, an unknown turn is a
+   * 400, and an unknown roster is a 404. The edit is recorded as a re-proposal of the same roster id,
+   * so it is auditable even though the contract has no dedicated turn-update event.
+   */
+  setTurnTime: {
+    method: "PATCH",
+    path: "/api/rosters/:id/turns/:turnId",
+    body: z.object({ start: z.string().min(1), end: z.string().min(1) }),
+    response: z.object({ ok: z.boolean(), turn: Turn }),
   },
 
   ledger: { method: "GET", path: "/api/ledger", response: z.object({ entries: z.array(LedgerEntry), balances: BalancesView }) },
