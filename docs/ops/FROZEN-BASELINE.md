@@ -72,3 +72,30 @@ These are **known and accepted**, not surprises:
 
 Real keys live only in `apps/api/.dev.vars`, which is gitignored (`**/.dev.vars`). Nothing in this
 tag contains a secret. Anyone restoring this state must supply their own `.dev.vars`.
+
+## Corrections after the freeze
+
+Recorded rather than rewritten, so the history stays honest.
+
+### A frozen tag with a red typecheck
+
+`pnpm --filter web typecheck` **fails at tag `freeze/2026-10-02`**. The contract route
+`setTurnTime` was added (PATCH /api/rosters/:id/turns/:turnId) but the web client never gained a
+matching function name, so `client.ts` and two `client.test.ts` cases fail. Found by the lane that
+fixed the coordinator's Reject action; the fix (a `setTurnTime` alias over the existing `updateTurn`
+PATCH) landed after the tag.
+
+Anyone restoring this tag should expect **typecheck red on the web package** and apply that fix.
+
+### Misattributed commit
+
+Commit `4321458` (`fix(api): bound the outbound queue retry…`) also contains **12 `apps/web` files**
+and two `tests/e2e` files belonging to a concurrent lane, because the orchestrator ran `git add -A`
+on the shared worktree while that lane was mid-edit.
+
+**No content was altered** — the lane verified the diff byte-for-byte. The damage is attribution only.
+The commit was left as-is rather than rewritten, because it is already pushed and other agents branch
+from it; a force-push on a shared branch is a worse risk than a misleading message.
+
+A `pre-commit` hook now refuses a commit that stages files outside `LANE_SCOPE`, verified by probe.
+**Rule going forward: on the shared integration worktree, stage explicit paths — never `git add -A`.**
