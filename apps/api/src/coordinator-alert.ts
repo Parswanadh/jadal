@@ -605,19 +605,11 @@ export async function notifyFarmerOfAlert(env: Env, input: FarmerAlertInput): Pr
   const note = input.message?.trim() ?? "";
   const label = `coordinator alert for ${input.farmer_id}`;
 
-  // No allocation and nothing the coordinator wrote: there is no true sentence to say. Say so rather
-  // than rendering a template that asserts a reschedule that did not happen.
-  if (allocation === undefined && note.length === 0) {
-    return {
-      ...outcome({
-        simulated: true,
-        alerted: false,
-        skipped: "no allocation and no message: nothing true to tell the farmer",
-      }),
-      messageTe: "",
-      messageEn: "",
-    };
-  }
+  // A coordinator alert always has a severity, and the severity is itself a true thing to say
+  // ("this is an urgent alert"), so the call goes out carrying the severity's own template rather
+  // than nothing. An earlier version refused to dial when there was no allocation and no free-text
+  // message; because the UI defaults to a severity with an empty message — a perfectly reasonable
+  // "notify this farmer" action — that made the coordinator's Alert button look broken.
 
   const result = await dispatchFarmerMessage(env, {
     label,

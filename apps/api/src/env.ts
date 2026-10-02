@@ -59,6 +59,8 @@ export interface Env {
   META_WHATSAPP_TOKEN?: string;
   META_PHONE_NUMBER_ID?: string;
   REAL_TELEPHONY?: string;
+  /** "1" when the Twilio account is a trial (see `trialAccount` in `src/telephony`). */
+  TWILIO_TRIAL?: string;
 }
 
 /**

@@ -133,7 +133,7 @@ describe("POST /api/alerts — the coordinator alerts a farmer directly", () => 
     expect(contact?.message_en).not.toContain("Invalid Date");
   });
 
-  it("includes the coordinator's own message verbatim, and refuses to invent one when there is nothing true to say", async () => {
+  it("includes the coordinator's own message verbatim, and still speaks when only a severity is given", async () => {
     const env = await seededEnv({ "api.twilio.com": TWILIO_ACCEPTED }, { ...TWILIO_ENV });
     const withNote = expectOk(
       await postAlert(env, {
@@ -148,14 +148,19 @@ describe("POST /api/alerts — the coordinator alerts a farmer directly", () => 
     expect(contact?.message_te).toContain("Please check your field gate.");
     expect(contact?.message_en).toContain("Please check your field gate.");
 
-    // No allocation and no message: there is no true sentence, so nothing is dialled and the response
-    // says exactly that rather than rendering a template that asserts a change that did not happen.
-    const empty = await seededEnv({ "api.twilio.com": TWILIO_ACCEPTED }, { ...TWILIO_ENV });
-    const nothing = expectOk(await postAlert(empty, { farmer_id: "f1", channel: "call", severity: "info" }));
-    expect(nothing.simulated).toBe(true);
-    expect(nothing.contact_id).toBe("");
-    expect(nothing.detail).toContain("nothing true to tell the farmer");
-    expect(twilioCalls(empty).length).toBe(0);
+    // A severity with no allocation and no free-text message is still a real, sayable alert: the
+    // severity's own wording is what the farmer hears. The UI defaults to exactly this (a severity
+    // and an empty message), so refusing to dial here made the coordinator's Alert button look
+    // broken. The call goes out, and it carries the severity's template.
+    const severityOnly = await seededEnv({ "api.twilio.com": TWILIO_ACCEPTED }, { ...TWILIO_ENV });
+    const spoken = expectOk(await postAlert(severityOnly, { farmer_id: "f1", channel: "call", severity: "info" }));
+    expect(spoken.simulated).toBe(false);
+    expect(spoken.contact_id).not.toBe("");
+    expect(twilioCalls(severityOnly).length).toBe(1);
+    const told = (await listContacts(severityOnly))[0];
+    expect(told?.message_te.length).toBeGreaterThan(0);
+    expect(told?.message_en.length).toBeGreaterThan(0);
+    expect(told?.message_en).not.toContain("Invalid Date");
   });
 
   it("accepts every severity and channel in the frozen shape", async () => {

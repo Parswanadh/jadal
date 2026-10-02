@@ -23,6 +23,12 @@ export interface TelephonyEnv {
   SKIP_TWILIO_SIGNATURE?: string;
   /** "0" or "false" forces simulated mode even when the Twilio vars are present. */
   REAL_TELEPHONY?: string;
+  /**
+   * "1" when the Twilio account is a trial. A trial rejects the extra call parameters
+   * (`Method`, status callbacks) with "trial accounts have limited parameter access", so they are
+   * omitted. Unset = paid account, which keeps the full parameter set.
+   */
+  TWILIO_TRIAL?: string;
 }
 
 /** Binary cache (KV / R2 / Cache API / Map). Keys are opaque strings. */

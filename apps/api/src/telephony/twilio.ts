@@ -15,6 +15,18 @@ export function realCallsEnabled(env: TelephonyDeps["env"]): boolean {
   return Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_FROM_NUMBER && env.PUBLIC_BASE_URL);
 }
 
+/**
+ * True when the account is a Twilio *trial*, which refuses the extra call parameters.
+ *
+ * Set `TWILIO_TRIAL=1` on a trial account. Default is unset (treated as a paid account), because the
+ * restriction is a property of the account, not of this code: guessing "trial" for a paid account
+ * would silently drop the status callbacks that keep `Contact.status` accurate.
+ */
+export function trialAccount(env: TelephonyDeps["env"]): boolean {
+  const flag = env.TWILIO_TRIAL;
+  return flag === "1" || flag === "true";
+}
+
 export async function messageCacheKey(contactId: string, text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return `telephony:msg:${contactId}:${toHex(digest).slice(0, 16)}`;
@@ -90,10 +102,16 @@ export async function placeCall(
   body.set("To", forwardTarget(env, input.to));
   body.set("From", env.TWILIO_FROM_NUMBER as string);
   body.set("Url", urls.twiml);
-  body.set("Method", "POST");
-  body.set("StatusCallback", urls.status);
-  body.set("StatusCallbackMethod", "POST");
-  for (const ev of ["initiated", "ringing", "answered", "completed"]) body.append("StatusCallbackEvent", ev);
+  // A Twilio *trial* account rejects `Method`, `Twilio` and the status-callback parameters with
+  // "trial accounts have limited parameter access", which fails the whole call. Send only what a
+  // trial permits there (To/From/Url) and keep the full set everywhere else. The TwiML URL is
+  // served by a POST route, so omitting `Method` is safe either way.
+  if (!trialAccount(env)) {
+    body.set("Method", "POST");
+    body.set("StatusCallback", urls.status);
+    body.set("StatusCallbackMethod", "POST");
+    for (const ev of ["initiated", "ringing", "answered", "completed"]) body.append("StatusCallbackEvent", ev);
+  }
 
   let res: Response;
   try {
