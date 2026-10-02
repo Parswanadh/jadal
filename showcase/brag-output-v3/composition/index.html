@@ -541,7 +541,7 @@
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="root" data-width="1920" data-height="1080">
+    <div id="root" data-composition-id="main" data-width="1920" data-height="1080">
       
       <!-- Scene 1: The Hook (0.0s – 8.0s) -->
       <section id="scene-1" class="scene">
@@ -600,8 +600,11 @@
           <!-- Real app footage: canal ribbon video cropped to top ribbon card only -->
           <div class="video-crop-card" id="video-card">
             <video
+              id="canal-video"
               src="assets/video/canal-seepage.webm"
               class="cropped-canal-video"
+              data-start="8.0"
+              data-duration="10.0"
               autoplay
               loop
               muted
@@ -939,6 +942,7 @@
       tl.set("#scene-4", { opacity: 0, pointerEvents: "none" }, 0);
       tl.set("#scene-5", { opacity: 0, pointerEvents: "none" }, 0);
       tl.set("#scene-6", { opacity: 0, pointerEvents: "none" }, 0);
+      tl.set("#video-card", { scale: 1.0, opacity: 1.0 }, 0);
 
       // --- Scene 1: 0.0s – 8.0s (Hook) ---
       tl.to("#scene-1", { opacity: 1, duration: 0.6, ease: "power2.out" }, 0.0);
@@ -951,9 +955,9 @@
       tl.to("#scene-2", { opacity: 1, duration: 0.5, ease: "power2.out" }, 8.0);
       tl.set("#caption-en", { textContent: "Outlet 1 receives 0.145 m³/s (3.5% loss). Outlet 8 receives 0.106 m³/s (29.4% loss)." }, 8.0);
       tl.set("#caption-te", { textContent: "తల వద్ద 0.145 m³/s (3.5% నష్టం) · తోక వద్ద 0.106 m³/s (29.4% నష్టం)." }, 8.0);
-      tl.fromTo("#video-card", { scale: 0.96, opacity: 0.8 }, { scale: 1.0, opacity: 1.0, duration: 1.0, ease: "power2.out" }, 8.2);
+      tl.fromTo("#video-card", { scale: 0.96, opacity: 0.8 }, { scale: 1.0, opacity: 1.0, duration: 1.0, ease: "power2.out", immediateRender: false }, 8.2);
       tl.fromTo("#metrics-col", { x: 30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.8, ease: "power2.out" }, 8.4);
-      tl.fromTo("#video-card", { scale: 1.0 }, { scale: 1.04, duration: 8.0, ease: "sine.inOut" }, 9.5);
+      tl.to("#video-card", { scale: 1.04, duration: 8.0, ease: "sine.inOut" }, 9.5);
       tl.to("#scene-2", { opacity: 0, duration: 0.4, ease: "power2.in" }, 17.6);
 
       // --- Scene 3: 18.0s – 28.0s (Equal Volume) ---
