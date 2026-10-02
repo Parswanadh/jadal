@@ -1,4 +1,4 @@
-import { expect, settle, test } from './support/app';
+import { expect, settle, signInAs, test } from './support/app';
 import en from '../../apps/web/src/i18n/en.json';
 
 /**
@@ -55,10 +55,19 @@ test('the demo walkthrough can be stepped through all 6 steps', async ({ page, c
 });
 
 test('"See it" opens the screen where the step shows up', async ({ page }) => {
+  // The demo is public, but the screen it points at is role-gated.
+  await signInAs(page, 'coordinator');
   await page.goto('/demo');
   await page.getByRole('link', { name: en.demo.seeIt }).nth(1).click();
   await expect(page.getByRole('heading', { level: 1, name: en.page.coordinator.title })).toBeVisible();
   await expect(page.getByRole('tab', { name: new RegExp(en.coord.tabs.requests) })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('a signed-out visitor clicking a gated demo step is sent to /login', async ({ page }) => {
+  await page.goto('/demo');
+  await page.getByRole('link', { name: en.demo.seeIt }).nth(1).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(en.login.title);
 });
 
 test('the demo reset button returns the walkthrough to step 0', async ({ page }) => {
