@@ -1,0 +1,13 @@
+Everyone got their hours. The tail still lost the crop. Hours are not water.
+
+Introducing Jadal: open-channel hydraulics and equal-volume turn distribution for gravity irrigation canals.
+
+- Pure Manning conveyance physics: Outlet 1 delivers 0.145 m³/s (3.5% loss); Outlet 8 delivers 0.106 m³/s (29.4% loss).
+- Equal volume allocation: turn durations scale with local flow (Tᵢ = Vᵢ / Q(xᵢ)) so tail turns run longer to deliver fair water.
+- Strict human gating: LLMs propose, deterministic core computes, coordinator approves. Nothing reaches a farmer without approval.
+- Spoken Telugu telephony outreach with rate-limited dispatch and mathematical double-entry conservation ledger (Debits = Credits).
+
+*Note: Telugu voice audio and captions are machine-written and pending native speaker review (docs/review/telugu-native-review.md).
+
+Built with TypeScript, Cloudflare Workers, and open-channel hydraulics.
+#civictech #hydraulics #agriculture #waterconservation #telugu
