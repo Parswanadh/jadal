@@ -191,20 +191,27 @@ const FACT_KEYS = [
   "requestStatus",
   "requestVolumeM3",
   "statusLabelTe",
+  "isLongerTurn",
+  "isLongerThanBaseline",
 ] as const;
 
 /** Facts that are numbers; everything else is text. Keeps `chainageM=4B` from becoming `NaN`. */
 const NUMERIC_FACT_KEYS = new Set<string>(["chainageM", "allocatedM3", "rainMm", "leadHours", "requestVolumeM3"]);
+/** Facts that are boolean flags. */
+const BOOLEAN_FACT_KEYS = new Set<string>(["isLongerTurn", "isLongerThanBaseline"]);
 
 /** Read {@link MessageFacts} out of a query string, dropping empty and unparseable values. */
 export function factsFromParams(params: URLSearchParams): MessageFacts {
-  const facts: Record<string, string | number> = {};
+  const facts: Record<string, string | number | boolean> = {};
   for (const key of FACT_KEYS) {
     const raw = params.get(key);
     if (raw === null || raw.length === 0) continue;
     if (NUMERIC_FACT_KEYS.has(key)) {
       const value = Number(raw);
       if (Number.isFinite(value)) facts[key] = value;
+    } else if (BOOLEAN_FACT_KEYS.has(key)) {
+      if (raw === "true" || raw === "1") facts[key] = true;
+      else if (raw === "false" || raw === "0") facts[key] = false;
     } else {
       facts[key] = raw;
     }

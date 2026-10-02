@@ -93,12 +93,12 @@ import { formatVolumeM3, templateForPurpose, type MessageFacts } from "./voice/t
  */
 export const COORDINATOR_REQUEST_TE =
   "నమస్కారం, జడల్ కాలువ కార్యాలయం నుండి కాల్. {farmer} గారు {volume} ఘన మీటర్ల నీటి కోసం " +
-  "అభ్యర్థన పెట్టారు. కారణం: {reason}. ఈ అభ్యర్థనకు మీ ఆమోదం కావాలి. " +
-  "ఆమోదించడానికి వన్ నొక్కండి, తిరస్కరించడానికి టూ నొక్కండి.";
+  "అభ్యర్థన పెట్టారు. కారణం: {reason}. ఈ అభ్యర్థనకు మీ ఆమోదం కావాలి, మీరు ఆమోదించే వరకు ఏదీ ఖరారు కాదు. " +
+  "ఆమోదించడానికి 1 నొక్కండి, తిరస్కరించడానికి 2 నొక్కండి.";
 
 export const COORDINATOR_REQUEST_EN =
   "Hello, this is the Jadal canal office calling. {farmer} has raised a request for {volume} cubic " +
-  "metres of water. Reason: {reason}. This request needs your approval. " +
+  "metres of water. Reason: {reason}. This request needs your approval, and nothing is final until you approve. " +
   "Press 1 to approve, or press 2 to reject.";
 
 /** Fill `{placeholder}`s, or `""` for a placeholder with no value. */
@@ -398,6 +398,8 @@ export interface AllocationAlertInput {
   readonly windowEnd?: string;
   /** The request the allocation came from, for the audit trail. */
   readonly requestId?: string;
+  /** True when this turn is sized longer to compensate for seepage down the canal. */
+  readonly isLongerTurn?: boolean;
 }
 
 /** The allocation outcome, plus the exact text the farmer is told (empty only if the attempt threw). */
@@ -617,6 +619,7 @@ export async function notifyFarmerOfAllocation(
       requestStatus: "approved",
       ...(input.windowStart === undefined ? {} : { windowStart: input.windowStart }),
       ...(input.windowEnd === undefined ? {} : { windowEnd: input.windowEnd }),
+      ...(input.isLongerTurn === undefined ? {} : { isLongerTurn: input.isLongerTurn }),
     },
     extraTe: "",
     extraEn: "",

@@ -55,6 +55,10 @@ export interface MessageFacts {
   readonly requestVolumeM3?: number;
   /** Free-text status shown to the farmer, e.g. `rejected` in their language. */
   readonly statusLabelTe?: string;
+  /** True when this turn is sized longer than equal hours to compensate for seepage losses down the canal. */
+  readonly isLongerTurn?: boolean;
+  /** Alias for isLongerTurn. */
+  readonly isLongerThanBaseline?: boolean;
 }
 
 /** A message in both languages. Matches the `message_te` / `message_en` pair on `Contact`. */
@@ -239,12 +243,12 @@ function outletClauseEn(facts: MessageFacts): string {
   return chainage.length === 0 ? `${facts.outletName}` : `${facts.outletName} (chainage ${chainage} m)`;
 }
 
-/** `రాత్రి 10:30 నుండి 01:00 వరకు` / `from 10:30 to 01:00`, or `""` without a start. */
+/** `రాత్రి 10:30 నుండి 01:00 IST వరకు` / `from 10:30 to 01:00 IST`, or `""` without a start. */
 function windowClauseTe(facts: MessageFacts): string {
   const start = formatIstTime(facts.windowStart);
   if (start.length === 0) return "";
   const end = formatIstTime(facts.windowEnd);
-  return end.length === 0 ? `${start} నుండి` : `${start} నుండి ${end} వరకు`;
+  return end.length === 0 ? `${start} IST నుండి` : `${start} నుండి ${end} IST వరకు`;
 }
 
 function windowClauseEn(facts: MessageFacts): string {
@@ -265,6 +269,39 @@ function volumeClauseEn(facts: MessageFacts): string {
   return volume.length === 0 ? "" : `${volume} cubic metres`;
 }
 
+/** Does this turn carry longer duration to compensate for canal seepage loss? */
+export function isLongerTurn(facts: MessageFacts): boolean {
+  return Boolean(facts.isLongerTurn || facts.isLongerThanBaseline);
+}
+
+/**
+ * Explanation of why tail turns are longer than equal-hours baseline on an unlined canal:
+ * part of the water soaks into the canal on the way, so tail farms get a longer turn.
+ */
+export function whyLongerClauseTe(facts: MessageFacts): string {
+  if (!isLongerTurn(facts)) return "";
+  return "దారిలో కొంత నీరు కాలువలో ఇంకిపోతుంది, అందుకే ప్రతి పొలానికి న్యాయమైన వాటా అందేలా చివరి పొలాలకు ఎక్కువ సమయం వంతు ఇస్తారు.";
+}
+
+export function whyLongerClauseEn(facts: MessageFacts): string {
+  if (!isLongerTurn(facts)) return "";
+  return "Part of the water soaks into the canal on the way, so tail farms get a longer turn so every farm receives its fair share of water.";
+}
+
+/** Telugu translations for known request statuses. */
+const STATUS_MAP_TE: Readonly<Record<string, string>> = {
+  approved: "ఆమోదించబడింది",
+  rejected: "తిరస్కరించబడింది",
+  scheduled: "ఖరారైంది",
+  released: "విడుదలయింది",
+  delivered: "అందింది",
+  confirmed: "ధృవీకరించబడింది",
+  cancelled: "రద్దయింది",
+  expired: "గడువు ముగిసింది",
+  raised: "వేచి ఉంది",
+  triaged: "వేచి ఉంది",
+};
+
 /** Join non-empty clauses with a single space, dropping the ones that are not there. */
 function join(...parts: readonly string[]): string {
   return parts.filter((part) => part.trim().length > 0).join(" ").replace(/\s+/g, " ").trim();
@@ -283,9 +320,11 @@ export function rosterChangeTe(facts: MessageFacts): string {
     "జడల్: మీరు పొందబోయే నీటి వంతులో మార్పు జరిగింది.",
     greetingTe(facts),
     outletClauseTe(facts),
+    dayClauseTe(facts).length === 0 ? "" : `మీ విడుదల రోజు ${dayClauseTe(facts)}.`,
     windowClauseTe(facts).length === 0 ? "" : `మీరు పొందే విడుదల సమయం ${windowClauseTe(facts)}.`,
     volumeClauseTe(facts).length === 0 ? "" : `మీకు కేటాయించిన పరిమాణం ${volumeClauseTe(facts)}.`,
-    "కొత్త సమయానికి సిద్ధంగా ఉండండి. ఏవై అవసరమైతే మా కాలువ కార్యాలయానికి తెలియజేయండి.",
+    whyLongerClauseTe(facts),
+    "కొత్త సమయానికి సిద్ధంగా ఉండండి. నిర్ధారించడానికి 1 నొక్కండి లేదా మాట్లాడి చెప్పండి.",
   );
 }
 
@@ -294,9 +333,11 @@ export function rosterChangeEn(facts: MessageFacts): string {
     "Jadal: your water turn has been rescheduled.",
     greetingEn(facts),
     outletClauseEn(facts),
+    dayClauseEn(facts).length === 0 ? "" : `Your release day is ${dayClauseEn(facts)}.`,
     windowClauseEn(facts).length === 0 ? "" : `Your release window is ${windowClauseEn(facts)}.`,
     volumeClauseEn(facts).length === 0 ? "" : `Your allocated volume is ${volumeClauseEn(facts)}.`,
-    "Please be ready at the new time. Tell our canal office if this does not suit you.",
+    whyLongerClauseEn(facts),
+    "Please be ready at the new time. Press 1 to confirm, or speak your reply.",
   );
 }
 
@@ -312,9 +353,11 @@ export function nightReleaseWarningTe(facts: MessageFacts): string {
     "జడల్: రాత్రి నీటి విడుదల హెచ్చరిక.",
     greetingTe(facts),
     outletClauseTe(facts),
+    dayClauseTe(facts).length === 0 ? "" : `విడుదల రోజు ${dayClauseTe(facts)}.`,
     windowClauseTe(facts).length === 0 ? "" : `మీ విడుదల ${windowClauseTe(facts)} ప్రారంభమవుతుంది.`,
     volumeClauseTe(facts).length === 0 ? "" : `మీరు ${volumeClauseTe(facts)} పొందుతారు.`,
-    "దయచేసి చెంక చేయడానికి సిద్ధంగా ఉండండి. నీరు రాలేదంటే మా కాలువ కార్యాలయానికి వెంటనే తెలియజేయండి.",
+    whyLongerClauseTe(facts),
+    "దయచేసి పొలం గేటు తెరవడానికి సిద్ధంగా ఉండండి. నిర్ధారించడానికి 1 నొక్కండి లేదా మాట్లాడి చెప్పండి. నీరు రాలేదంటే మా కాలువ కార్యాలయానికి వెంటనే తెలియజేయండి.",
   );
 }
 
@@ -323,9 +366,11 @@ export function nightReleaseWarningEn(facts: MessageFacts): string {
     "Jadal: night water-release alert.",
     greetingEn(facts),
     outletClauseEn(facts),
+    dayClauseEn(facts).length === 0 ? "" : `The release day is ${dayClauseEn(facts)}.`,
     windowClauseEn(facts).length === 0 ? "" : `Your release starts ${windowClauseEn(facts)}.`,
     volumeClauseEn(facts).length === 0 ? "" : `You will receive ${volumeClauseEn(facts)}.`,
-    "Please be ready to open your field gate. Call the canal office at once if the water does not reach you.",
+    whyLongerClauseEn(facts),
+    "Please be ready to open your field gate. Press 1 to confirm, or speak your reply. Call the canal office at once if the water does not reach you.",
   );
 }
 
@@ -374,7 +419,7 @@ export function rainPostponedEn(facts: MessageFacts): string {
  * on the WhatsApp thread; a translated status would make the call and the screen disagree.
  */
 export function requestUpdateTe(facts: MessageFacts): string {
-  const status = facts.statusLabelTe ?? facts.requestStatus ?? "తెలియడం లేదు";
+  const status = facts.statusLabelTe ?? (facts.requestStatus ? (STATUS_MAP_TE[facts.requestStatus] ?? facts.requestStatus) : "తెలియడం లేదు");
   return join(
     "జడల్: మీ నీటి అభ్యర్థన స్థితి.",
     greetingTe(facts),
@@ -382,6 +427,7 @@ export function requestUpdateTe(facts: MessageFacts): string {
     facts.requestVolumeM3 === undefined ? "" : `మీరు అభ్యర్థించిన పరిమాణం ${formatVolumeM3(facts.requestVolumeM3)} ఘన మీటర్లు.`,
     outletClauseTe(facts),
     windowClauseTe(facts).length === 0 ? "" : `ఎప్పుడు పొందుతారో అయితే: ${windowClauseTe(facts)}.`,
+    whyLongerClauseTe(facts),
     "వివరాలకు మా కాలువ కార్యాలయాన్ని సంప్రదించండి.",
   );
 }
@@ -395,6 +441,7 @@ export function requestUpdateEn(facts: MessageFacts): string {
     facts.requestVolumeM3 === undefined ? "" : `You asked for ${formatVolumeM3(facts.requestVolumeM3)} cubic metres.`,
     outletClauseEn(facts),
     windowClauseEn(facts).length === 0 ? "" : `Expected release: ${windowClauseEn(facts)}.`,
+    whyLongerClauseEn(facts),
     "Contact the canal office for details.",
   );
 }
@@ -410,9 +457,11 @@ export function reminderTe(facts: MessageFacts): string {
     "జడల్: మీ నీటి వంతు గుర్తింపు.",
     greetingTe(facts),
     outletClauseTe(facts),
+    dayClauseTe(facts).length === 0 ? "" : `విడుదల రోజు ${dayClauseTe(facts)}.`,
     windowClauseTe(facts).length === 0 ? "" : `రాబోయే విడుదల ${windowClauseTe(facts)} ప్రారంభమవుతుంది.`,
     volumeClauseTe(facts).length === 0 ? "" : `మీకు ${volumeClauseTe(facts)} నీరు అందుబాటులో ఉంటుంది.`,
-    "దయచేసి సమయానికి చెంక చేయండి.",
+    whyLongerClauseTe(facts),
+    "దయచేసి సమయానికి పొలం గేటు తెరవండి. నిర్ధారించడానికి 1 నొక్కండి లేదా మాట్లాడి చెప్పండి.",
   );
 }
 
@@ -421,9 +470,11 @@ export function reminderEn(facts: MessageFacts): string {
     "Jadal: reminder about your water turn.",
     greetingEn(facts),
     outletClauseEn(facts),
+    dayClauseEn(facts).length === 0 ? "" : `The release day is ${dayClauseEn(facts)}.`,
     windowClauseEn(facts).length === 0 ? "" : `Your release starts ${windowClauseEn(facts)}.`,
     volumeClauseEn(facts).length === 0 ? "" : `${volumeClauseEn(facts)} of water is available for you.`,
-    "Please open your field gate on time.",
+    whyLongerClauseEn(facts),
+    "Please open your field gate on time. Press 1 to confirm, or speak your reply.",
   );
 }
 
@@ -538,7 +589,8 @@ export function nextTurnTe(facts: MessageFacts): string {
     windowClauseTe(facts).length === 0 ? "" : `విడుదల సమయం ${windowClauseTe(facts)}.`,
     outletClauseTe(facts),
     volumeClauseTe(facts).length === 0 ? "" : `మీకు కేటాయించిన పరిమాణం ${volumeClauseTe(facts)}.`,
-    "దయచేసి సమయానికి సిద్ధంగా ఉండండి.",
+    whyLongerClauseTe(facts),
+    "దయచేసి సమయానికి సిద్ధంగా ఉండండి. నిర్ధారించడానికి 1 నొక్కండి లేదా మాట్లాడి చెప్పండి.",
   );
 }
 
@@ -550,7 +602,8 @@ export function nextTurnEn(facts: MessageFacts): string {
     windowClauseEn(facts).length === 0 ? "" : `The release window is ${windowClauseEn(facts)}.`,
     outletClauseEn(facts),
     volumeClauseEn(facts).length === 0 ? "" : `Your allocated volume is ${volumeClauseEn(facts)}.`,
-    "Please be ready on time.",
+    whyLongerClauseEn(facts),
+    "Please be ready on time. Press 1 to confirm, or speak your reply.",
   );
 }
 
@@ -566,7 +619,8 @@ export function requestApprovedTe(facts: MessageFacts): string {
     dayClauseTe(facts).length === 0 ? "" : `విడుదల రోజు ${dayClauseTe(facts)}.`,
     windowClauseTe(facts).length === 0 ? "" : `విడుదల సమయం ${windowClauseTe(facts)}.`,
     outletClauseTe(facts),
-    "దయచేసి సమయానికి సిద్ధంగా ఉండండి.",
+    whyLongerClauseTe(facts),
+    "దయచేసి సమయానికి సిద్ధంగా ఉండండి. నిర్ధారించడానికి 1 నొక్కండి లేదా మాట్లాడి చెప్పండి.",
   );
 }
 
@@ -578,7 +632,8 @@ export function requestApprovedEn(facts: MessageFacts): string {
     dayClauseEn(facts).length === 0 ? "" : `The release day is ${dayClauseEn(facts)}.`,
     windowClauseEn(facts).length === 0 ? "" : `The release window is ${windowClauseEn(facts)}.`,
     outletClauseEn(facts),
-    "Please be ready on time.",
+    whyLongerClauseEn(facts),
+    "Please be ready on time. Press 1 to confirm, or speak your reply.",
   );
 }
 
@@ -661,6 +716,7 @@ export function alertTe(severity: AlertSeverity, facts: MessageFacts): string {
     dayClauseTe(facts).length === 0 ? "" : `విడుదల రోజు ${dayClauseTe(facts)}.`,
     windowClauseTe(facts).length === 0 ? "" : `విడుదల సమయం ${windowClauseTe(facts)}.`,
     volumeClauseTe(facts).length === 0 ? "" : `మీకు ${volumeClauseTe(facts)} నీరు.`,
+    whyLongerClauseTe(facts),
     closing,
   );
 }
@@ -679,6 +735,7 @@ export function alertEn(severity: AlertSeverity, facts: MessageFacts): string {
     dayClauseEn(facts).length === 0 ? "" : `The release day is ${dayClauseEn(facts)}.`,
     windowClauseEn(facts).length === 0 ? "" : `The release window is ${windowClauseEn(facts)}.`,
     volumeClauseEn(facts).length === 0 ? "" : `${volumeClauseEn(facts)} of water for you.`,
+    whyLongerClauseEn(facts),
     closing,
   );
 }
