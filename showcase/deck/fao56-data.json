@@ -23659,9 +23659,23 @@
       "printed_page": null,
       "line_range": null,
       "parse_status": "verified",
-      "shipped": false,
+      "shipped": true,
       "shipped_match": null,
-      "differs_from_book": false
+      "differs_from_book": true,
+      "shipped_crop_id": "redgram",
+      "shipped_constant_status": {
+        "kc_ini": "UNSOURCED",
+        "kc_mid": "UNSOURCED",
+        "kc_end": "UNSOURCED",
+        "max_height_m": "UNSOURCED",
+        "root_depth_m": "UNSOURCED",
+        "stage_days": "UNSOURCED",
+        "stage_gdd": "UNSOURCED",
+        "t_base_c": "UNSOURCED",
+        "t_upper_c": "UNSOURCED",
+        "depletion_p": "UNSOURCED",
+        "percolation_mm_day": "UNSOURCED"
+      }
     },
     {
       "table_id": "tracked",
@@ -35915,9 +35929,23 @@
       "printed_page": null,
       "line_range": null,
       "parse_status": "verified",
-      "shipped": false,
+      "shipped": true,
       "shipped_match": null,
-      "differs_from_book": false
+      "differs_from_book": true,
+      "shipped_crop_id": "redgram",
+      "shipped_constant_status": {
+        "kc_ini": "UNSOURCED",
+        "kc_mid": "UNSOURCED",
+        "kc_end": "UNSOURCED",
+        "max_height_m": "UNSOURCED",
+        "root_depth_m": "UNSOURCED",
+        "stage_days": "UNSOURCED",
+        "stage_gdd": "UNSOURCED",
+        "t_base_c": "UNSOURCED",
+        "t_upper_c": "UNSOURCED",
+        "depletion_p": "UNSOURCED",
+        "percolation_mm_day": "UNSOURCED"
+      }
     },
     {
       "table_id": "tracked",

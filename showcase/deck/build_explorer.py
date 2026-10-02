@@ -742,6 +742,15 @@ def run_cross_validation(all_book_rows, shipped_crops):
         file_cites = m_cites.group(1) if m_cites else None
 
         if target is None:
+            # Tag the tracked row for redgram in all_rows if present
+            for r in all_book_rows:
+                if "redgram" in r["crop"].lower() and r.get("source_type") == "tracked_doc" and r.get("kc_ini") == 0.35:
+                    r["shipped"] = True
+                    r["shipped_crop_id"] = "redgram"
+                    r["differs_from_book"] = True
+                    r["shipped_constant_status"] = sc.get("constant_status", {})
+                    break
+
             results.append({
                 "shipped_crop": c_id,
                 "shipped_variant": v_id,
@@ -1611,7 +1620,7 @@ def main():
     # 3. Load Shipped Crops & Cross-validate across ALL book tables
     shipped_crops = load_shipped_crops()
     print(f"Shipped crops loaded: {len(shipped_crops)} rows")
-    cross_validation = run_cross_validation(book_rows, shipped_crops)
+    cross_validation = run_cross_validation(all_rows, shipped_crops)
 
     # 4. Sanity Checks per table
     table_dict = {
