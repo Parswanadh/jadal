@@ -869,7 +869,9 @@ describe("case study voice messages: en + te parity, placeholders, and seepage e
     expect(latinMatch).toBeNull();
   });
 
-  it.each(ALL_BUILDERS.filter(([, , , supportsSeepage]) => supportsSeepage))("%s includes why longer turn sentence when isLongerTurn is true", (_name, teFn, enFn) => {
+  const SEEPAGE_BUILDERS = ALL_BUILDERS.filter((item) => item[3]);
+
+  it.each(SEEPAGE_BUILDERS)("%s includes why longer turn sentence when isLongerTurn is true", (_name, teFn, enFn) => {
     const factsWithLonger = { ...TELUGU_FACTS, isLongerTurn: true };
     const te = teFn(factsWithLonger);
     const en = enFn(factsWithLonger);
@@ -881,7 +883,7 @@ describe("case study voice messages: en + te parity, placeholders, and seepage e
     expect(en).toContain("tail farms get a longer turn");
   });
 
-  it.each(ALL_BUILDERS.filter(([, , , supportsSeepage]))("%s omits why longer turn sentence when isLongerTurn is false or undefined", (_name, teFn, enFn) => {
+  it.each(SEEPAGE_BUILDERS)("%s omits why longer turn sentence when isLongerTurn is false or undefined", (_name, teFn, enFn) => {
     const factsNormal = { ...TELUGU_FACTS, isLongerTurn: false };
     const te = teFn(factsNormal);
     const en = enFn(factsNormal);
