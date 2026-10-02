@@ -55,3 +55,54 @@ webhooks (`twiml` → `gather` with DTMF `1`) so the acknowledgement is written 
 Its last test asserts that no contact was ever marked `sent` or `failed`, i.e. that nothing dialled.
 
 `pnpm e2e` (the UI suite) is unaffected: it ignores `live/**` and starts only the web dev server.
+
+## 4. System-1 / Laya
+
+`SYSTEM1_PROVIDER` (unset => `auto`) selects the classifier chain: `laya -> jev -> rules` for
+`auto` and for an explicit `laya`, `jev -> laya -> rules` for `jev`, and `rules` alone for `rules`.
+`rules` never touches the network. Whatever answers, the decision carries `source=laya|jev|rules`,
+so a fallback is never reported as a model call.
+
+Laya is a **local sidecar** (`services/laya`, `POST /decide`), so it is not reachable through the
+Cloudflare AI Gateway and is never gateway-prefixed. With `LAYA_ENDPOINT` unset the chain records
+`not_configured` for Laya and lands on Jev/rules every time. To enable it, put the sidecar URL in
+`apps/api/.dev.vars` (gitignored) — `wrangler dev` reads that file automatically, so `pnpm dev:live`
+needs no extra flag:
+
+```dotenv
+# a name and a local placeholder, never a secret
+LAYA_ENDPOINT=http://127.0.0.1:8099/decide
+# optional; unset => 4000 ms, clamped to 100..15000
+LAYA_TIMEOUT_MS=
+```
+
+`LAYA_ENDPOINT` is parsed by `layaEndpoint()` in `src/env.ts`: blank, unparseable or non-`http(s)`
+values are treated as **unset** (reason `not_configured`) rather than attempted, so a typo cannot
+hide behind a network-sounding `transport_error`. A trailing slash is trimmed, so
+`http://127.0.0.1:8099/decide/` and `http://127.0.0.1:8099/decide` are equivalent.
+
+Confirm the sidecar itself is up before wiring the API (`GET /health` is the sidecar's, not the
+API's):
+
+```bash
+curl -s http://127.0.0.1:8099/health   # { "ok": true, "model": "...", "device": "cpu|cuda" }
+```
+
+### What Laya is allowed to decide
+
+Laya is trusted for `intent` and `mentions_crop_stress` **only** (`docs/research/laya-verdict.md`).
+Its `urgency` score never left band 2 for a "crop will die today" message, and its
+`is_release_time` noul false-positived on both Telugu (0.814) and an English control (0.778). Both
+fields are therefore **discarded in code**, not just in prose: `parseLayaDecision` in
+`src/system1.ts` never reads them and returns `urgency: null`, and `finishProviderCall` fills the
+contract's required urgency from `classifyByRules`. A change to the sidecar's calibration cannot
+leak into a farmer's result. If Laya answers, `source=laya` and the intent/crop-stress come from the
+model while urgency comes from the rules.
+
+The failure taxonomy is the same for every provider, and each case falls through to the next with
+an honest `source` and a recorded reason: unreachable/refused => `transport_error`, deadline =>
+`timeout`, non-2xx => `http_error` (429 => `rate_limited`), non-JSON => `malformed_json`, JSON
+outside the schema => `out_of_schema`.
+
+Laya runs on **CPU** (load ~8 s, inference tens of ms); it cannot run inside a Worker, so the
+sidecar process must be started separately. That is lane L's scope — see `services/laya/README.md`.

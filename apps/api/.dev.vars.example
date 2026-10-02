@@ -26,8 +26,14 @@ AI_GATEWAY_URL=
 # network. Whatever runs, the decision carries source=laya|jev|rules, so a fallback is never silent.
 SYSTEM1_PROVIDER=
 
-# Local Laya sidecar base URL (lane L builds `services/laya`, `POST /decide`). Unset => Laya is
-# skipped in the chain. Example: http://127.0.0.1:8099/decide
+# Local Laya sidecar base URL (lane L builds `services/laya`, `POST /decide`). Unset/blank => Laya
+# is skipped in the chain with reason `not_configured`, and the API never opens a socket for it.
+# Must be an absolute http(s) URL; a typo (e.g. a missing scheme) is treated as unset, not fetched.
+# Placeholder (a name, not a secret — real values stay in .dev.vars):
+#   LAYA_ENDPOINT=http://127.0.0.1:8099/decide
+# Laya is trusted for `intent` and `mentions_crop_stress` ONLY. Its `urgency` and
+# `is_release_time` are discarded in code (src/system1.ts, `parseLayaDecision`); the Telugu keyword
+# rules own urgency. Why: docs/research/laya-verdict.md L1.
 LAYA_ENDPOINT=
 
 # Deadline for one Laya call, in milliseconds. Unset => 4000. Values outside 100..15000 are clamped.
