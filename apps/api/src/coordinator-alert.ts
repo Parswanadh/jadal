@@ -437,9 +437,11 @@ export interface FarmerAlertInput {
  * ready at once. `info` and `warning` use the roster-change template, which leads with the facts and
  * asks the farmer to tell the canal office if it does not suit.
  *
- * DELIBERATELY NOT DERIVED FROM `triage_score`. That score is currently a constant floor for English
- * demo reasons (see `docs/COORDINATOR-ALERT.md`), so treating it as a severity measurement would
- * present a placeholder as a computed judgement. Severity is whatever the coordinator chose.
+ * DELIBERATELY NOT DERIVED FROM `triage_score`. That score comes from the keyword rules over the
+ * demo's English reasons; the rules now cover those reasons and vary with the message, but they are
+ * still a keyword heuristic rather than a calibrated severity band (see `docs/COORDINATOR-ALERT.md`
+ * and `docs/ops/swarm/triage-urgency.md`), so treating it as a severity measurement would present a
+ * lexical match as a judgement. Severity is whatever the coordinator chose.
  */
 export type AlertSeverity = "info" | "warning" | "urgent" | "emergency";
 

@@ -84,14 +84,24 @@ returned `simulated: true` with a `detail` that says no transport delivered it.
 
 ### Severity is not derived from `triage_score`
 
-`triage_score` is currently a **constant floor of `0.15`** for the demo's short English reasons:
-`apps/api/src/system1.rules.ts` sets `URGENCY_BASE = 0.15` and `scoreUrgency` only *adds* on keyword
-hits, while the term tables are predominantly Telugu, so English demo reasons match nothing and the
-score stays at the floor. That file is another lane's and was not touched here.
+`triage_score` used to be a **constant floor of `0.15`** for the demo's short English reasons:
+`apps/api/src/system1.rules.ts` set `URGENCY_BASE = 0.15` and `scoreUrgency` only *added* on keyword
+hits, while the term tables were predominantly Telugu, so English demo reasons matched nothing and the
+score stayed at the floor.
 
-Severity is therefore whatever the **coordinator chose** — a presentation choice, never presented as a
-computed measurement. Do not surface `triage_score` as an urgency judgement in any coordinator-facing
-message until that rules file is fixed.
+That rules file has since been changed (see `docs/ops/swarm/triage-urgency.md`): the seeded English
+reasons now match real terms and score in a range (`0.25`–`0.6`), and a rules result that matches
+**no** term is returned as explicitly unscored (`intent: "other"`, `intent_confidence: 0`,
+`urgency: 0`; `isUnscored()` in that module reads it back) rather than being handed the floor as a
+measurement.
+
+Severity is still whatever the **coordinator chose** — a presentation choice, never presented as a
+computed measurement. `triage_score` is now a keyword heuristic that varies with the message, not a
+calibrated urgency band, so a coordinator-facing message must not turn it into an urgency judgement.
+
+Do not surface `triage_score` (nor the unscored state) as an urgency band in any coordinator-facing
+message until the score is derived from a trustworthy engine (Laya/Jev) and the unscored state is
+carried through persistence and the UI.
 
 ## No keys, no problem (ADR-003)
 
