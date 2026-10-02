@@ -92,7 +92,15 @@ export type AlertResponseBody = z.infer<typeof AlertResponseSchema>;
 /** A one-line, human-readable account of what actually happened — the `detail` field. */
 export function describeAlertOutcome(
   channel: AlertChannel,
-  outcome: { simulated: boolean; alerted: boolean; to: string | null; skipped?: string; error?: string },
+  outcome: {
+    simulated: boolean;
+    alerted: boolean;
+    to: string | null;
+    /** The number Twilio actually rang; differs from `to` when a demo mapping is in force. */
+    dialled?: string | null;
+    skipped?: string;
+    error?: string;
+  },
 ): string {
   if (outcome.error !== undefined) {
     return `${channel} alert failed: ${outcome.error}`;
@@ -107,7 +115,7 @@ export function describeAlertOutcome(
     ? `call simulated (no real call placed)${
         outcome.to === null ? "" : `; destination would be ${outcome.to}`
       }`
-    : `call placed to ${outcome.to ?? "unknown"}`;
+    : `call placed to ${outcome.dialled ?? outcome.to ?? "unknown"}`;
 }
 
 /**

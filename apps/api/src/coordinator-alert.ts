@@ -72,6 +72,7 @@ import { appendEvent } from "./db/store";
 import { DEMO_CANAL_ID } from "./demo";
 import type { Env } from "./env";
 import { placeCallFromCampaign, type TelephonyBindings } from "./telephony-deps";
+import { forwardTargetForFarmer } from "./telephony/twilio";
 import type { PlaceCallResult } from "./telephony";
 import { formatVolumeM3, templateForPurpose, type MessageFacts } from "./voice/telugu";
 
@@ -127,8 +128,15 @@ export interface AlertOutcome {
   readonly simulated: boolean;
   /** True when the recipient should be considered notified. */
   readonly alerted: boolean;
-  /** The number dialled, or `null` when there was nothing to dial. */
+  /** The farmer's own number, or `null` when there was nothing to dial. */
   readonly to: string | null;
+  /**
+   * The number actually dialled by Twilio, or `null` when no call was placed.
+   *
+   * Differs from {@link to} when a demo mapping or forward target is in force, so a coordinator is
+   * never told a call went to a number that was not the one rung.
+   */
+  readonly dialled: string | null;
   /** `placeCall`'s own result, verbatim, or `null` when the call was skipped before dispatch. */
   readonly placed: PlaceCallResult | null;
   /** The audit `Contact` appended for this attempt, or `null` when nothing was appended. */
@@ -141,7 +149,7 @@ export interface AlertOutcome {
 
 /** The shape every branch of this module returns, so callers never have to ask "did it throw?". */
 function outcome(partial: Partial<AlertOutcome> & Pick<AlertOutcome, "simulated" | "alerted">): AlertOutcome {
-  return { to: null, placed: null, contactId: null, ...partial };
+  return { to: null, dialled: null, placed: null, contactId: null, ...partial };
 }
 
 /* ------------------------------------------------------------------ dispatch */
@@ -189,6 +197,10 @@ async function dispatch(
 
   // `placeCallFromCampaign` is the shared seam: it builds the deps from the bindings and calls
   // `placeCall` in the telephony module. The cast only exposes the bindings `Env` already declares.
+  // Resolve the number Twilio will actually ring, so the outcome can report it rather than the
+  // farmer's own (which a demo mapping may have replaced).
+  const dialled = forwardTargetForFarmer(env as unknown as TelephonyBindings, to, input.farmer_id);
+
   const placed = await placeCallFromCampaign(env as unknown as TelephonyBindings, {
     contactId,
     to,
@@ -228,6 +240,7 @@ async function dispatch(
       simulated: placed.simulated,
       alerted: placed.simulated || placed.ok,
       to,
+      dialled,
       placed,
       error: `audit_failed: ${message}`,
     });
@@ -237,6 +250,7 @@ async function dispatch(
     simulated: placed.simulated,
     alerted: placed.simulated || placed.ok,
     to,
+    dialled,
     placed,
     contactId,
     ...(placed.simulated || placed.ok ? {} : { error: placed.error }),
