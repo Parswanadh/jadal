@@ -80,8 +80,16 @@ A pre-existing local copy, pointed at with `LAYA_MODEL` so the service never tou
 | Precision | fp16 weights (322M × 2 bytes); `encoder/config.json` declares `dtype: float32`, so the loader upcasts to fp32 on CPU | `[RAN]`/`[READ]` |
 | Load time, CUDA | **8.33 s** | `[RAN]` `/health` `load_seconds` |
 | Load time, CPU (other lane) | 7.66 s | `[CITED]` `docs/research/laya-verdict.md` §2 R2 |
-| Host RSS after load, CUDA | **1,367 MB** | `[RAN]` `ps -o rss` |
-| VRAM after load, CUDA | **~1,690 MiB** (1,257 → 2,947 MiB used) | `[RAN]` `nvidia-smi` |
+| Host RSS, **peak during load** | **2,673 MB** (`VmHWM` 2,737,520 kB) | `[RAN]` `/proc/<pid>/status` |
+| Host RSS, steady state after load | **122 MB** (`VmRSS` 125,076 kB) | `[RAN]` `/proc/<pid>/status` |
+| VRAM after load, CUDA | **~1,693 MiB** (1,257 → 2,950 MiB used) | `[RAN]` `nvidia-smi` |
+
+The peak-vs-steady gap is real and was worth respecting: `model.to(cuda)` releases the CPU-side
+fp32 copy, so the resident set collapses once loading finishes — but the load itself transiently
+holds the fp32 model, the fp16 source tensors and the CUDA staging buffers at once. **The brief's
+"roughly 2 GB of RAM to load" was right about the peak even though its 1.7 GB on-disk figure was
+not.** The 2 GB available-RAM floor was checked before loading, and when available RAM fell to
+1,524 MB the load was deferred rather than forced `[RAN]`.
 
 The hash is byte-identical to the pin in `docs/research/laya-verdict.md` and in
 `laya-lab/README.md:514-517` `[RAN]`.
@@ -250,8 +258,9 @@ evaluation lane found, reproduced here on the same sentence.
 * **Model loaded once**, at startup, before serving. `/decide` during load returns `503`.
 * **Inference serialised** behind a lock: a torch module is not reliably re-entrant, and this also
   bounds peak VRAM.
-* **Resources**: 1,367 MB host RSS, ~1,690 MiB VRAM, 8.33 s load. The 2 GB RAM floor was checked
-  before loading; when available RAM fell to 1,524 MB the load was deferred rather than forced.
+* **Resources**: peak 2,673 MB host RSS during load, 122 MB steady state, ~1,693 MiB VRAM,
+  8.33 s load. The 2 GB available-RAM floor was checked before loading; when available RAM fell
+  to 1,524 MB the load was deferred rather than forced.
 
 ---
 
