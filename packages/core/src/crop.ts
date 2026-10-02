@@ -121,9 +121,15 @@ export function adjustKcForClimate(
   if (u2_ms < 1 || u2_ms > 6 || rhMin_pct < 20 || rhMin_pct > 80) {
     return kcTab;
   }
-  // `(h/3)^0.3` is only meaningful for a positive height; the source bounds h to 0.1-10 m.
-  const h = Math.min(10, Math.max(0.1, maxHeight_m));
-  const adjustment = (0.04 * (u2_ms - 2) - 0.004 * (rhMin_pct - 45)) * Math.pow(h / 3, 0.3);
+  // The source bounds h to 0.1-10 m as well. Outside that box `(h/3)^0.3` is not defined by the
+  // source, so — exactly like the two climate inputs — we return the tabulated Kc rather than
+  // clamping or extrapolating. (Previously h was silently clamped to [0.1, 10], contradicting the
+  // documented no-extrapolation contract above. Shipped `crop-params.json` heights are 0.5-3.0 m,
+  // so no production value crossed the boundary.)
+  if (maxHeight_m < 0.1 || maxHeight_m > 10) {
+    return kcTab;
+  }
+  const adjustment = (0.04 * (u2_ms - 2) - 0.004 * (rhMin_pct - 45)) * Math.pow(maxHeight_m / 3, 0.3);
   return kcTab + adjustment;
 }
 
@@ -135,6 +141,53 @@ export function adjustKcForClimate(
  * SOURCE: `docs/research/fao56-crop-tables.md` §4.2.2, "Governing Rule".
  */
 export const KC_END_ADJUSTMENT_THRESHOLD = 0.45;
+
+/**
+ * Optional climate inputs for the {@link adjustKcForClimate} correction. Both are optional and
+ * independently nullable: the adjustment fires only when BOTH are supplied and finite, so a caller
+ * that has neither (every caller today, since `WeatherDay` carries no humidity/wind field) can pass
+ * `{}` or omit the argument entirely.
+ */
+export interface ClimateInputs {
+  /** Mean wind speed at 2 m [m/s]. Omit (or pass null) when unknown. */
+  wind_u2_ms?: number | null;
+  /** Mean minimum relative humidity [%]. Omit (or pass null) when unknown. */
+  rh_min_pct?: number | null;
+}
+
+/**
+ * Applies the FAO-56 Eq. 6.18 / Eq. 6.21 climatic Kc correction to a whole `CropParams` row.
+ *
+ * This is the one place the correction is applied, so `cropEngine.weeklyNeed` and any future caller
+ * share a single rule: `kc_mid` is always a candidate, `kc_end` only when the tabulated value
+ * exceeds {@link KC_END_ADJUSTMENT_THRESHOLD} (Eq. 6.21 governing rule).
+ *
+ * STRICT NO-OP CONTRACT: when either {@link ClimateInputs} field is missing/null, non-finite, or
+ * outside the source validity domain (u2 1-6 m/s, RHmin 20-80 %, h 0.1-10 m), this returns the
+ * **same** `params` object reference, unchanged. Callers without humidity/wind therefore produce
+ * bit-for-bit identical output to the pre-adjustment core, and no adjustment is claimed.
+ *
+ * @param params   Tabulated crop parameters
+ * @param climate  Optional wind/humidity inputs; omit for a guaranteed no-op
+ * @returns `params` itself when nothing changes, otherwise a copy with adjusted `kc_mid`/`kc_end`
+ */
+export function adjustCropParamsForClimate(
+  params: CropParams,
+  climate: ClimateInputs = {},
+): CropParams {
+  const kcMid = adjustKcForClimate(
+    params.kc_mid,
+    params.max_height_m,
+    climate.wind_u2_ms,
+    climate.rh_min_pct,
+  );
+  const kcEnd =
+    params.kc_end > KC_END_ADJUSTMENT_THRESHOLD
+      ? adjustKcForClimate(params.kc_end, params.max_height_m, climate.wind_u2_ms, climate.rh_min_pct)
+      : params.kc_end;
+  if (kcMid === params.kc_mid && kcEnd === params.kc_end) return params;
+  return { ...params, kc_mid: kcMid, kc_end: kcEnd };
+}
 
 export const cropEngine = {
   /**
@@ -233,20 +286,14 @@ export const cropEngine = {
     const { plan, plot, params, weather, weekStart } = input;
     const isPaddy = plan.crop === 'rice';
 
-    // Kc mid / Kc end are climate-adjusted per FAO-56 Eq. 6.18 / Eq. 6.21. The WeatherDay
-    // contract carries no RHmin or u2, so unless the caller supplies them (see WeeklyNeedInput)
-    // both are null and the tabulated value is returned unchanged — never silently adjusted.
-    const kcMid = adjustKcForClimate(
-      params.kc_mid,
-      params.max_height_m,
-      input.wind_u2_ms,
-      input.rh_min_pct,
-    );
-    const kcEnd =
-      params.kc_end > KC_END_ADJUSTMENT_THRESHOLD
-        ? adjustKcForClimate(params.kc_end, params.max_height_m, input.wind_u2_ms, input.rh_min_pct)
-        : params.kc_end;
-    const adjusted: CropParams = { ...params, kc_mid: kcMid, kc_end: kcEnd };
+    // Kc mid / Kc end are climate-adjusted per FAO-56 Eq. 6.18 / Eq. 6.21 through the shared
+    // helper. The WeatherDay contract carries no RHmin or u2, so unless the caller supplies them
+    // both are absent and `adjustCropParamsForClimate` is a strict no-op (same object reference,
+    // tabulated values used verbatim) — never silently adjusted.
+    const adjusted = adjustCropParamsForClimate(params, {
+      wind_u2_ms: input.wind_u2_ms,
+      rh_min_pct: input.rh_min_pct,
+    });
 
     let totalEtc = 0;
     let totalEffRain = 0;
