@@ -42,19 +42,20 @@ In order, fastest first. **Step 1 stops the dialling outright and needs no deplo
    `MAX_QUEUE_ATTEMPTS = 2` (one retry, then drop with a `jadal-outbound: dropping contact …` line).
    If you see that line repeating for many different contacts, the loop is upstream of the queue.
 6. **Clear the counters if the guard is over-blocking** during the incident. The counter now lives in
-   **D1**, in the `call_rate_window` table, keyed by `(destination digits, window_key)` — the KV keys
-   this step used to name (`callcap:v1:<digits>`) **no longer exist**. To clear one handset:
+   **D1**, in the `call_rate_hit` table, keyed by the destination's digits and the instant of each
+   call — the KV keys this step used to name (`callcap:v1:<digits>`) **no longer exist**. To clear one
+   handset:
 
    ```sh
    npx wrangler d1 execute jadal-db --command \
-     "DELETE FROM call_rate_window WHERE destination = '<digits>'"
+     "DELETE FROM call_rate_hit WHERE destination = '<digits>'"
    ```
 
    The digits are the destination with every non-digit stripped (`+91 90000 00001` → `919000000001`),
    the same key `destinationKey()` in `apps/api/src/noloop.ts` produces. Rows are also disposable by
-   age — a window the guard can no longer address is never read again, and
-   `pruneCallRateWindows()` deletes them — so **doing nothing is always safe**: every row stops
-   mattering once its window has passed.
+   age — a call more than a window old is never counted again, and `pruneCallRateHits()` deletes them —
+   so **doing nothing is always safe**: every row stops mattering one window after it was written.
+   (`call_rate_window`, the fixed-window table from `0003`, still exists but is no longer read.)
 
 **What NOT to do:** do not raise `CALL_RATE_MAX_CALLS` to make a call go through during an incident.
 If the guard is refusing a call you believe is legitimate, the guard is telling you that path has
@@ -147,79 +148,85 @@ could spend the budget three times over by formatting one number three ways. It 
 
 ### Where the counter lives, and why it is atomic
 
-The counter is the `call_rate_window` table in **D1** (`env.DB`), created by migration
-`0003_call_rate_limit.sql`. One row per `(destination, window_key)`, where `window_key` is the window
-*start* (`floor(now / (windowSeconds × 1000))`), with two counters:
+The counter is the `call_rate_hit` table in **D1** (`env.DB`), created by migration
+`0004_call_rate_hit.sql`. **One row per counted call**, with an autoincrement `id` (the rollback
+token), the destination's digits, and the instant of the call:
 
 | Column | Meaning |
 |---|---|
-| `n` | Calls counted in **this** window. This is the budget. |
-| `not_live` | Calls counted in the **previous** window of this destination, carried forward so a refusal can still name a retry instant without a second query. |
+| `id` | The rollback token. `releaseCall` deletes exactly this row. `AUTOINCREMENT` so a pruned id is never reused and a stale token cannot alias a later call. |
+| `destination` | The dialled destination's digits — the budget key. |
+| `at` | The call's instant, epoch milliseconds. The budget is the count of rows with `at > now − windowMs`. |
 
 **The budget is consumed by one statement, and that statement is the whole guarantee:**
 
 ```sql
-INSERT INTO call_rate_window (destination, window_key, n, not_live)
-     VALUES (?1, ?2, 1, COALESCE((SELECT n FROM call_rate_window
-                                   WHERE destination = ?1 AND window_key = ?2 - 1), 0))
-ON CONFLICT (destination, window_key) DO UPDATE
-        SET n = n + 1
-      WHERE n < ?3
-  RETURNING n
+INSERT INTO call_rate_hit (destination, at)
+SELECT ?1, ?2
+ WHERE (SELECT COUNT(*) FROM call_rate_hit
+         WHERE destination = ?1 AND at > ?2 - ?3) < ?4
+RETURNING id, (SELECT COUNT(*) FROM call_rate_hit
+                WHERE destination = ?1 AND at > ?2 - ?3) AS n
 ```
 
 It is one SQL statement, so SQLite runs it inside a single write transaction: another request's
-`INSERT`/`UPDATE` of the same primary key cannot interleave between the `WHERE n < ?3` test and the
-`n = n + 1` assignment. There is no instant at which two callers both observe `n = 0`. A second
-concurrent writer waits on the write lock, re-evaluates `WHERE n < ?3` against the already-incremented
-row, the `ON CONFLICT` clause updates nothing, and **no row is returned**.
+`INSERT` for the same destination cannot interleave between the `COUNT(*) < ?4` test and the insert.
+There is no instant at which two callers both observe room. D1 serialises writes to a database through
+one instance, which is the premise this design shares with the fixed-window version.
 
 The guard's permission is *whether that row came back*. `first()` returning `null` means refused;
-returning a row means the slot was spent. Nothing re-reads the counter to decide — a read-back is
+returning a row means the slot was spent. Nothing re-reads the count to decide — a read-back is
 exactly the race this replaced. The refusal path's single `SELECT` is descriptive only (it supplies
 `priorCalls` and `retryAfterAt` for the message) and cannot turn a refusal into an allow.
 
-**Why this replaced KV.** The guard originally stored its counter in KV, which has **no atomic
+### The window slides
+
+`at > now − windowMs` is measured backwards from *each* attempt, so the window is a trailing span, not
+a bucket with a wall-clock boundary. A spent slot frees exactly one window after the call that spent
+it, so a burst that straddles a boundary gets **one** budget, not two: the `2 × maxCalls` hole the
+fixed-window design had is closed. Slots free **one at a time**, and `retryAfterAt` is the moment the
+oldest counted call ages out.
+
+**Why this replaced fixed windows.** The previous D1 guard counted `floor(now / window)` in one row
+per `(destination, window)` and consumed it with `INSERT … ON CONFLICT … WHERE n < ?`. That was atomic
+and correct for a burst inside one window, but it reset the whole budget at each boundary (up to
+`2 × maxCalls`), and its `releaseCall` decremented a shared counter, which could hand back a slot
+another caller had just taken. D1 is SQLite, so per-hit rows and a `COUNT(*)` condition cost one
+indexed range scan and keep the single-statement guarantee. The `0003` table `call_rate_window` is
+left in place but is no longer read.
+
+**The KV story still matters.** The guard originally stored its counter in KV, which has **no atomic
 increment**. Two callers reading the same counter in the same instant both wrote `1` and both were
-allowed: N simultaneous `POST /api/alerts` requests all dialled, and repeated rapid button presses
-produced a continuous stream of calls. Measured against the old guard, **12 simultaneous calls to one
-handset were all allowed**; against this one, exactly 3 are. The old guard was *correct* for a
-sequential burst (the 01:45 shape still yields `true, true, true, false`), which is precisely why the
-defect stayed hidden — see §5 for the tests that pin both cases.
-
-KV is no longer used by the guard at all. It is kept in `Env` because the telephony module uses it for
-the audio cache, which is what a cache is for; a call counter is not.
-
-### Bound on the table
-
-The key is the window *start*, so a destination's budget rolls over by addressing a **new** key rather
-than by resetting a row in place. A row is therefore created at most once per destination per window in
-which that destination is called, and is never updated again: a page of the table is one row per
-called handset per minute, and the table is bounded by traffic, not by uptime. `pruneCallRateWindows()`
-deletes rows two or more windows old (which the guard can never read again) and is deliberately **not**
-called from the guard: that would put a table-wide `DELETE` inside the request-critical path.
+allowed; measured against that guard, **12 simultaneous calls to one handset were all allowed**.
+Against this one, exactly 3 are. See §5 for the tests.
 
 ### Where it is enforced
 
 `placeCallIfAllowed()` in `telephony-deps.ts` is the single seam. It:
 
-1. calls `checkOutboundCall(env, input.to)`;
-2. logs the decision (`noloop: <label> — <detail>`, `console.warn` on refusal);
-3. returns `{ allowed: false, refusal }` **without calling `placeCall`** when refused, or
+1. resolves the number that will **actually ring** (`forwardTargetForFarmer`) and keys the budget on
+   that, so a demo forward target shared by several farmers also shares one budget;
+2. calls `checkOutboundCall(env, destination)`;
+3. logs the decision (`noloop: <label> — <detail>`, `console.warn` on refusal);
+4. returns `{ allowed: false, refusal }` **without calling `placeCall`** when refused, or
    `{ allowed: true, decision, placed }` otherwise.
 
 The caller cannot reach a `PlaceCallResult` without branching on `allowed` — the type is a
 discriminated union, so the guard cannot be made cosmetic by accident.
 
 The counter is **consumed by the guard itself**, not by the caller, so no path can opt out of the
-budget. `releaseCall()` exists to give a slot back for a call that was counted but never dialled.
+budget. `releaseCall(env, destination, decision.token)` deletes **exactly the row that call inserted**
+— a true rollback. Without the token it is a no-op: there is no longer a shared counter to decrement,
+and a decrement was never a rollback. *(No production path calls `releaseCall` today; it is used when
+a caller gets permission and then finds a reason not to dial.)*
 
-The guard counts the number **after** `TWILIO_FORWARD_TO` is applied? **No — before.** The guard is
-called with the farmer's registered number (`input.to`), while `placeCall` applies the forward
-override internally. During a demo with one forward target this means several *farmers* can share one
-physical handset while each keeps a full budget. That is deliberate: the demo mapping is a
-presentation device, and per-farmer budgets are what the production rule means. It is called out here
-so it is not mistaken for a gap — see §5.
+### Bound on the table
+
+Per-call rows grow with traffic (one row per counted call), so unlike the fixed-window table this one
+is **not** self-limiting. `pruneCallRateHits()` deletes rows older than `keepWindows × windowMs` (two
+windows by default), which can no longer affect a decision, and is deliberately **not** called from
+the guard: that would put a table-wide `DELETE` inside the request-critical path. The limit stays
+correct without it — the table is just larger.
 
 ### Refusal is visible, never silent
 
@@ -235,15 +242,12 @@ never rings, nothing says why, and the request looks handled. So a refusal is a 
 
 ### Known limits (reported, not papered over)
 
-* **Windows are fixed, not sliding.** A burst straddling a window boundary can place up to
-  `2 × maxCalls` (3 either side of the roll-over). The KV version's rolling hit-list did not have this
-  gap; the atomicity is worth the trade, the gap is bounded by construction, and closing it needs the
-  same statement over per-hit rows. Recorded as a limit, not hidden.
+* **The hit log grows with traffic.** One row per counted call. `pruneCallRateHits()` must be run
+  periodically on a busy deployment to reclaim space; until it is, the table is larger but every
+  decision is still correct (old rows simply stop counting).
 * **The limit is per D1 database.** Atomicity is SQLite's, and it holds because every request for a
   deployment reaches the same D1 instance. A future move to read replicas *for the counter* would
   reintroduce the race; the counter must be read and written on the primary.
-* **A `releaseCall` is a decrement, not a rollback.** Giving a slot back can let a slot be taken twice
-  under a race, which errs toward allowing a call. It is only used after a transport refusal.
 * **It bounds calls, not spend.** Two *different* destinations each get a full budget, so the guard
   caps calls per person, not the total number of calls. A loop that iterates the whole roster is not
   stopped by this guard.
@@ -317,7 +321,7 @@ Flip to `"closed"` if **any** of these becomes true:
 
 ## 5. Tests
 
-`apps/api/src/noloop.test.ts` (45 tests, up from 23). Every test stubs the network: the harness's
+`apps/api/src/noloop.test.ts` (49 tests, up from 23). Every test stubs the network: the harness's
 injected `fetch` **throws** on any unrouted URL, and the only Twilio URL ever reached is served a
 canned `Response`. Refusal tests additionally assert `env.calls` did **not** grow, so "the guard
 blocked the call" is proven by the absence of a request, not by a returned flag. The counter store is
@@ -327,16 +331,18 @@ itself rather than by a mock of it. **No real call can be placed by the test sui
 | Requirement | Test |
 |---|---|
 | **Simultaneous calls are bounded** (the reported defect) | `allows EXACTLY max calls when N are fired simultaneously at one destination`, `allows exactly N when N simultaneous calls are fired with max N`, `bounds repeated rapid presses: 30 simultaneous requests…`, `keeps separate destinations independent under simultaneous load`, `still refuses sequentially after a simultaneous burst` |
-| **The consume is genuinely atomic** | `consumes the budget with a single conditional INSERT ... ON CONFLICT ... WHERE n < ?`, `has no read-then-write anywhere on the guard's path`, `doesn't condition the increment on a value read in JavaScript`, `increments the stored counter exactly max times under a simultaneous burst` |
+| **The consume is genuinely atomic** | `consumes the budget with a single conditional INSERT ... SELECT ... WHERE (COUNT) < ?`, `has no read-then-write anywhere on the guard's path`, `doesn't condition the insert on a value read in JavaScript`, `inserts exactly max rows under a burst, and the count refuses the rest` |
+| **The window slides, so a boundary cannot double the budget** | `does not reset the budget at a fixed boundary: a straddling burst cannot reach 2 x maxCalls` and `frees a slot exactly one window after the oldest call, under the real clock path` (both fake-timer, through the production `new Date()` path), `frees slots one at a time…`, `counts against the trailing window only…` |
 | The same bound holds at both call sites, simultaneously | `path 1: simultaneous rungs to one handset are bounded too`, `path 2: three simultaneous alerts dial once and make one Twilio request` |
 | Guard blocks the 4th call in a burst | `blocks the 4th call in a burst, and the first three are allowed` (the measured 01:45 shape) |
-| Resets after the window | `resets after the window` |
+| The budget ages out a window after each call | `is completely fresh once every call has aged out, a window after the last one` |
+| **releaseCall is a true rollback, not a decrement** | `rolls back exactly the slot the call consumed…`, `deletes only the token's row, so a stale release cannot free another caller's slot`, `is a no-op without a token, and never throws on an unknown one` |
 | Both call paths go through it | `path 1 (escalation ladder)…`, `path 2 (coordinator alert)…`, `the two paths share one budget for one handset` |
 | A refused call is reported, not swallowed | `path 1` (contact recorded `failed`), `path 2` (`skipped` set, `alerted: false`, no audit row) |
 | The 15-minute retry still works | `does not break the designed 15-minute voice retry` |
 | One handset, three spellings, one budget | `spends the budget once per spelling of one number` |
 | Configurable N and window | `makes N and the window configurable by env`, `honours a tighter limit…`, `honours a longer window…` |
-| The table does not grow without bound | `pruneCallRateWindows` — `deletes windows the guard can no longer address, and keeps the live ones` |
+| The hit log can be pruned | `pruneCallRateHits` — `deletes hits that can no longer count, and keeps the ones inside the trailing window` |
 | Failure mode, both ways | `fails open and SAYS so when the counter cannot be written`, `fails open when the binding throws synchronously…`, `fails open when there is no DB binding at all`, `still refuses correctly when only the descriptive read-back fails` |
 
 **The concurrency tests were shown to fail against the old KV guard.** Running the identical
@@ -344,16 +350,18 @@ assertion (12 calls fired through one `Promise.all`, max 3) against the pre-chan
 `git show 50d7e90:apps/api/src/noloop.ts` allowed **all 12**; the same burst against this guard allows
 **exactly 3**. The old guard was correct for a *sequential* burst — `[0, 12, 25, 40]s` still returns
 `[true, true, true, false]` — which is why the defect was invisible until the calls were placed
-concurrently. The demonstration was throwaway (deleted, not committed); the D1 concurrency tests are
-permanent.
+concurrently. The fixed-window D1 guard fixed that race but still reset at a wall-clock boundary; the
+fake-timer boundary tests pin the sliding behaviour that replaced it. The KV demonstration was
+throwaway (deleted, not committed); the D1 tests are permanent.
 
 ---
 
 ## 6. Anything that could not be bounded
 
-* **Fixed windows, not sliding** — a burst straddling a window boundary can place up to `2 × maxCalls`.
-  See §3 "Known limits". Closing it needs per-hit rows and the same conditional statement; not done
-  here.
+* **Hit-log growth** — the sliding window stores one row per counted call rather than one per
+  destination per window, so a busy deployment accumulates rows. The limit is always correct (old rows
+  stop counting once they are a window old); `pruneCallRateHits()` reclaims the space and is
+  deliberately off the guard's path. See §3 "Bound on the table".
 * **Total spend across many destinations** — the guard is per-destination. A loop that walks the
   roster one farmer at a time would place one legitimate-looking call per person. The natural next
   bound is a *canal-wide* budget (a second row per window, keyed by the canal instead of the handset),
