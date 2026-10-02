@@ -1,0 +1,20 @@
+--- a/packages/contracts/src/entities.ts
++++ b/packages/contracts/src/entities.ts
+@@ -118,6 +118,17 @@
+   rain_mm: z.number().nonnegative(),
+   tmax_c: z.number().optional(),
+   tmin_c: z.number().optional(),
++  /**
++   * ADDITIVE (needs contracts-ok): mean minimum relative humidity for the day [%], the `RHmin`
++   * input to the FAO-56 Eq. 6.18 / Eq. 6.21 Kc climate adjustment. Optional and absent = "unknown";
++   * never default it to 0 %, which would claim an arid climate that was not measured.
++   */
++  rh_min_pct: z.number().min(0).max(100).optional(),
++  /**
++   * ADDITIVE (needs contracts-ok): mean wind speed at 2 m [m/s], the `u2` input to the FAO-56
++   * Eq. 6.18 / Eq. 6.21 Kc climate adjustment. Optional and absent = "unknown".
++   */
++  wind_u2_ms: z.number().nonnegative().optional(),
+ });
+ export type WeatherDay = z.infer<typeof WeatherDay>;
+ 
