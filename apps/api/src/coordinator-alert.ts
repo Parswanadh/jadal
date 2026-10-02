@@ -619,6 +619,7 @@ export async function notifyFarmerOfAllocation(
       requestStatus: "approved",
       ...(input.windowStart === undefined ? {} : { windowStart: input.windowStart }),
       ...(input.windowEnd === undefined ? {} : { windowEnd: input.windowEnd }),
+      ...(input.isLongerTurn === undefined ? {} : { isLongerTurn: input.isLongerTurn }),
     },
     extraTe: "",
     extraEn: "",
