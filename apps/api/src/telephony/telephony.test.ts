@@ -436,3 +436,52 @@ describe("placeCall", () => {
     expect(off.calls).toHaveLength(0);
   });
 });
+
+describe("call forwarding (demo redirect)", () => {
+  const TWILIO_CALLS = "https://api.twilio.com/2010-04-01/Accounts";
+
+  /** Pull the `To` field out of the recorded Twilio Calls POST body (sent urlencoded as a string). */
+  function dialled(calls: Call[]): string | undefined {
+    const call = calls.find((c) => c.url.startsWith(TWILIO_CALLS));
+    if (call === undefined) return undefined;
+    const body = call.init?.body;
+    if (typeof body !== "string") return undefined;
+    return new URLSearchParams(body).get("To") ?? undefined;
+  }
+
+  it("dials the farmer's own number when TWILIO_FORWARD_TO is unset", async () => {
+    const s = setup();
+    await placeCall(s.deps, { contactId: "c1", to: "+919000000001", messageTe: "x" });
+    expect(dialled(s.calls)).toBe("+919000000001");
+  });
+
+  it("redirects to the single configured number", async () => {
+    const s = setup({ env: { TWILIO_FORWARD_TO: "+918341717162" } });
+    await placeCall(s.deps, { contactId: "c1", to: "+919000000001", messageTe: "x" });
+    expect(dialled(s.calls)).toBe("+918341717162");
+  });
+
+  it("spreads across several numbers deterministically", async () => {
+    const s = setup({ env: { TWILIO_FORWARD_TO: "+918341717162, +918610071143" } });
+    const targets = new Set<string>();
+    for (const to of ["+919000000001", "+919000000002", "+919000000003", "+919000000004"]) {
+      const one = setup({ env: { TWILIO_FORWARD_TO: "+918341717162, +918610071143" } });
+      await placeCall(one.deps, { contactId: "c1", to, messageTe: "x" });
+      const again = setup({ env: { TWILIO_FORWARD_TO: "+918341717162, +918610071143" } });
+      await placeCall(again.deps, { contactId: "c1", to, messageTe: "x" });
+      // Deterministic: the same recipient always rings the same handset.
+      expect(dialled(one.calls)).toBe(dialled(again.calls));
+      targets.add(dialled(one.calls) as string);
+    }
+    for (const t of targets) {
+      expect(["+918341717162", "+918610071143"]).toContain(t);
+    }
+    expect(s.calls).toHaveLength(0);
+  });
+
+  it("ignores malformed entries and falls back to the farmer's number", async () => {
+    const s = setup({ env: { TWILIO_FORWARD_TO: "  , not-a-number ," } });
+    await placeCall(s.deps, { contactId: "c1", to: "+919000000001", messageTe: "x" });
+    expect(dialled(s.calls)).toBe("+919000000001");
+  });
+});

@@ -28,6 +28,11 @@ export interface Env {
   TWILIO_AUTH_TOKEN?: string;
   /** Caller ID, E.164. Named `TWILIO_FROM_NUMBER` because that is what `src/telephony` reads. */
   TWILIO_FROM_NUMBER?: string;
+  /**
+   * Demo-only redirect of outbound call destinations: one or more E.164 numbers, comma-separated.
+   * Unset keeps production behaviour (dial the farmer's own number). See `forwardTarget`.
+   */
+  TWILIO_FORWARD_TO?: string;
   /** Public https origin Twilio can reach for webhooks, e.g. a cloudflared tunnel or the deployed Worker. */
   PUBLIC_BASE_URL?: string;
   /** Optional: Deepgram `nova-3` STT fallback when Sarvam cannot transcribe. */
