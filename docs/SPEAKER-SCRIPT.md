@@ -324,4 +324,4 @@ Same deck, same order. Slides marked *skipped* are not shown or are clicked past
 
 **Does the product ingest the whole book?**
 
-> No. The product's table holds ten crops in eleven rows. Our research extract tabulates 17 crop rows, and the book tabulates more than that. We use the crops grown in the scenario.
+> No. The product's table holds ten crops in eleven rows in crop-params.json. The repo's crop explorer parses 70 crop rows from Table 6.2 (FAO-56 Rev.1 2025) plus 49 rows across three repo research extracts (17 in fao56-book-reference.md, 23 in fao56-crop-tables.md, 9 in fao56-model.md). The book has more than this table and the product does not ingest the whole book.

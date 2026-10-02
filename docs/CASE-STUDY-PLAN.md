@@ -1,6 +1,6 @@
 # Jadal case study — plan
 
-Audience: judges and evaluators at the presentation. Deck: http://127.0.0.1:5190/deck/ (source `showcase/deck/index.html`). Word-for-word script: `docs/SPEAKER-SCRIPT.md`.
+Audience: judges and evaluators at the presentation. Deck: http://127.0.0.1:5190/deck/ (source `showcase/deck/index.html`). Word-for-word script: `docs/SPEAKER-SCRIPT.md`. Crop explorer: http://127.0.0.1:5190/deck/fao56-explorer.html.
 
 Evidence labels used throughout: **RAN** (a command was run and its output observed), **READ** (read in a file), **COMPUTED** (arithmetic checked), **MODELLED** (output of the scenario's model, not a field measurement).
 
@@ -66,7 +66,7 @@ Caveat: the 862 figure was measured on the merged branch before one later web di
 
 Full speaker script with stage cues: `docs/SPEAKER-SCRIPT.md`; second-screen reader: http://127.0.0.1:5190/deck/speaker-script.html. The table below is **generated** from `showcase/deck/script.json` by `showcase/deck/build.py`, so the slide numbers and times cannot drift from the deck. Times are computed from word counts, not rehearsed.
 
-The deck is 13 slides. Two former slides, *What we caught in our own work* and *What is still simulated or open*, and the closing slide were removed from the deck. Their substance is still spoken: it is in the notes of slide 13 and in the speaker script's *If asked* section, and the section 5 and 9 tables of this document hold the evidence.
+The deck has 16 slides (15 timed slides culminating in Path to field telemetry, plus Slide 16 Appendix: crop data we ship). Two former slides, *What we caught in our own work* and *What is still simulated or open*, were removed from the main sequence; their substance is spoken from the notes of slide 15 and in the speaker script's *If asked* section, and the section 5 and 9 tables of this document hold the evidence.
 
 <!-- TALK-TRACK:START -->
 | Slide | Beat | Standard | Architect |
