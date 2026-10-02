@@ -1,153 +1,196 @@
 // Coordinator console view of the shared typed API client (src/api/client.ts).
 // The shared client serves contract-validated mock data when VITE_MOCK is not "0"
-// and calls the live /api routes otherwise. This module only reshapes the
-// responses into the console's view types; it computes no water numbers, so
-// every figure displayed comes from the API (or its mock).
+// and calls the live routes otherwise. This module only reshapes the responses
+// into the console's view types. It computes no water numbers, so every figure
+// displayed comes from the API (or its mock).
 
-import { api as client, isMockMode } from "../api";
-import type {
-  EntitlementRow,
-  FarmerRegistration,
-  LedgerView,
-  RequestRow,
-  RosterProposal,
-} from "./types";
-
-export type Source = "live" | "mock";
-
-function source(): Source {
-  return isMockMode() ? "mock" : "live";
-}
+import { api as client, sendAlert as clientSendAlert, updateTurn as clientUpdateTurn } from "../api";
+import type { AlertChannel, AlertSeverity, Allocation } from "../api/extra";
+import type { AuditView, EntitlementRow, FarmerRegistration, LedgerView, RequestRow, RosterProposal } from "./types";
 
 async function farmerNames(): Promise<Map<string, string>> {
   const list = await client.listFarmers();
   return new Map(list.map((r) => [r.farmer.id, r.farmer.name]));
 }
 
-async function cropByPlan(): Promise<Map<string, string>> {
-  const list = await client.listFarmers();
-  return new Map(list.flatMap((r) => r.crop_plans.map((c) => [c.id, c.crop] as const)));
+/**
+ * The turn the API scheduled for one farmer in the first release window, or
+ * null when there is no window or the farmer has no turn. Read straight from the
+ * roster proposal: this layer never derives a window of its own.
+ */
+async function nextTurnFor(farmerId: string): Promise<{ start: string; end: string } | null> {
+  const windows = await client.releaseWindows();
+  const win = windows[0];
+  if (!win) return null;
+  const { roster } = await client.proposeRoster({ release_window_id: win.id, mode: "equal_water" });
+  const turn = roster.turns.find((t) => t.farmer_id === farmerId);
+  return turn ? { start: turn.start, end: turn.end } : null;
 }
 
 export const api = {
-  async listFarmers(): Promise<{ rows: FarmerRegistration[]; source: Source }> {
-    const list = await client.listFarmers();
-    const rows: FarmerRegistration[] = list.map((r) => ({
-      farmer: {
-        id: r.farmer.id,
-        name: r.farmer.name,
-        phone: r.farmer.phone,
-        hasSmartphone: r.farmer.has_smartphone,
-        channels: r.farmer.preferred_channels,
-      },
-      plots: r.plots.map((p) => ({ id: p.id, outletId: p.outlet_id, areaHa: p.area_ha, soil: p.soil })),
+  async listFarmers(): Promise<FarmerRegistration[]> {
+    const [list, canal] = await Promise.all([client.listFarmers(), client.canal()]);
+    const outletName = new Map(canal.outlets.map((o) => [o.id, o.name]));
+    return list.map((r) => ({
+      farmer: { id: r.farmer.id, name: r.farmer.name, phone: r.farmer.phone, hasSmartphone: r.farmer.has_smartphone },
+      plots: r.plots.map((p) => ({ id: p.id, outletName: outletName.get(p.outlet_id) ?? "", areaHa: p.area_ha, soil: p.soil })),
       cropPlans: r.crop_plans.map((c) => ({ id: c.id, plotId: c.plot_id, crop: c.crop, sowingDate: c.sowing_date })),
       verified: r.verified,
     }));
-    return { rows, source: source() };
   },
 
-  async verifyFarmer(id: string): Promise<{ ok: boolean; source: Source }> {
+  async verifyFarmer(id: string): Promise<boolean> {
     const res = await client.verifyFarmer(id);
-    return { ok: res.ok, source: source() };
+    return res.ok;
   },
 
-  async suggestEntitlements(): Promise<{ rows: EntitlementRow[]; seasonTotalM3: number; explanationEn: string; explanationTe: string; source: Source }> {
-    const [data, names, crops] = await Promise.all([client.suggestEntitlements(), farmerNames(), cropByPlan()]);
+  async suggestEntitlements(): Promise<{ rows: EntitlementRow[]; seasonTotalM3: number; explanation: string }> {
+    const [data, list] = await Promise.all([client.suggestEntitlements(), client.listFarmers()]);
+    const names = new Map(list.map((r) => [r.farmer.id, r.farmer.name]));
+    const crops = new Map(list.flatMap((r) => r.crop_plans.map((c) => [c.id, c.crop] as const)));
     const rows: EntitlementRow[] = data.entitlements.map((e) => ({
       id: e.id,
       farmerId: e.farmer_id,
-      farmerName: names.get(e.farmer_id) ?? e.farmer_id,
-      cropPlanId: e.crop_plan_id,
+      farmerName: names.get(e.farmer_id) ?? "",
       crop: crops.get(e.crop_plan_id) ?? "",
       weekStart: e.week_start,
       volumeM3: e.volume_m3,
       netMm: e.net_irrigation_mm,
-      status: e.status === "approved" ? "approved" : e.status === "edited" ? "edited" : "proposed",
+      status: e.status,
     }));
-    return { rows, seasonTotalM3: data.season_total_m3, explanationEn: data.explanation, explanationTe: "", source: source() };
+    return { rows, seasonTotalM3: data.season_total_m3, explanation: data.explanation };
   },
 
-  async approveEntitlements(edits: { id: string; volume_m3: number }[]): Promise<{ approved: number; source: Source }> {
+  async approveEntitlements(edits: { id: string; volume_m3: number }[]): Promise<number> {
     const res = await client.approveEntitlements({ edits });
-    return { approved: res.approved, source: source() };
+    return res.approved;
   },
 
-  async proposeRoster(mode: "equal_water" | "equal_hours"): Promise<{ proposal: RosterProposal; source: Source }> {
-    const [windows, names] = await Promise.all([client.releaseWindows(), farmerNames()]);
+  async proposeRoster(mode: "equal_water" | "equal_hours"): Promise<RosterProposal> {
+    const [windows, names, canal] = await Promise.all([client.releaseWindows(), farmerNames(), client.canal()]);
     const win = windows[0];
     if (!win) throw new Error("no release window");
     const data = await client.proposeRoster({ release_window_id: win.id, mode });
     const needByOutlet = new Map(data.need_met.map((n) => [n.outlet_id, n.pct]));
-    const proposal: RosterProposal = {
+    const outletName = new Map(canal.outlets.map((o) => [o.id, o.name]));
+    return {
       id: data.roster.id,
       mode,
-      releaseWindowId: win.id,
-      turns: data.roster.turns.map((t) => {
-        const durH = (Date.parse(t.end) - Date.parse(t.start)) / 3600000;
-        return {
-          id: t.id,
-          outletId: t.outlet_id,
-          farmerId: t.farmer_id,
-          farmerName: names.get(t.farmer_id) ?? t.farmer_id,
-          start: t.start,
-          end: t.end,
-          plannedVolumeM3: t.planned_volume_m3,
-          expectedFlowM3s: t.expected_flow_m3s,
-          durationH: Math.round(durH * 100) / 100,
-          needMetPct: needByOutlet.get(t.outlet_id) ?? 0,
-        };
-      }),
+      approved: data.roster.status === "approved",
+      windowStart: win.start,
+      windowEnd: win.end,
+      turns: data.roster.turns.map((t) => ({
+        id: t.id,
+        outletName: outletName.get(t.outlet_id) ?? "",
+        farmerName: names.get(t.farmer_id) ?? "",
+        start: t.start,
+        end: t.end,
+        plannedVolumeM3: t.planned_volume_m3,
+        needMetPct: needByOutlet.get(t.outlet_id) ?? 0,
+      })),
       equalHoursGini: data.comparison.equal_hours_gini,
       equalWaterGini: data.comparison.equal_water_gini,
     };
-    return { proposal, source: source() };
   },
 
-  async approveRoster(id: string): Promise<{ contactsQueued: number; source: Source }> {
+  async approveRoster(id: string): Promise<number> {
     const res = await client.approveRoster(id);
-    return { contactsQueued: res.contacts_queued, source: source() };
+    return res.contacts_queued;
   },
 
-  async listRequests(): Promise<{ rows: RequestRow[]; source: Source }> {
+  /** Set one turn's start and end. Returns what the API stored. */
+  async updateTurn(rosterId: string, turnId: string, start: string, end: string): Promise<{ start: string; end: string }> {
+    const res = await clientUpdateTurn(rosterId, turnId, { start, end });
+    return { start: res.turn.start, end: res.turn.end };
+  },
+
+  /**
+   * Alert one farmer by call, SMS or WhatsApp. `simulated` says whether anything
+   * really left. When `allocation` is given, the alert tells the farmer how much
+   * water they have been given and the window to use it in — the numbers come
+   * from the API, never from this layer.
+   */
+  async sendAlert(
+    farmerId: string,
+    channel: AlertChannel,
+    severity: AlertSeverity,
+    message?: string,
+    allocation?: Allocation,
+  ): Promise<{ simulated: boolean; detail: string }> {
+    const trimmed = message?.trim();
+    const res = await clientSendAlert({
+      farmer_id: farmerId,
+      channel,
+      severity,
+      message: trimmed ? trimmed : undefined,
+      allocation,
+    });
+    return { simulated: res.simulated, detail: res.detail };
+  },
+
+  /**
+   * The allocation to offer a farmer: the volume the coordinator approved for
+   * their request, and the turn window the API scheduled for them. Returns null
+   * when the API has no approved amount and no turn, so the control can say so
+   * instead of inventing a number.
+   */
+  async allocationFor(farmerId: string): Promise<Allocation | null> {
+    const [requests, turn] = await Promise.all([
+      client.listRequests(),
+      nextTurnFor(farmerId),
+    ]);
+    const approved = requests
+      .filter((r) => r.farmer_id === farmerId && r.coordinator_decision?.decision === "approve")
+      .at(-1)?.coordinator_decision;
+    if (!approved || !turn) return null;
+    return { volume_m3: approved.volume_m3, start: turn.start, end: turn.end };
+  },
+
+  async listRequests(): Promise<RequestRow[]> {
     const [list, names] = await Promise.all([client.listRequests(), farmerNames()]);
-    const rows: RequestRow[] = list.map((w) => ({
+    return list.map((w) => ({
       id: w.id,
       farmerId: w.farmer_id,
-      farmerName: names.get(w.farmer_id) ?? w.farmer_id,
+      farmerName: names.get(w.farmer_id) ?? "",
       type: w.type,
       volumeM3: w.volume_m3,
       reason: w.reason,
-      reasonTe: "",
       channel: w.channel,
+      raisedAt: w.raised_at,
       status: w.status,
       triageScore: w.triage_score ?? 0,
-      recommendation: {
-        decision: w.agent_recommendation?.decision ?? "approve",
-        volumeM3: w.agent_recommendation?.volume_m3 ?? 0,
-        rationale: w.agent_recommendation?.rationale ?? "",
-        rationaleTe: "",
-      },
+      recommendation: w.agent_recommendation
+        ? { decision: w.agent_recommendation.decision, volumeM3: w.agent_recommendation.volume_m3, rationale: w.agent_recommendation.rationale }
+        : undefined,
       decision: w.coordinator_decision
         ? { decision: w.coordinator_decision.decision, volumeM3: w.coordinator_decision.volume_m3, note: w.coordinator_decision.note }
         : undefined,
     }));
-    return { rows, source: source() };
   },
 
-  async decideRequest(id: string, decision: "approve" | "reject", volumeM3: number): Promise<{ source: Source }> {
-    await client.decideRequest(id, { decision, volume_m3: volumeM3 });
-    return { source: source() };
+  /**
+   * Record the coordinator's decision. Returns what the API reported about
+   * letting the farmer know: `dispatched` names the contact the decision queued
+   * for that farmer, and null when nothing was dispatched — the console says so
+   * plainly rather than implying the farmer was told.
+   */
+  async decideRequest(id: string, decision: "approve" | "reject", volumeM3: number): Promise<{ dispatched: string | null }> {
+    const decided = await client.decideRequest(id, { decision, volume_m3: volumeM3 });
+    const contacts = await client.contacts();
+    // A decision queues a `request_update` contact. The roster contacts that
+    // exist for every farmer do not count: this asks specifically whether the
+    // decision itself dispatched anything.
+    const queued = contacts.find((c) => c.farmer_id === decided.farmer_id && c.purpose === "request_update");
+    return { dispatched: queued ? queued.channel : null };
   },
 
-  async ledger(): Promise<{ balances: LedgerView; source: Source }> {
-    const data = await client.ledger();
-    return { balances: toLedgerView(data), source: source() };
+  async ledger(): Promise<LedgerView> {
+    return toLedgerView(await client.ledger());
   },
 
-  async audit(): Promise<{ balances: LedgerView; findings: { severity: "info" | "warn" | "critical"; text: string }[]; summaryEn: string; summaryTe: string; source: Source }> {
-    const [data, led] = await Promise.all([client.audit(), client.ledger()]);
-    return { balances: toLedgerView(led), findings: data.findings, summaryEn: data.summary_en, summaryTe: data.summary_te, source: source() };
+  async audit(): Promise<AuditView> {
+    const data = await client.audit();
+    return { findings: data.findings, summaryEn: data.summary_en, summaryTe: data.summary_te };
   },
 };
 

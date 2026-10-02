@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import scenario from "@jadal/contracts/fixtures/demo-scenario.json";
 import { getNeedMet, getOverrunCase, loadCanalVisual } from "./api";
 import { CANAL_SEED } from "./mock";
-import { STR } from "./strings";
 
 const fixtureOutletIds = (scenario as { outlets: { id: string }[] }).outlets.map((o) => o.id);
 
@@ -48,11 +47,5 @@ describe("loadCanalVisual (mock mode)", () => {
     expect(getOverrunCase(data, "o1", 0)).toBeUndefined();
     expect(getOverrunCase(data, "o1", 1)?.total_lost_m3).toBeGreaterThan(0);
     expect(getOverrunCase(data, "o8", 1)).toBeUndefined();
-  });
-});
-
-describe("canal strings", () => {
-  it("has the same keys in English and Telugu", () => {
-    expect(Object.keys(STR.te).sort()).toEqual(Object.keys(STR.en).sort());
   });
 });

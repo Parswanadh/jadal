@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -33,16 +34,25 @@ function SunIcon() {
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { t, lang, setLang } = useI18n();
   const { theme, toggleTheme } = useTheme();
+  const { session, signOut } = useAuth();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // The nav shows only the portal the signed-in role may actually reach.
   const navItems = [
     { to: '/', key: 'nav.home', end: true },
-    { to: '/farmer', key: 'nav.farmer', end: false },
-    { to: '/coordinator', key: 'nav.coordinator', end: false },
+    ...(session?.role === 'farmer' ? [{ to: '/farmer', key: 'nav.farmer', end: false }] : []),
+    ...(session?.role === 'coordinator' ? [{ to: '/coordinator', key: 'nav.coordinator', end: false }] : []),
     { to: '/canal', key: 'nav.canal', end: false },
     { to: '/phone', key: 'nav.phone', end: false },
     { to: '/demo', key: 'nav.demo', end: false },
   ];
+
+  function handleSignOut(): void {
+    setMenuOpen(false);
+    signOut();
+    navigate('/login', { replace: true });
+  }
 
   return (
     <div className="shell">
@@ -70,6 +80,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </nav>
           <div className="header-controls">
+            {session ? (
+              <div className="header-user">
+                <span className="who">{t('auth.signedInAs', { role: t(`auth.role.${session.role}`) })}</span>
+                <button type="button" className="btn btn-quiet" onClick={handleSignOut}>
+                  {t('auth.signOut')}
+                </button>
+              </div>
+            ) : (
+              <Link className="btn btn-quiet" to="/login" onClick={() => setMenuOpen(false)}>
+                {t('auth.signIn')}
+              </Link>
+            )}
             <div className="lang-toggle" role="group" aria-label={t('a11y.toggleLanguage')}>
               <button type="button" aria-pressed={lang === 'en'} lang="en" onClick={() => setLang('en')}>
                 {t('controls.langOptionEn')}

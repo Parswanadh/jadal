@@ -1,0 +1,18 @@
+/* The agent call reuses the simulated-phone frame (SimulatedPhone.css) inline. */
+
+.agent-call {
+  width: min(420px, 100%);
+  margin-top: 1.25rem;
+}
+
+.agent-call .jadal-phone__screen {
+  min-height: 0;
+}
+
+.agent-call .jadal-phone__send {
+  align-self: flex-start;
+}
+
+.agent-call .btn {
+  align-self: flex-start;
+}

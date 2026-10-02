@@ -4,16 +4,10 @@ import { test as base, expect } from '@playwright/test';
 /**
  * Shared fixtures for the apps/web end-to-end suite.
  *
- * Two stubs keep the browser hermetic (and therefore the "no console errors"
- * assertion meaningful) without touching application code:
- *
- *  1. Google Fonts is requested from index.html. The suite must pass offline,
- *     so those requests are answered with an empty 200 body instead of failing.
- *  2. The home page probes `/api/health` with a raw `fetch` that bypasses the
- *     app's mock client. Mock mode starts no backend, so the Vite proxy request
- *     hangs and only fails long after the test ended. The route is fulfilled
- *     with the payload `mockHealth()` returns, so the page renders its
- *     "Operational" state deterministically.
+ * One stub keeps the browser hermetic (and therefore the "no console errors"
+ * assertion meaningful) without touching application code: Google Fonts is
+ * requested from index.html. The suite must pass offline, so those requests
+ * are answered with an empty 200 body instead of failing.
  *
  * Everything else (canal roster, contacts, demo steps) is served by the app's
  * own contract-validated mock, so no interception happens there.
@@ -35,14 +29,6 @@ export const test = base.extend<{ consoleErrors: ConsoleErrorSink }>({
     await page.route(/https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/, (route) =>
       route.fulfill({ status: 200, contentType: 'text/css', body: '' }),
     );
-    await page.route('**/api/health', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ ok: true, version: '0.1.0-mock' }),
-      }),
-    );
-
     await use(errors);
   },
 });
@@ -59,6 +45,37 @@ export const SETTLE_MS = 500;
 export async function settle(page: Page): Promise<void> {
   await page.waitForLoadState('load');
   await page.waitForTimeout(SETTLE_MS);
+}
+
+export type E2ERole = 'farmer' | 'coordinator';
+
+/**
+ * The session key and the password defaults are pinned here instead of imported
+ * from apps/web: the suite runs in Node, where the app's Vite env module cannot
+ * be loaded. Drift in either value makes these tests fail, so the duplication is
+ * a contract check rather than a copy.
+ */
+export const SESSION_KEY = 'jadal.session';
+export const FARMER_PASSWORD = process.env.VITE_FARMER_PASSWORD ?? 'farmer123';
+export const COORDINATOR_PASSWORD = process.env.VITE_COORDINATOR_PASSWORD ?? 'coordinator123';
+
+/**
+ * Give the browser a signed-in session without walking the form.
+ *
+ * The value is written after the app has loaded (not via addInitScript), so a
+ * later sign-out in the same test is not undone by a re-seeded session.
+ */
+export async function signInAs(page: Page, role: E2ERole): Promise<void> {
+  await page.goto('/login');
+  await page.evaluate(
+    ({ key, nextRole }) => {
+      window.localStorage.setItem(
+        key,
+        JSON.stringify({ role: nextRole, signedInAt: new Date().toISOString() }),
+      );
+    },
+    { key: SESSION_KEY, nextRole: role },
+  );
 }
 
 export { expect };

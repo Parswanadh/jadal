@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useI18n } from "../i18n/I18nContext";
 import PageHeader from "../components/PageHeader";
 import EntitlementReview from "./EntitlementReview";
@@ -6,158 +7,228 @@ import LedgerAudit from "./LedgerAudit";
 import RequestQueue from "./RequestQueue";
 import RosterCompare from "./RosterCompare";
 import VerifyRegistrations from "./VerifyRegistrations";
-import { api, type Source } from "./api";
-import { strings } from "./i18n";
-import type { EntitlementRow, FarmerRegistration, LedgerView, RequestRow, RosterProposal } from "./types";
+import { api } from "./api";
+import type { AuditView, EntitlementRow, FarmerRegistration, LedgerView, RequestRow, RosterProposal } from "./types";
 import "./coordinator.css";
 
-type Tab = "verify" | "entitlements" | "roster" | "requests" | "ledger";
+type Tab = "requests" | "farmers" | "entitlements" | "roster" | "accounts";
 
-const TABS: Tab[] = ["verify", "entitlements", "roster", "requests", "ledger"];
+const TABS: Tab[] = ["requests", "farmers", "entitlements", "roster", "accounts"];
+
+function isTab(value: string | null): value is Tab {
+  return value !== null && (TABS as string[]).includes(value);
+}
 
 export default function CoordinatorConsole() {
-  const { lang, t: tr } = useI18n();
-  const [tab, setTab] = useState<Tab>("verify");
-  const [source, setSource] = useState<Source>("mock");
+  const { t } = useI18n();
+  const [params, setParams] = useSearchParams();
+  const [chosen, setChosen] = useState<Tab | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [ready, setReady] = useState(false);
 
   const [farmers, setFarmers] = useState<FarmerRegistration[]>([]);
   const [ents, setEnts] = useState<EntitlementRow[]>([]);
   const [seasonTotal, setSeasonTotal] = useState(0);
-  const [explEn, setExplEn] = useState("");
-  const [explTe, setExplTe] = useState("");
+  const [explanation, setExplanation] = useState("");
   const [water, setWater] = useState<RosterProposal | null>(null);
   const [hours, setHours] = useState<RosterProposal | null>(null);
-  const [activeRoster, setActiveRoster] = useState<string | null>(null);
   const [requests, setRequests] = useState<RequestRow[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [requestsFailed, setRequestsFailed] = useState(false);
   const [ledger, setLedger] = useState<LedgerView | null>(null);
-  const [findings, setFindings] = useState<{ severity: "info" | "warn" | "critical"; text: string }[]>([]);
-  const [sumEn, setSumEn] = useState("");
-  const [sumTe, setSumTe] = useState("");
-  const [ready, setReady] = useState(false);
+  const [audit, setAudit] = useState<AuditView | null>(null);
+  const [changedTurns, setChangedTurns] = useState<Set<string>>(new Set());
 
-  const t = strings[lang];
+  const load = useCallback(async (): Promise<void> => {
+    try {
+      const [f, e, rw, rh, rq, lg, au] = await Promise.all([
+        api.listFarmers(),
+        api.suggestEntitlements(),
+        api.proposeRoster("equal_water"),
+        api.proposeRoster("equal_hours"),
+        api.listRequests(),
+        api.ledger(),
+        api.audit(),
+      ]);
+      setFarmers(f);
+      setEnts(e.rows);
+      setSeasonTotal(e.seasonTotalM3);
+      setExplanation(e.explanation);
+      setWater(rw);
+      setHours(rh);
+      setRequests(rq);
+      setLedger(lg);
+      setAudit(au);
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setReady(true);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    async function load(): Promise<void> {
-      try {
-        const [f, e, rw, rq, lg, au] = await Promise.all([
-          api.listFarmers(),
-          api.suggestEntitlements(),
-          api.proposeRoster("equal_water"),
-          api.listRequests(),
-          api.ledger(),
-          api.audit(),
-        ]);
-        if (cancelled) return;
-        setFarmers(f.rows);
-        setEnts(e.rows);
-        setSeasonTotal(e.seasonTotalM3);
-        setExplEn(e.explanationEn);
-        setExplTe(e.explanationTe);
-        setWater(rw.proposal);
-        setRequests(rq.rows);
-        setLedger(lg.balances);
-        setFindings(au.findings.map((x) => ({ severity: x.severity, text: x.text })));
-        setSumEn(au.summaryEn);
-        setSumTe(au.summaryTe);
-        const sources = [f.source, e.source, rw.source, rq.source, lg.source, au.source];
-        setSource(sources.every((s) => s === "live") ? "live" : "mock");
-      } catch {
-        if (!cancelled) setLoadError(true);
-      } finally {
-        if (!cancelled) setReady(true);
-      }
-    }
     void load();
-    return () => { cancelled = true; };
+  }, [load]);
+
+  /** Re-read the queue, so a request raised in another session shows up on a plain load. */
+  const refreshRequests = useCallback(async (): Promise<void> => {
+    setRequestsLoading(true);
+    setRequestsFailed(false);
+    try {
+      setRequests(await api.listRequests());
+    } catch {
+      setRequestsFailed(true);
+    } finally {
+      setRequestsLoading(false);
+    }
   }, []);
+
+  const pendingRequests = requests.filter((r) => !r.decision).length;
+  const pendingFarmers = farmers.filter((r) => !r.verified).length;
+  const pendingEnts = ents.filter((r) => r.status === "proposed").length;
+  const rosterOpen = water !== null && hours !== null && !water.approved && !hours.approved ? 1 : 0;
+  const counts: Record<Tab, number> = {
+    requests: pendingRequests,
+    farmers: pendingFarmers,
+    entitlements: pendingEnts,
+    roster: rosterOpen,
+    accounts: 0,
+  };
+
+  // Open on what needs attention first: extra-water requests, then unchecked
+  // farmers, then the weekly shares. Fall back to the weekly shares.
+  const fromUrl = params.get("tab");
+  const defaultTab: Tab =
+    pendingRequests > 0 ? "requests" : pendingFarmers > 0 ? "farmers" : "entitlements";
+  const tab: Tab = isTab(fromUrl) ? fromUrl : (chosen ?? defaultTab);
+
+  const pick = useCallback(
+    (next: Tab) => {
+      setChosen(next);
+      if (params.has("tab")) setParams({}, { replace: true });
+    },
+    [params, setParams],
+  );
 
   const onVerified = useCallback((id: string) => {
     setFarmers((rows) => rows.map((r) => (r.farmer.id === id ? { ...r, verified: true } : r)));
   }, []);
 
-  const onEntsApproved = useCallback((rows: EntitlementRow[]) => {
-    setEnts(rows);
-  }, []);
-
-  const onProposed = useCallback((p: RosterProposal) => {
-    if (p.mode === "equal_water") setWater(p);
-    else setHours(p);
+  const onDecided = useCallback((id: string, decision: "approve" | "reject", volumeM3: number) => {
+    setRequests((rows) =>
+      rows.map((r) => (r.id === id ? { ...r, decision: { decision, volumeM3 }, status: decision === "approve" ? "approved" : "rejected" } : r)),
+    );
   }, []);
 
   const onRosterApproved = useCallback((id: string) => {
-    setActiveRoster(id);
+    const mark = (p: RosterProposal | null): RosterProposal | null => (p && p.id === id ? { ...p, approved: true } : p);
+    setWater(mark);
+    setHours(mark);
   }, []);
 
-  const onDecided = useCallback((id: string, decision: "approve" | "reject", volumeM3: number) => {
-    setRequests((rows) => rows.map((r) => (r.id === id ? { ...r, decision: { decision, volumeM3 }, status: decision === "approve" ? "approved" : "rejected" } : r)));
+  /** Re-read the accounts after a schedule change, so its audit note appears. */
+  const refreshAccounts = useCallback(async (): Promise<void> => {
+    try {
+      const [lg, au] = await Promise.all([api.ledger(), api.audit()]);
+      setLedger(lg);
+      setAudit(au);
+    } catch {
+      // Keep the last good accounts rather than blanking the tab.
+    }
   }, []);
 
-  function tabLabel(k: Tab): string {
-    if (k === "verify") return t.tabVerify;
-    if (k === "entitlements") return t.tabEntitlements;
-    if (k === "roster") return t.tabRoster;
-    if (k === "requests") return t.tabRequests;
-    return t.tabLedger;
-  }
+  const onTurnSaved = useCallback(
+    (rosterId: string, turnId: string, start: string, end: string) => {
+      const patch = (p: RosterProposal | null): RosterProposal | null =>
+        p && p.id === rosterId
+          ? { ...p, turns: p.turns.map((turn) => (turn.id === turnId ? { ...turn, start, end } : turn)) }
+          : p;
+      setWater(patch);
+      setHours(patch);
+      setChangedTurns((prev) => new Set(prev).add(`${rosterId}:${turnId}`));
+      void refreshAccounts();
+    },
+    [refreshAccounts],
+  );
+
+  // The audit is a live trail: re-read it whenever the accounts tab is opened,
+  // so a schedule change or an alert sent a moment ago is already there. The
+  // request queue is re-read the same way: requests are raised in other
+  // sessions, so opening the tab must not show a stale list.
+  useEffect(() => {
+    if (tab === "accounts") void refreshAccounts();
+  }, [tab, refreshAccounts]);
+
+  useEffect(() => {
+    if (tab === "requests" && ready) void refreshRequests();
+  }, [tab, ready, refreshRequests]);
+
+  const tabLabel = useMemo(() => (k: Tab) => t(`coord.tabs.${k}`), [t]);
 
   return (
     <div className="coord">
-      <a className="skip" href="#coord-main">{t.skipLink}</a>
-      <PageHeader
-        eyebrow={tr("page.coordinator.eyebrow")}
-        title={tr("page.coordinator.title")}
-        lead={tr("page.coordinator.lead")}
-        actions={
-          <span className={`chip ${source === "live" ? "chip-ok" : "chip-warn"}`} role="status">
-            {source === "live" ? t.onlineBadge : t.offlineBadge}
-          </span>
-        }
-      />
+      <PageHeader eyebrow={t("page.coordinator.eyebrow")} title={t("page.coordinator.title")} lead={t("page.coordinator.lead")} />
 
-      <nav aria-label={t.consoleTitle}>
-        <ul className="tabs" role="tablist">
-          {TABS.map((k) => (
-            <li key={k} role="presentation">
-              <button
-                type="button" role="tab" aria-selected={tab === k}
-                className={`tab ${tab === k ? "active" : ""}`}
-                onClick={() => setTab(k)}
-              >
-                {tabLabel(k)}
-                {k === "verify" && farmers.some((r) => !r.verified) && (
-                  <span className="count" aria-label={`${String(farmers.filter((r) => !r.verified).length)} pending`}>
-                    {farmers.filter((r) => !r.verified).length}
-                  </span>
-                )}
-                {k === "requests" && requests.some((r) => !r.decision) && (
-                  <span className="count" aria-label={`${String(requests.filter((r) => !r.decision).length)} pending`}>
-                    {requests.filter((r) => !r.decision).length}
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <div className="tabs" role="tablist" aria-label={t("page.coordinator.title")}>
+        {TABS.map((k) => (
+          <button key={k} type="button" role="tab" className="tab" aria-selected={tab === k} onClick={() => pick(k)}>
+            {tabLabel(k)}
+            {counts[k] > 0 && (
+              <span className="tab-badge" aria-label={t("coord.pendingCount", { n: counts[k] })}>
+                {counts[k]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
-      <div id="coord-main" tabIndex={-1}>
+      <div role="tabpanel" id="coord-main">
         {!ready ? (
-          <p role="status" aria-live="polite">{t.loading}</p>
+          <p className="muted" role="status">{t("common.loading")}</p>
         ) : (
           <>
-            {loadError && <p role="alert" className="alert">{t.error}</p>}
-            {tab === "verify" && <VerifyRegistrations lang={lang} rows={farmers} onVerified={onVerified} />}
+            {loadError && (
+              <div className="notice notice-crit" role="alert">
+                <p>
+                  {t("common.loadError")}{" "}
+                  <button type="button" className="btn" onClick={() => void load()}>
+                    {t("common.retry")}
+                  </button>
+                </p>
+              </div>
+            )}
+            {tab === "requests" && (
+              <RequestQueue
+                rows={requests}
+                loading={requestsLoading}
+                failed={requestsFailed}
+                onRefresh={() => void refreshRequests()}
+                onDecided={onDecided}
+              />
+            )}
+            {tab === "farmers" && <VerifyRegistrations rows={farmers} onVerified={onVerified} />}
             {tab === "entitlements" && (
-              <EntitlementReview lang={lang} rows={ents} seasonTotalM3={seasonTotal} explanationEn={explEn} explanationTe={explTe} onApproved={onEntsApproved} />
+              <EntitlementReview
+                rows={ents}
+                seasonTotalM3={seasonTotal}
+                explanation={explanation}
+                onApproved={setEnts}
+                onGoFarmers={() => pick("farmers")}
+                onReload={() => void load()}
+              />
             )}
             {tab === "roster" && (
-              <RosterCompare lang={lang} water={water} hours={hours} activeId={activeRoster} onProposed={onProposed} onApproved={onRosterApproved} />
+              <RosterCompare
+                water={water}
+                hours={hours}
+                changedTurns={changedTurns}
+                onApproved={onRosterApproved}
+                onTurnSaved={onTurnSaved}
+                onReload={() => void load()}
+              />
             )}
-            {tab === "requests" && <RequestQueue lang={lang} rows={requests} onDecided={onDecided} />}
-            {tab === "ledger" && <LedgerAudit lang={lang} ledger={ledger} findings={findings} summaryEn={sumEn} summaryTe={sumTe} />}
+            {tab === "accounts" && <LedgerAudit ledger={ledger} audit={audit} />}
           </>
         )}
       </div>
