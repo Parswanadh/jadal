@@ -33,7 +33,7 @@ import type { FarmerRecord } from "../db/repo";
 import { appendEvent, isStoreError } from "../db/store";
 import type { Db } from "../db/store";
 import type { ProviderFetch } from "../system1";
-import { placeCallFromCampaign } from "../telephony-deps";
+import { placeCallIfAllowed } from "../telephony-deps";
 import { templateForPurpose, type MessageFacts } from "../voice/telugu";
 
 /* ------------------------------------------------------------------ environment */
@@ -82,6 +82,9 @@ export interface CampaignEnv {
   readonly SARVAM_TTS_SPEAKER?: string | undefined;
   readonly DEEPGRAM_API_KEY?: string | undefined;
   readonly REAL_TELEPHONY?: string | undefined;
+  /** The outbound-call rate limit (see `../noloop.ts` and `docs/ops/CALL-SAFETY.md`). */
+  readonly CALL_RATE_MAX_CALLS?: string | undefined;
+  readonly CALL_RATE_WINDOW_SECONDS?: string | undefined;
 }
 
 /**
@@ -303,17 +306,45 @@ export async function runEscalation(env: CampaignEnv, contactId: string): Promis
    *
    * `placeCall` never throws and never makes a request without a full credential set, so the offline
    * demo path is unchanged.
+   *
+   * NO LOOP: the dial goes through `placeCallIfAllowed`, so a destination that has already been
+   * rung `CALL_RATE_MAX_CALLS` times inside `CALL_RATE_WINDOW_SECONDS` is refused **before Twilio is
+   * called**. A refusal is not hidden: the contact is written back as `failed` (nobody was reached, so
+   * claiming `queued`/`sent` would be the lie the audit trail must not tell) and the refusal line is
+   * logged by the guard with its limit and window. The rung itself still exists and is still handed to
+   * `OUTBOUND` below, so the ladder's designed progression — and its 15-minute retry — is untouched.
    */
   let landed = next;
   if (decision.channel === "voice") {
-    const placed = await placeCallFromCampaign(env, {
-      contactId: next.id,
-      to: record.farmer.phone,
-      messageTe: next.message_te,
-      farmerId: record.farmer.id,
-    });
-    if (!placed.simulated) {
-      landed = { ...next, status: placed.ok ? "sent" : "failed" };
+    const guarded = await placeCallIfAllowed(
+      env,
+      {
+        contactId: next.id,
+        to: record.farmer.phone,
+        messageTe: next.message_te,
+        farmerId: record.farmer.id,
+      },
+      `escalation ${next.id} → ${record.farmer.phone}`,
+    );
+
+    if (!guarded.allowed) {
+      // Refused by the rate limiter: the rung is recorded as a failed attempt rather than a queued or
+      // sent one, so the coordinator's contact list shows that this farmer was NOT reached.
+      landed = { ...next, status: "failed" };
+      try {
+        await appendEvent(env, {
+          id: deterministicId("evt", "contact.updated", landed.id, landed.status),
+          at: scheduledAt,
+          canal_id: canalId,
+          actor: { kind: "agent", id: "caller" },
+          type: "contact.updated",
+          contact: landed,
+        });
+      } catch (error) {
+        if (!(isStoreError(error) && error.kind === "duplicate_event")) throw error;
+      }
+    } else if (!guarded.placed.simulated) {
+      landed = { ...next, status: guarded.placed.ok ? "sent" : "failed" };
       try {
         await appendEvent(env, {
           id: deterministicId("evt", "contact.updated", landed.id, landed.status),

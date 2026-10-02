@@ -26,9 +26,10 @@
  *  * **Simulated is never reported as real.** {@link AlertOutcome} carries `simulated` straight from
  *    `placeCall`, and the audit event is only written once the dispatch has actually happened.
  *  * **No second Twilio client.** Every call goes through `placeCall` in `src/telephony/twilio.ts`,
- *    reached through `placeCallDeps`/`placeCallFromCampaign` in `src/telephony-deps.ts` — the same
- *    seam the escalation ladder uses, so `TWILIO_FORWARD_TO` and the `REAL_TELEPHONY` kill switch
- *    behave identically here.
+ *    reached through `placeCallIfAllowed` in `src/telephony-deps.ts` — the same seam the escalation
+ *    ladder uses, so `TWILIO_FORWARD_TO`, the `REAL_TELEPHONY` kill switch and the outbound-call rate
+ *    limit (`src/noloop.ts`) behave identically here. A call this module refuses is returned as
+ *    `skipped`, never as a silent success.
  *
  * ## Prose: composed, not invented
  *
@@ -71,7 +72,7 @@ import { getFarmer } from "./db/repo";
 import { appendEvent } from "./db/store";
 import { DEMO_CANAL_ID } from "./demo";
 import type { Env } from "./env";
-import { placeCallFromCampaign, type TelephonyBindings } from "./telephony-deps";
+import { placeCallIfAllowed, type TelephonyBindings } from "./telephony-deps";
 import { forwardTargetForFarmer } from "./telephony/twilio";
 import type { PlaceCallResult } from "./telephony";
 import { formatVolumeM3, templateForPurpose, type MessageFacts } from "./voice/telugu";
@@ -195,18 +196,39 @@ async function dispatch(
   // describes and the call we asked for are recognisably the same attempt.
   const contactId = newId("contact");
 
-  // `placeCallFromCampaign` is the shared seam: it builds the deps from the bindings and calls
-  // `placeCall` in the telephony module. The cast only exposes the bindings `Env` already declares.
   // Resolve the number Twilio will actually ring, so the outcome can report it rather than the
   // farmer's own (which a demo mapping may have replaced).
   const dialled = forwardTargetForFarmer(env as unknown as TelephonyBindings, to, input.farmer_id);
 
-  const placed = await placeCallFromCampaign(env as unknown as TelephonyBindings, {
-    contactId,
-    to,
-    messageTe: input.messageTe,
-    farmerId: input.farmer_id,
-  });
+  // NO LOOP: the same guarded seam the escalation ladder uses. This is the path a coordinator's own
+  // hand reaches — a double-clicked "Alert the farmer" button, or two coordinators acting at once —
+  // and it is exactly the kind of repeated request the ladder can never see. The refusal is reported,
+  // not swallowed: it becomes `skipped`, which `notifyFarmerOfAlert`'s callers surface, and the guard
+  // logs the limit and the window as it refuses.
+  const guarded = await placeCallIfAllowed(
+    env as unknown as TelephonyBindings,
+    {
+      contactId,
+      to,
+      messageTe: input.messageTe,
+      farmerId: input.farmer_id,
+    },
+    `coordinator-alert ${input.context.purpose} → ${to}`,
+  );
+
+  if (!guarded.allowed) {
+    return outcome({
+      simulated: true,
+      alerted: false,
+      to,
+      dialled,
+      // The recipient was NOT reached. Saying `alerted: true` here would be the one lie this module
+      // promises never to tell (see the module header).
+      skipped: `refused by the call rate limit — ${guarded.refusal.detail}`,
+    });
+  }
+
+  const placed = guarded.placed;
 
   const contact: Contact = {
     id: contactId,
