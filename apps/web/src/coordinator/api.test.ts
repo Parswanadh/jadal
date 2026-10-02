@@ -98,9 +98,12 @@ describe("coordinator api adapter (mock mode)", () => {
     ).rejects.toMatchObject({ status: 400 });
   });
 
-  it("alerts one farmer and reports simulated dispatch", async () => {
-    const res = await api.sendAlert("f1", "sms", "Please check your turn.");
+  it("alerts one farmer at a chosen severity and reports simulated dispatch", async () => {
+    const res = await api.sendAlert("f1", "sms", "emergency", "Please check your turn.");
     expect(res.simulated).toBe(true);
     expect(res.detail).toBeTruthy();
+    // The severity reaches the audit trail.
+    const findings = (await api.audit()).findings;
+    expect(findings.some((f) => /emergency level/i.test(f.text))).toBe(true);
   });
 });

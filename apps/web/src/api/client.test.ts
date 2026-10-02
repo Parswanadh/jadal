@@ -185,19 +185,40 @@ describe("coordinator tool endpoints (mock mode)", () => {
     expect((await client.audit()).findings.some((f) => /changed by the coordinator/i.test(f.text))).toBe(true);
   });
 
-  it("sends an alert and reports simulated mode", async () => {
+  it("sends an alert with a severity and reports simulated mode", async () => {
     vi.stubEnv("VITE_MOCK", "1");
-    const res = await client.sendAlert({ farmer_id: "f1", channel: "whatsapp", message: "Please check your turn." });
+    await client.demoReset();
+    const res = await client.sendAlert({
+      farmer_id: "f1",
+      channel: "whatsapp",
+      severity: "warning",
+      message: "Please check your turn.",
+    });
     expect(res.ok).toBe(true);
     expect(res.simulated).toBe(true);
     expect(res.contact_id).toBeTruthy();
     expect(res.detail).toBeTruthy();
+
+    // The severity is recorded in the audit trail.
+    const findings = (await client.audit()).findings;
+    expect(findings.some((f) => /Alert queued for/i.test(f.text) && /warning level/i.test(f.text))).toBe(true);
+  });
+
+  it("an alert creates the call whose reply the phone surface speaks", async () => {
+    vi.stubEnv("VITE_MOCK", "1");
+    await client.demoReset();
+    const alert = await client.sendAlert({ farmer_id: "f1", channel: "call", severity: "urgent" });
+    // The alert contact is listed, and its call carries the agent's Telugu reply.
+    expect((await client.contacts()).some((c) => c.id === alert.contact_id)).toBe(true);
+    const reply = await client.phoneReply(alert.contact_id, {});
+    expect(reply.agent_reply_te).toMatch(/[ఀ-౿]/);
+    expect(reply.agent_reply_te).not.toBe("ధన్యవాదాలు. మీ వంతు ఖరారైంది.");
   });
 
   it("rejects an alert for a farmer it does not know", async () => {
     vi.stubEnv("VITE_MOCK", "1");
-    await expect(client.sendAlert({ farmer_id: "no-such-farmer", channel: "call" })).rejects.toMatchObject({
-      status: 404,
-    });
+    await expect(
+      client.sendAlert({ farmer_id: "no-such-farmer", channel: "call", severity: "info" }),
+    ).rejects.toMatchObject({ status: 404 });
   });
 });
