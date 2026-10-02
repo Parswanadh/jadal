@@ -218,14 +218,24 @@
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
         background: #ffffff;
         position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .ribbon-wrapper {
+        position: relative;
+        width: 880px;
+        height: 220px;
+        overflow: hidden;
+        border-radius: 16px;
       }
       /* Crop strictly to the top ribbon to forbid lower need-met bars */
       .cropped-canal-video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        object-position: 50% 12%;
-        transform: scale(1.02);
+        position: absolute;
+        width: 1250px;
+        height: auto;
+        left: -160px;
+        top: -140px;
       }
       .flow-metrics-col {
         display: flex;
@@ -599,17 +609,19 @@
         <div class="seepage-layout">
           <!-- Real app footage: canal ribbon video cropped to top ribbon card only -->
           <div class="video-crop-card" id="video-card">
-            <video
-              id="canal-video"
-              src="assets/video/canal-seepage.webm"
-              class="cropped-canal-video"
-              data-start="8.0"
-              data-duration="10.0"
-              autoplay
-              loop
-              muted
-              playsinline
-            ></video>
+            <div class="ribbon-wrapper">
+              <video
+                id="canal-video"
+                src="assets/video/canal-seepage.webm"
+                class="cropped-canal-video"
+                data-start="8.0"
+                data-duration="10.0"
+                autoplay
+                loop
+                muted
+                playsinline
+              ></video>
+            </div>
           </div>
 
           <!-- Allowed flow metrics from facts.md rows 8, 9, 11, 12 -->
