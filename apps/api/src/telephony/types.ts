@@ -29,6 +29,11 @@ export interface TelephonyEnv {
    * omitted. Unset = paid account, which keeps the full parameter set.
    */
   TWILIO_TRIAL?: string;
+  /**
+   * Ordered list of real, verified demo handsets (comma-separated E.164) used in place of the
+   * seeded farmers' placeholder numbers. See `forwardTargetForFarmer`.
+   */
+  FARMER_DEMO_NUMBERS?: string;
 }
 
 /** Binary cache (KV / R2 / Cache API / Map). Keys are opaque strings. */
@@ -155,4 +160,9 @@ export interface PlaceCallInput {
   to: string;
   /** Telugu message; used to pre-warm the TTS cache. */
   messageTe: string;
+  /**
+   * The farmer the call is about. Used only to pick a demo destination when the farmer's own number
+   * is a seeded placeholder. See `forwardTargetForFarmer` in `./twilio`.
+   */
+  farmerId?: string;
 }

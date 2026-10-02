@@ -61,6 +61,8 @@ export interface Env {
   REAL_TELEPHONY?: string;
   /** "1" when the Twilio account is a trial (see `trialAccount` in `src/telephony`). */
   TWILIO_TRIAL?: string;
+  /** Real verified demo handsets used in place of the seeded farmers' placeholder numbers. */
+  FARMER_DEMO_NUMBERS?: string;
 }
 
 /**

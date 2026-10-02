@@ -485,3 +485,39 @@ describe("call forwarding (demo redirect)", () => {
     expect(dialled(s.calls)).toBe("+919000000001");
   });
 });
+
+describe("per-farmer demo mapping (FARMER_DEMO_NUMBERS)", () => {
+  const TWILIO_CALLS = "https://api.twilio.com/2010-04-01/Accounts";
+  function dialled(calls: Call[]): string | undefined {
+    const call = calls.find((c) => c.url.startsWith(TWILIO_CALLS));
+    const body = call?.init?.body;
+    return typeof body === "string" ? (new URLSearchParams(body).get("To") ?? undefined) : undefined;
+  }
+  const DEMO = { FARMER_DEMO_NUMBERS: "+917207997965, +918610071143" };
+
+  it("maps a seeded placeholder onto a real handset by farmer number", async () => {
+    const cases: [string, string][] = [
+      ["f1", "+917207997965"],
+      ["f2", "+918610071143"],
+      ["f3", "+917207997965"],
+      ["f4", "+918610071143"],
+    ];
+    for (const [farmerId, expected] of cases) {
+      const s = setup({ env: DEMO });
+      await placeCall(s.deps, { contactId: "c1", to: "+919000000001", messageTe: "x", farmerId });
+      expect(dialled(s.calls)).toBe(expected);
+    }
+  });
+
+  it("leaves a real farmer number alone", async () => {
+    const s = setup({ env: DEMO });
+    await placeCall(s.deps, { contactId: "c1", to: "+918341717162", messageTe: "x", farmerId: "f1" });
+    expect(dialled(s.calls)).toBe("+918341717162");
+  });
+
+  it("is inert when FARMER_DEMO_NUMBERS is unset", async () => {
+    const s = setup();
+    await placeCall(s.deps, { contactId: "c1", to: "+919000000001", messageTe: "x", farmerId: "f1" });
+    expect(dialled(s.calls)).toBe("+919000000001");
+  });
+});

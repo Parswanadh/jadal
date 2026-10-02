@@ -61,6 +61,40 @@ export function forwardTarget(env: TelephonyDeps["env"], to: string): string {
   return targets[hash % targets.length] as string;
 }
 
+/**
+ * Resolve the number a call about `farmerId` is dialled to.
+ *
+ * `FARMER_DEMO_NUMBERS` is an ordered list of real, verified demo handsets. The seeded farmers carry
+ * placeholder Mobiles (`+9190000000xx`) that a Twilio trial account cannot dial, so during a demo
+ * each farmer is mapped onto one of those handsets. The mapping is by the farmer's position in the
+ * numeric part of their id (`f1` → the first handset, `f2` → the second, `f3` → the first, …), which
+ * is stable, easy to explain to an audience, and needs no extra configuration per farmer.
+ *
+ * A farmer whose number is already a real one is left alone: the mapping only applies when the
+ * destination looks like a seeded placeholder (`+9190000000xx`). `TWILIO_FORWARD_TO`, when set, is
+ * still honoured for anything the demo map does not cover.
+ */
+export function forwardTargetForFarmer(
+  env: TelephonyDeps["env"],
+  to: string,
+  farmerId?: string,
+): string {
+  const raw = env.FARMER_DEMO_NUMBERS;
+  const placeholders = /^\+9190{7}\d{2}$/;
+  if (typeof raw === "string" && raw.trim() !== "" && farmerId !== undefined && placeholders.test(to)) {
+    const targets = raw
+      .split(",")
+      .map((t) => t.trim())
+      .filter((t) => /^\+\d{8,15}$/.test(t));
+    if (targets.length > 0) {
+      const n = Number.parseInt(farmerId.replace(/\D/g, ""), 10);
+      const index = Number.isFinite(n) && n > 0 ? (n - 1) % targets.length : 0;
+      return targets[index] as string;
+    }
+  }
+  return forwardTarget(env, to);
+}
+
 /** Return the message audio from cache, or synthesise it with Sarvam and store it. */
 export async function messageAudio(
   deps: Pick<TelephonyDeps, "env" | "fetch" | "cache">,
@@ -99,7 +133,7 @@ export async function placeCall(
   }
 
   const body = new URLSearchParams();
-  body.set("To", forwardTarget(env, input.to));
+  body.set("To", forwardTargetForFarmer(env, input.to, input.farmerId));
   body.set("From", env.TWILIO_FROM_NUMBER as string);
   body.set("Url", urls.twiml);
   // A Twilio *trial* account rejects `Method`, `Twilio` and the status-callback parameters with

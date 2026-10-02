@@ -310,6 +310,7 @@ export async function runEscalation(env: CampaignEnv, contactId: string): Promis
       contactId: next.id,
       to: record.farmer.phone,
       messageTe: next.message_te,
+      farmerId: record.farmer.id,
     });
     if (!placed.simulated) {
       landed = { ...next, status: placed.ok ? "sent" : "failed" };

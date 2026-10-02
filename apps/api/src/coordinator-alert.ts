@@ -193,6 +193,7 @@ async function dispatch(
     contactId,
     to,
     messageTe: input.messageTe,
+    farmerId: input.farmer_id,
   });
 
   const contact: Contact = {
