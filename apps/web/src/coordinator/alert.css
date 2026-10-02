@@ -54,3 +54,39 @@
 .coord .alert-form textarea {
   min-height: 3.5rem;
 }
+
+/* The allocation opt-in: one compact line, not a form of its own. */
+.coord .alert-form .choice-compact {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.coord .alert-form .choice-compact:hover {
+  border-color: var(--muted);
+}
+
+.coord .alert-form .choice-compact input {
+  margin-top: 0.15rem;
+  accent-color: var(--accent);
+}
+
+.coord .alert-form .choice-compact strong {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.coord .alert-form .choice-compact span span {
+  display: block;
+}
+
+/* The allocation the coordinator just told the farmer about. */
+.coord .alert-form .notice p + p {
+  margin-top: 0.35rem;
+}
