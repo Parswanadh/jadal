@@ -122,25 +122,11 @@ export default function SimulatedPhone() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wantedContact, contacts.length]);
 
-  // Speak the committee message in Telugu when it arrives (feature-detected),
-  // so the demo works even where the audio payload is only a tone.
-  useEffect(() => {
-    if (phase !== "active" || turns.length === 0 || !caps.speechSynthesis) {
-      return;
-    }
-    try {
-      const first = turns[0];
-      if (!first) return;
-      const utter = new SpeechSynthesisUtterance(first.text_te);
-      utter.lang = "te-IN";
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utter);
-    } catch {
-      // Speech synthesis is best-effort; the audio element is the fallback.
-    }
-    // Run once per call acceptance.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, contacts.length]);
+  // Speech is user-initiated only. The committee's message is on screen as a
+  // transcript the moment the call connects, and the play control below speaks
+  // it. Auto-speaking on connect hijacked the screen — including when a request
+  // raised on the farmer side opened this phone — so nothing here fires on its
+  // own. See AgentCall.tsx for the same rule on the outbound-call panel.
 
   const playAnnouncement = (): void => {
     if (audioRef.current) {
