@@ -24,7 +24,7 @@ import { seededEnv } from "../../test/fixtures";
 
 import { advanceHours, isNightRelease, now, setNow, toIST } from "./clock";
 import { deterministicId, newId } from "./id";
-import { INIT_SCHEMA_SQL, JADAL_SCHEMA_SQL, MIGRATION_SQL, applySchema } from "./schema.sql";
+import { CALL_RATE_LIMIT_SQL, INIT_SCHEMA_SQL, JADAL_SCHEMA_SQL, MIGRATION_SQL, applySchema } from "./schema.sql";
 import {
   APPEND_ONLY_TABLES,
   StoreError,
@@ -461,8 +461,17 @@ describe("schema.sql.ts", () => {
     expect(normalise(JADAL_SCHEMA_SQL)).toBe(normalise(onDisk));
   });
 
+  it("keeps the inlined 0003 migration byte-identical to the file on disk", () => {
+    const onDisk = readFileSync(join(MIGRATIONS_DIR, "0003_call_rate_limit.sql"), "utf8");
+    expect(normalise(CALL_RATE_LIMIT_SQL)).toBe(normalise(onDisk));
+  });
+
   it("joins the migrations in application order", () => {
-    expect(MIGRATION_SQL).toBe([INIT_SCHEMA_SQL, JADAL_SCHEMA_SQL].join("\n"));
+    // Listed explicitly rather than derived from the directory: the point of this assertion is that
+    // the inlined constants are applied in filename order, so a new migration that is added to the
+    // directory and *not* to `MIGRATION_SQL` fails here (the string would be missing from the join)
+    // instead of silently never running in tests.
+    expect(MIGRATION_SQL).toBe([INIT_SCHEMA_SQL, JADAL_SCHEMA_SQL, CALL_RATE_LIMIT_SQL].join("\n"));
   });
 
   it("applies cleanly to a bare database", async () => {
