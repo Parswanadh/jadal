@@ -447,14 +447,16 @@ function voiceRows() {
   const rows = [];
   const used = new Set();
 
-  const push = (key, en, te, context, isVoice) => {
+  const push = (key, en, te, context, isVoice, extra) => {
+    let flag = autoFlag(te, en, isVoice);
+    if (extra) flag = flag ? `${flag};${extra}` : extra;
     rows.push({
       key,
       file: "apps/api/src/voice/telugu.ts",
       en,
       te,
       context,
-      auto_flag: autoFlag(te, en, isVoice),
+      auto_flag: flag,
     });
   };
 
@@ -466,29 +468,35 @@ function voiceRows() {
     // Drop empty literals (`""` from the "omit when unknown" ternaries) and language
     // switch tokens (`"en"` in farmerGreeting) so Te/En indices line up.
     const visible = (l) => l.text.trim().length > 0 && l.text !== "en" && l.text !== "te";
-    const teLits = lits.filter((l) => TELUGU.test(l.text) && visible(l));
-    if (teLits.length === 0) continue;
 
+    const twinName = `${stem(name)}En`;
+    const twin = name === `${stem(name)}Te` && scopes.has(twinName) ? twinName : null;
+    let teLits;
     let enLits;
-    let mismatch = false;
-    const twin = scopes.get(`${stem(name)}En`) && scopes.get(`${stem(name)}Te`) ? `${stem(name)}En` : null;
-    if (twin && name === `${stem(name)}Te`) {
+    if (twin) {
       const enScope = scopes.get(twin);
-      enLits = scanLiterals(enScope.text).filter((l) => !TELUGU.test(l.text) && visible(l));
+      const teAll = lits.filter(visible);
+      const enAll = scanLiterals(enScope.text).filter(visible);
+      // English discriminator tokens that appear verbatim in BOTH scopes (e.g. the
+      // severity strings "emergency"/"urgent" tested by the alert ternary) are code,
+      // not copy. Drop them from both sides so the visible clauses line up.
+      const common = new Set(teAll.filter((l) => enAll.some((e) => e.text === l.text)).map((l) => l.text));
+      teLits = teAll.filter((l) => TELUGU.test(l.text) && !common.has(l.text));
+      enLits = enAll.filter((l) => !TELUGU.test(l.text) && !common.has(l.text));
       used.add(twin);
     } else {
+      teLits = lits.filter((l) => TELUGU.test(l.text) && visible(l));
       enLits = lits.filter((l) => !TELUGU.test(l.text) && visible(l));
     }
-    if (enLits.length !== teLits.length) mismatch = true;
+    if (teLits.length === 0) continue;
+    const mismatch = enLits.length !== teLits.length;
     used.add(name);
 
     const base = stem(name);
     const context = VOICE_FN_CONTEXT[base] ?? `voice builder: ${base}`;
     teLits.forEach((lit, i) => {
       const en = enLits[i] ? enLits[i].text : "";
-      let flag = autoFlag(lit.text, en, true);
-      if (mismatch) flag = flag ? `${flag};literal_index_mismatch` : "literal_index_mismatch";
-      push(`voice.${base}[${i}]`, en, lit.text, context, true);
+      push(`voice.${base}[${i}]`, en, lit.text, context, true, mismatch ? "literal_index_mismatch" : "");
     });
   }
 
