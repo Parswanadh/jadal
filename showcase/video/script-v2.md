@@ -52,18 +52,18 @@
   - Camera pans smoothly along the `/canal` schematic from Head (Outlet 1, 300 m) to Tail (Outlet 8, 2900 m).
   - Head Outlet 1 callout appears: `0.145 m³/s` flow (3.5% loss).
   - Downstream flow band narrows noticeably toward Tail Outlet 8 callout: `0.106 m³/s` flow (29.4% seepage loss).
-  - Outlet deficit bar indicates tail farms receive only ~42% of required crop water under equal-hours turns.
+  - A time bar shows both turns lasting the SAME hours; the tail's smaller flow means less water for the same time (no percentage shown).
 - **On-Screen Text (Captions):**
   - **EN:** *Head Outlet 1: 0.145 m³/s (3.5% loss) · Tail Outlet 8: 0.106 m³/s (29.4% loss).*  
-    *Equal hours meet only ~42% of tail crop need.*
+    *Same hours. Not the same water.*
   - **TE:** *తల వద్ద 0.145 m³/s (3.5% నష్టం) · తోక వద్ద 0.106 m³/s (29.4% నష్టం).*  
-    *సమాన గంటల్లో తోక రైతుకు ~42% నీరే అందుతుంది.*
+    *అదే గంటలు. అదే నీరు కాదు.*
 - **Voiceover (EN):**
-  > "Water travels through three kilometres of unlined soil. Head outlets receive point-one-four-five cubic metres a second; by outlet eight, seepage claims nearly thirty percent of the flow. Under equal hours, the tail meets only forty-two percent of its crop need."
+  > "Water travels through three kilometres of unlined soil. Head outlets receive point-one-four-five cubic metres a second; by outlet eight, seepage claims nearly thirty percent of the flow. An hour at the tail is not an hour at the head: same time, less water."
 - **Audio Cue:** Subtle rushing water sound, soft clock tick under the narration.
 - **Truth Verification:**
   - Flow rates & loss fractions: `apps/web/src/canal/seed.json:17-18, 59-60` (`READ` & `COMPUTED`).
-  - Tail deficit ~42%: `apps/web/src/api/mock.ts:322`, `docs/HANDOFF-ENGINEERING.md:46-47` (`READ` & `COMPUTED`).
+  - The earlier '~42% tail need-met' claim was REFUTED (see facts.md #13 and ADR-need-met-planned.md: core gives 280.8% head / 205.5% tail planned; 42% came only from an illustrative mock). No need-met percentage may appear.
   - **Strict rule enforced:** Zero mention of Gini coefficients; no unverified percentages.
 
 ---

@@ -22,15 +22,15 @@
 | **10** | Outlet 8 Chainage (Tail) | 2900 | m | `packages/contracts/fixtures/demo-scenario.json:62` | `READ` | **YES** | Shot 2 on-screen marker |
 | **11** | Outlet 8 Delivered Flow | 0.106 (exact: 0.1059) | m³/s | `apps/web/src/canal/seed.json:59`, `packages/core/src/hydraulics.ts:92` ($0.15 \times e^{-0.00012 \times 2900}$) | `COMPUTED` & `READ` | **YES** | Shot 2 on-screen comparison & voiceover |
 | **12** | Outlet 8 Conveyance Loss | 29.4 | % (`0.294`) | `apps/web/src/canal/seed.json:60`, $1 - e^{-0.00012 \times 2900} = 0.29390$ | `COMPUTED` & `READ` | **YES** | Shot 2 voiceover ("29% loss per second") |
-| **13** | Tail Need Met (Equal Hours) | ~42 | % | `apps/web/src/api/mock.ts:322` ($98 - 7 \times 8 = 42$), `docs/HANDOFF-ENGINEERING.md:46-47` | `READ` & `COMPUTED` | **YES** | Shot 2 problem statement ("tail meets ~42% of need") |
-| **14** | Automated Tests Passing | 794 | passed tests (152 core, 111 web, 531 api) | `docs/HANDOFF-ENGINEERING.md:108`, `git log` live tag audit | `READ` | **YES** | Shot 6 technical proof card |
+| **13** | ~~Tail Need Met (Equal Hours) ~42%~~ — **DEMOTED: UNVERIFIED** | — | `apps/web/src/api/mock.ts:322` is an ASSUMED illustrative mock formula (its own comment says so); no core computation backs it. Only usable if the `gini-planned` lane's COMPUTED planned need-met reproduces it (see section 2b). | `READ` | **NO** | Do NOT use unless re-verified |
+| **14** | Automated tests passing | **do not quote a count** — 794 was true only at `live/2026-10-02`; the swarm branch added tests. Re-measure with `pnpm -r test` and quote that, or omit | tests | `docs/HANDOFF-ENGINEERING.md:108` | `READ` | **STALE** | Shot 6 proof card only with a freshly measured number |
 | **15** | TypeScript Typecheck | Clean across all 4 packages | contracts, core, web, api | `docs/HANDOFF-ENGINEERING.md:107` | `READ` | **YES** | Shot 6 technical proof card |
-| **16** | i18n Bilingual Parity | 600 / 600 leaf keys | English & Telugu exact match | `apps/web/src/i18n/en.json`, `apps/web/src/i18n/te.json`, verified via script | `RAN` & `COMPUTED` | **YES** | Shot 5 on-screen badge / bilingual support |
+| **16** | i18n Bilingual Parity | 601 / 601 leaf keys (re-measured on swarm branch after alerts-honesty) | English & Telugu exact match | `apps/web/src/i18n/en.json`, `apps/web/src/i18n/te.json`, verified via script | `RAN` & `COMPUTED` | **YES** | Shot 5 on-screen badge / bilingual support |
 | **17** | Core Architectural Mandate | "LLMs propose, deterministic core computes, coordinator approves" | Principle | `docs/HANDOFF-ENGINEERING.md:64`, `apps/api/src/agents/loop.ts`, `packages/contracts/src/agents.ts` | `READ` | **YES** | Shot 4 central transition & on-screen lower third |
 | **18** | Turn Duration Formula | $T_i = V_i / Q(x_i)$ | seconds or hours | `packages/core/src/roster.ts:24`, `packages/core/src/hydraulics.ts:90-95` | `SOURCE` & `READ` | **YES** | Shot 3 on-screen equation card |
 | **19** | Velocity Formula | $v = \frac{1}{n} R^{2/3} S^{1/2}$ (Manning open channel) | m/s | `packages/core/src/hydraulics.ts:41-78` | `SOURCE` & `READ` | **YES** | Shot 3 physics foundation callout |
 | **20** | Double-Entry Conservation | $\sum \text{Debits} = \sum \text{Credits}$ across all transfers | m³ conservation invariant | `packages/core/src/ledger.ts:1-250`, `packages/core/src/ledger.test.ts` | `READ` | **YES** | Shot 5 ledger callout |
-| **21** | Outbound Call Rate Limit | 3 calls / 60 s per dialed handset | rate limit bound | `apps/api/src/campaigns/rate-limit.ts`, `docs/HANDOFF-ENGINEERING.md:116` | `READ` | **YES** | Architecture / safety notes |
+| **21** | Outbound Call Rate Limit | 3 calls / 60 s per dialed handset | rate limit bound | `apps/api/src/noloop.ts` (the path in the earlier draft did not exist), `docs/HANDOFF-ENGINEERING.md:116` | `READ` | **YES** | Architecture / safety notes |
 | **22** | Core Package Boundary | Zero I/O, zero network, zero LLM calls | architectural boundary | `packages/core/package.json`, `docs/HANDOFF-ENGINEERING.md:76` | `READ` | **YES** | Shot 4 deterministic core badge |
 
 ---
@@ -51,6 +51,12 @@ The following claims are strictly **FORBIDDEN** from appearing on screen, in voi
 | **Laya Model Active in Live API** | `LAYA_ENDPOINT` is unset in standard environment configurations, defaulting System-1 classification directly to keyword rules. | `docs/HANDOFF-ENGINEERING.md:158-169` (P3) |
 
 ---
+
+### 2b. Added by orchestrator review (RAN/READ)
+
+- **"Tail meets ~42% of crop need" and any equal-hours vs equal-water need-met percentage** — the only numeric source is the mock formula `max(40, 98 - i*8)` (`apps/web/src/api/mock.ts:322`, labelled ASSUMED/illustrative). Forbidden until a core-computed planned need-met is merged (lane `gini-planned`) and this table is updated.
+- **A bare test count** — quote only a number measured at render time.
+- **"Urgency score" as a measured quantity** — an unscored request now reports `urgency: 0` as a marker, not a measurement.
 
 ## 3. Verification Commands & Outputs
 
