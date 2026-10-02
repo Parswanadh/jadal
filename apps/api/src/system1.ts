@@ -74,9 +74,18 @@
  *    (`classifyByRules(text).mentions_crop_stress`). When the sidecar does report crop stress, its
  *    answer wins. `is_release_time` is accepted but never mapped onto `mentions_crop_stress` — they
  *    are different questions. See ADR-006.
+ *
+ *  * **Laya is trusted for `intent` and `mentions_crop_stress` only.** Its `urgency` (`score`) and
+ *    `is_release_time` (`noul`) are discarded in code, not merely in prose: `parseLayaDecision`
+ *    never reads either field and returns `urgency: null`, and `finishProviderCall` fills the
+ *    contract's required `urgency` from `classifyByRules` (see `docs/research/laya-verdict.md` L1:
+ *    the score never left band 2 for a "crop will die today" message, and the release-time noul
+ *    false-positived at 0.814 Telugu / 0.778 English). `is_release_time` has no `System1Result`
+ *    field at all.
  */
 
 import { System1Intent, System1Result } from "@jadal/contracts";
+import { layaEndpoint } from "./env";
 import { classifyByRules } from "./system1.rules";
 
 /**
@@ -167,7 +176,7 @@ export function providerConfigured(
   env: Pick<ProviderEnv, "LAYA_ENDPOINT" | "OPENROUTER_API_KEY">,
 ): boolean {
   if (provider === "rules") return true;
-  if (provider === "laya") return (env.LAYA_ENDPOINT?.trim().length ?? 0) > 0;
+  if (provider === "laya") return layaEndpoint(env) !== undefined;
   return jevEnabled(env);
 }
 
@@ -360,10 +369,23 @@ export function buildLayaRequest(text: string): LayaRequestBody {
 interface JevDecision {
   readonly intent: System1Result["intent"];
   readonly intentConfidence: number;
-  /** Normalised to the contract's `0..1`. */
-  readonly urgency: number;
+  /**
+   * Normalised to the contract's `0..1`, or `null` when this provider is not trusted for urgency.
+   * Jev returns a number; Laya returns `null` by design (it is trusted for intent and crop stress
+   * only) and `finishProviderCall` supplies the deterministic rules' urgency instead.
+   */
+  readonly urgency: number | null;
   /** Probability of crop stress; >= 0.5 is yes. */
   readonly stressProbability: number;
+}
+
+/**
+ * A decision parsed from the Laya sidecar. `urgency` is pinned to `null` so a caller cannot
+ * accidentally ship Laya's unusable score: the type system, not a comment, enforces it. The
+ * deterministic rules fill the contract value downstream.
+ */
+export interface LayaDecision extends JevDecision {
+  readonly urgency: null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -390,14 +412,6 @@ function nestedChoice(container: Record<string, unknown> | undefined, key: strin
   if (container === undefined) return undefined;
   const answer = container[key];
   return isRecord(answer) ? answer["choice"] : undefined;
-}
-
-/** `container[key][field]` when both are records/numbers, else null. */
-function nestedNumber(container: Record<string, unknown> | undefined, key: string, field: string): number | null {
-  if (container === undefined) return null;
-  const answer = container[key];
-  if (!isRecord(answer)) return null;
-  return asFiniteNumber(answer[field]);
 }
 
 /**
@@ -521,23 +535,23 @@ function readLayaConfidence(
  * The sidecar (lane L, `services/laya`) returns `{ intent, urgency (0..1), is_release_time, source,
  * latency_ms, model, device, intent_confidence, mentions_crop_stress, ... , answers }`, where
  * `intent_confidence` and `mentions_crop_stress` may be `null` when the model did not answer that
- * question. A nested Decisions shape under `answers` is also accepted, as is a `0..URGENCY_MAX_INDEX`
- * score instead of a `0..1` urgency. When no crop-stress signal is reported, the one boolean is
- * derived from the deterministic rules rather than guessed — see the module header and ADR-006.
+ * question. A nested Decisions shape under `answers` is also accepted. When no crop-stress signal is
+ * reported, the one boolean is derived from the deterministic rules rather than guessed — see the
+ * module header and ADR-006.
+ *
+ * **`urgency` and `is_release_time` are never read.** Both are fields in the wire body and both are
+ * discarded here, so a change to the sidecar's calibration cannot leak into a farmer's result:
+ * `docs/research/laya-verdict.md` L1 shows the urgency `score` never left band 2 for a "crop will die
+ * today" message and the release-time `noul` false-positived on both Telugu (0.814) and an English
+ * control (0.778). The returned decision carries `urgency: null` (`LayaDecision`), which
+ * `finishProviderCall` replaces with `classifyByRules(text).urgency`.
  */
-export function parseLayaDecision(payload: unknown, text: string): JevDecision | null {
+export function parseLayaDecision(payload: unknown, text: string): LayaDecision | null {
   if (!isRecord(payload)) return null;
   const answers = isRecord(payload["answers"]) ? payload["answers"] : undefined;
 
   const intent = asIntent(payload["intent"]) ?? asIntent(nestedChoice(answers, "intent"));
   if (intent === null) return null;
-
-  let urgency = asProbability(payload["urgency"]);
-  if (urgency === null) {
-    const rawScore = nestedNumber(answers, "urgency", "score");
-    if (rawScore !== null && rawScore >= 0 && rawScore <= URGENCY_MAX_INDEX) urgency = rawScore / URGENCY_MAX_INDEX;
-  }
-  if (urgency === null) return null;
 
   const intentConfidence = readLayaConfidence(payload, answers);
   if (intentConfidence === null) return null;
@@ -549,7 +563,9 @@ export function parseLayaDecision(payload: unknown, text: string): JevDecision |
   // not answer that question) is the one boolean derived deterministically rather than guessed.
   if (stress === undefined) stress = classifyByRules(text).mentions_crop_stress ? 1 : 0;
 
-  return { intent, intentConfidence, urgency, stressProbability: stress };
+  // Deliberately no `urgency` read (and `is_release_time` is not a `System1Result` field): Laya is
+  // trusted for intent + crop stress only. See the doc comment above and laya-verdict.md L1.
+  return { intent, intentConfidence, urgency: null, stressProbability: stress };
 }
 
 /* ------------------------------------------------------------------ transport */
@@ -699,10 +715,16 @@ type ProviderAttemptResult =
 /**
  * The shared tail of both model providers: check the response, read JSON, parse a decision, and let
  * `System1Result.parse` be the final gate. Keeps the two providers' failure taxonomies identical.
+ *
+ * `text` is the farmer message and is used for exactly one thing: when the provider's decision
+ * carries `urgency: null` — which is always true for Laya — the contract's required urgency is taken
+ * from the deterministic rules (`classifyByRules(text).urgency`). Laya is trusted for `intent` and
+ * `mentions_crop_stress` only; Jev returns a real urgency.
  */
 async function finishProviderCall(
   provider: "laya" | "jev",
   response: Response,
+  text: string,
   parse: (payload: unknown) => JevDecision | null,
 ): Promise<ProviderAttemptResult> {
   if (!response.ok) {
@@ -723,13 +745,16 @@ async function finishProviderCall(
   const decision = parse(payload);
   if (decision === null) return { ok: false, reason: "out_of_schema" };
 
+  // Laya never owns urgency; when it (or any provider) reports null, the rules fill it.
+  const urgency = decision.urgency ?? classifyByRules(text).urgency;
+
   try {
     // `System1Result.parse` is the published contract. Anything outside it rejects the model answer
     // and lets the next provider in the chain speak.
     const result = System1Result.parse({
       intent: decision.intent,
       intent_confidence: decision.intentConfidence,
-      urgency: decision.urgency,
+      urgency,
       mentions_crop_stress: decision.stressProbability >= 0.5,
       source: provider,
     });
@@ -753,7 +778,7 @@ async function finishProviderCall(
  *  * JSON outside the schema       -> `out_of_schema`
  */
 async function callLaya(env: ProviderEnv, text: string, opts: ClassifyOptions): Promise<ProviderAttemptResult> {
-  const endpoint = env.LAYA_ENDPOINT?.trim();
+  const endpoint = layaEndpoint(env);
   if (!endpoint) return { ok: false, reason: "not_configured" };
 
   const body = JSON.stringify(buildLayaRequest(text));
@@ -771,7 +796,7 @@ async function callLaya(env: ProviderEnv, text: string, opts: ClassifyOptions): 
     return { ok: false, reason: isTimeoutError(error) ? "timeout" : "transport_error" };
   }
 
-  return finishProviderCall("laya", response, (payload) => parseLayaDecision(payload, text));
+  return finishProviderCall("laya", response, text, (payload) => parseLayaDecision(payload, text));
 }
 
 /**
@@ -799,7 +824,7 @@ async function callJev(env: ProviderEnv, text: string, opts: ClassifyOptions): P
     return { ok: false, reason: isTimeoutError(error) ? "timeout" : "transport_error" };
   }
 
-  return finishProviderCall("jev", response, parseJevDecision);
+  return finishProviderCall("jev", response, text, parseJevDecision);
 }
 
 /* ------------------------------------------------------------------ public API */

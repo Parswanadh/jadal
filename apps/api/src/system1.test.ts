@@ -340,7 +340,7 @@ describe("parseLayaDecision", () => {
     expect(decision).toEqual({
       intent: "urgent_request",
       intentConfidence: 0.5,
-      urgency: 0.9,
+      urgency: null,
       stressProbability: 1,
     });
   });
@@ -373,7 +373,7 @@ describe("parseLayaDecision", () => {
     expect(parseLayaDecision(real, urgentTe)).toEqual({
       intent: "urgent_request",
       intentConfidence: 0.83,
-      urgency: 0.9,
+      urgency: null,
       stressProbability: 1,
     });
   });
@@ -395,7 +395,7 @@ describe("parseLayaDecision", () => {
     expect(parseLayaDecision(real, urgentTe)).toEqual({
       intent: "urgent_request",
       intentConfidence: 0.7,
-      urgency: 0.9,
+      urgency: null,
       stressProbability: 0.8,
     });
   });
@@ -405,11 +405,30 @@ describe("parseLayaDecision", () => {
     expect(parseLayaDecision(bare, urgentTe)).toEqual({
       intent: "urgent_request",
       intentConfidence: 0.5,
-      urgency: 0.9,
+      urgency: null,
       stressProbability: 1,
     });
     // Same answer for a calm message: the rules say no stress.
     expect(parseLayaDecision(bare, "ధన్యవాదాలు")?.stressProbability).toBe(0);
+  });
+
+  it("discards Laya's urgency and is_release_time; the rules own both", () => {
+    // laya-verdict.md L1: the urgency score never left band 2 for a "crop will die today" message
+    // and the release-time noul false-positived on Telugu (0.814) and an English control (0.778).
+    // Whatever the sidecar says, `parseLayaDecision` must not surface it. A "hi" message scores the
+    // rules' floor (0.15), far from Laya's 0.99.
+    const decision = parseLayaDecision(
+      { intent: "other", urgency: 0.99, is_release_time: true, mentions_crop_stress: false },
+      "hi",
+    );
+    expect(decision?.urgency).toBeNull();
+    expect(decision?.stressProbability).toBe(0);
+
+    // `is_release_time` must never be mapped onto crop stress: set it true while crop stress is
+    // absent and the rules (which say no stress for "hi") still decide.
+    const releaseOnly = parseLayaDecision({ intent: "schedule_question", is_release_time: true }, "hi");
+    expect(releaseOnly?.stressProbability).toBe(0);
+    expect(releaseOnly?.urgency).toBeNull();
   });
 
   it("prefers an explicit crop-stress field over the rules", () => {
@@ -433,17 +452,22 @@ describe("parseLayaDecision", () => {
     expect(decision).toEqual({
       intent: "harvested",
       intentConfidence: 0.8,
-      urgency: 0,
+      urgency: null,
       stressProbability: 0.1,
     });
   });
 
   it("rejects out-of-schema answers", () => {
     expect(parseLayaDecision({}, "hi")).toBeNull();
-    expect(parseLayaDecision({ intent: "banana", urgency: 0.5 }, "hi")).toBeNull();
-    expect(parseLayaDecision({ intent: "other" }, "hi")).toBeNull();
-    expect(parseLayaDecision({ intent: "other", urgency: 1.4 }, "hi")).toBeNull();
-    expect(parseLayaDecision({ intent: "other", urgency: 0.5, mentions_crop_stress: "yes" }, "hi")).toBeNull();
+    expect(parseLayaDecision({ intent: "banana" }, "hi")).toBeNull();
+    expect(parseLayaDecision({ intent: "other", mentions_crop_stress: "yes" }, "hi")).toBeNull();
+    // Missing/odd urgency is no longer a rejection: Laya's urgency is not read at all.
+    expect(parseLayaDecision({ intent: "other" }, "hi")).toEqual({
+      intent: "other",
+      intentConfidence: 0.5,
+      urgency: null,
+      stressProbability: 0,
+    });
   });
 });
 
@@ -465,12 +489,16 @@ describe("rules-only provider", () => {
 
 describe("auto provider chain", () => {
   it("prefers Laya when the sidecar is configured and answering", async () => {
+    const text = "పంట ఎండిపోతుంది, నీళ్లు లేవు";
     const env = bothProviders((call) => (call.url === LAYA_DECIDE ? json(LAYA_OK) : json(JEV_OK)));
-    const outcome = await classifyDetailed(env, "పంట ఎండిపోతుంది, నీళ్లు లేవు");
+    const outcome = await classifyDetailed(env, text);
     expect(outcome.source).toBe("laya");
     expect(outcome.result.source).toBe("laya");
     expect(outcome.result.intent).toBe("urgent_request");
-    expect(outcome.result.urgency).toBe(0.9);
+    // Laya's own urgency (0.9 in LAYA_OK) is discarded; the rules own it. See laya-verdict.md L1.
+    expect(outcome.result.urgency).toBe(classifyByRules(text).urgency);
+    expect(outcome.result.urgency).not.toBe(LAYA_OK.urgency);
+    expect(outcome.result.mentions_crop_stress).toBe(true);
     expect(outcome.attempts).toEqual([{ provider: "laya", ok: true }]);
     expect(env.calls).toHaveLength(1);
     expect(env.calls[0]?.url).toBe(LAYA_DECIDE);
@@ -489,15 +517,55 @@ describe("auto provider chain", () => {
       mentions_crop_stress: true,
       answers: {},
     };
+    const text = "పంట ఎండిపోతుంది, నీళ్లు లేవు";
     const env = bothProviders((call) => (call.url === LAYA_DECIDE ? json(real) : json(JEV_OK)));
-    const outcome = await classifyDetailed(env, "పంట ఎండిపోతుంది, నీళ్లు లేవు");
+    const outcome = await classifyDetailed(env, text);
     expect(outcome.result).toEqual({
       intent: "urgent_request",
       intent_confidence: 0.83,
-      urgency: 0.9,
+      urgency: classifyByRules(text).urgency,
       mentions_crop_stress: true,
       source: "laya",
     });
+  });
+
+  it("falls back Laya -> Jev on an HTTP 502 from the sidecar, with an honest source", async () => {
+    const text = "నీళ్లు లేవు";
+    const env = bothProviders((call) =>
+      call.url === LAYA_DECIDE ? json({ error: "laya_answer_not_mapable" }, 502) : json(JEV_OK),
+    );
+    const outcome = await classifyDetailed(env, text);
+    expect(outcome.source).toBe("jev");
+    expect(outcome.result.source).toBe("jev");
+    expect(outcome.attempts).toEqual([
+      { provider: "laya", ok: false, reason: "http_error", status: 502 },
+      { provider: "jev", ok: true },
+    ]);
+    expect(env.calls.map((call) => call.url)).toEqual([LAYA_DECIDE, OPENROUTER_DECISIONS_URL]);
+  });
+
+  it("falls back Laya -> Jev when the sidecar times out", async () => {
+    const env = bothProviders((call) =>
+      call.url === LAYA_DECIDE ? new Promise<Response>(() => {}) : json(JEV_OK),
+    );
+    const outcome = await classifyDetailed(env, "నీళ్లు లేవు", { timeoutMs: 25 });
+    expect(outcome.source).toBe("jev");
+    expect(outcome.result.source).toBe("jev");
+    expect(outcome.attempts).toEqual([
+      { provider: "laya", ok: false, reason: "timeout" },
+      { provider: "jev", ok: true },
+    ]);
+  });
+
+  it("falls back Laya -> Jev on a malformed sidecar body", async () => {
+    const env = bothProviders((call) => (call.url === LAYA_DECIDE ? raw("<html>not json</html>") : json(JEV_OK)));
+    const outcome = await classifyDetailed(env, "నీళ్లు లేవు");
+    expect(outcome.source).toBe("jev");
+    expect(outcome.result.source).toBe("jev");
+    expect(outcome.attempts).toEqual([
+      { provider: "laya", ok: false, reason: "malformed_json" },
+      { provider: "jev", ok: true },
+    ]);
   });
 
   it("falls back Laya -> Jev when the sidecar fails", async () => {

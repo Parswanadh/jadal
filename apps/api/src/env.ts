@@ -88,6 +88,32 @@ function hasText(value: string | undefined): boolean {
 }
 
 /**
+ * Reads and normalises `LAYA_ENDPOINT`, the local Laya System-1 sidecar (`services/laya`, `POST
+ * /decide`).
+ *
+ * Returns `undefined` when the variable is unset, blank/whitespace, or not an absolute `http(s)://`
+ * URL. A trailing slash is trimmed, so `http://127.0.0.1:8099/decide/` and
+ * `http://127.0.0.1:8099/decide` POST to the same path. Rejecting a non-URL matters: an invalid
+ * endpoint would otherwise be attempted as a fetch and reported as `transport_error`, hiding a typo
+ * behind a network-sounding failure. `undefined` here means "Laya is not configured", so the
+ * System-1 chain records `not_configured` and never opens a socket for Laya (`src/system1.ts`).
+ */
+export function layaEndpoint(env: Pick<Env, "LAYA_ENDPOINT">): string | undefined {
+  const raw = env.LAYA_ENDPOINT?.trim();
+  if (raw === undefined || raw === "") return undefined;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return undefined;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return undefined;
+
+  return parsed.toString().replace(/\/+$/, "");
+}
+
+/**
  * True when the deployment runs the offline demo path.
  *
  * Demo mode is the default: with `DEMO_MODE` unset the app still serves the seed scenario, the
