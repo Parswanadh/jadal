@@ -212,6 +212,24 @@
   background: var(--canal-high);
 }
 
+/* Over-allocated (>100% planned need met): the bar is clamped to the track and
+   flagged, never allowed to overflow. */
+.canal-fill[data-band="over"] {
+  background: var(--canal-accent);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgb(255 255 255 / 35%) 4px,
+    rgb(255 255 255 / 35%) 8px
+  );
+}
+
+.canal-over-pill {
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
 .canal-fill[data-band="mid"] {
   background: var(--canal-mid);
 }
