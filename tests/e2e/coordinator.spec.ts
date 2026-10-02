@@ -1,4 +1,4 @@
-import { expect, settle, test } from './support/app';
+import { expect, settle, signInAs, test } from './support/app';
 import en from '../../apps/web/src/i18n/en.json';
 
 /**
@@ -7,6 +7,7 @@ import en from '../../apps/web/src/i18n/en.json';
  * decided table still shows m³, so the hint must remain.
  */
 test('the m³ hint stays after the last request is decided', async ({ page, consoleErrors }) => {
+  await signInAs(page, 'coordinator');
   await page.goto('/coordinator?tab=requests');
 
   // Decide the only pending request.

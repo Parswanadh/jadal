@@ -47,4 +47,35 @@ export async function settle(page: Page): Promise<void> {
   await page.waitForTimeout(SETTLE_MS);
 }
 
+export type E2ERole = 'farmer' | 'coordinator';
+
+/**
+ * The session key and the password defaults are pinned here instead of imported
+ * from apps/web: the suite runs in Node, where the app's Vite env module cannot
+ * be loaded. Drift in either value makes these tests fail, so the duplication is
+ * a contract check rather than a copy.
+ */
+export const SESSION_KEY = 'jadal.session';
+export const FARMER_PASSWORD = process.env.VITE_FARMER_PASSWORD ?? 'farmer123';
+export const COORDINATOR_PASSWORD = process.env.VITE_COORDINATOR_PASSWORD ?? 'coordinator123';
+
+/**
+ * Give the browser a signed-in session without walking the form.
+ *
+ * The value is written after the app has loaded (not via addInitScript), so a
+ * later sign-out in the same test is not undone by a re-seeded session.
+ */
+export async function signInAs(page: Page, role: E2ERole): Promise<void> {
+  await page.goto('/login');
+  await page.evaluate(
+    ({ key, nextRole }) => {
+      window.localStorage.setItem(
+        key,
+        JSON.stringify({ role: nextRole, signedInAt: new Date().toISOString() }),
+      );
+    },
+    { key: SESSION_KEY, nextRole: role },
+  );
+}
+
 export { expect };

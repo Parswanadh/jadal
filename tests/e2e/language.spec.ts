@@ -1,4 +1,4 @@
-import { expect, settle, test } from './support/app';
+import { expect, settle, signInAs, test } from './support/app';
 import en from '../../apps/web/src/i18n/en.json';
 import te from '../../apps/web/src/i18n/te.json';
 
@@ -41,6 +41,7 @@ test('the language choice survives a reload', async ({ page }) => {
 
 test('a fixture request reason follows the active language', async ({ page, consoleErrors }) => {
   // The seeded pool request carries the mock's own prose and a decision note.
+  await signInAs(page, 'farmer');
   await page.goto('/farmer?tab=pool');
   await expect(page.getByText(en.fixture.reasonTailShortTurn)).toBeVisible();
   await expect(page.getByText(en.fixture.noteTailShort)).toBeVisible();
