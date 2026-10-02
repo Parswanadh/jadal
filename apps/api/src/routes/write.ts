@@ -29,6 +29,7 @@ import type {
 
 import { suggestEntitlements } from "../agents/need";
 import { proposeRoster } from "../agents/scheduler";
+import { ALERTS_PATH, AlertRequestSchema, AlertResponseSchema, handleAlert } from "../alerts";
 import { notifyFarmerOfAllocation } from "../coordinator-alert";
 import { entriesForDecision, ledger, policy } from "../core-shim";
 import { now } from "../db/clock";
@@ -452,5 +453,18 @@ export function registerWriteRoutes(app: Hono<{ Bindings: Env }>): void {
     }
 
     return c.json(parseResponse(routes.decideRequest.response, stored));
+  });
+
+  /**
+   * `POST /api/alerts` — the coordinator's "Alert the farmer" action.
+   *
+   * Registered here rather than in `routes/read.ts` because it is a write: it dispatches a call and
+   * appends the `contact.updated` event that records it. The shape is declared in `src/alerts.ts`
+   * (not in `@jadal/contracts`, which this lane must not edit) and the web lane is frozen against it.
+   */
+  app.post(ALERTS_PATH, async (c) => {
+    const body = await parseBody(c, AlertRequestSchema);
+    const result = await handleAlert(c.env, body);
+    return c.json(parseResponse(AlertResponseSchema, result));
   });
 }
