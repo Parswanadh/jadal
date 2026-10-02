@@ -284,15 +284,19 @@ describe("mounted /api/telephony", () => {
     expect((await getContact(env, contact.id))?.status).toBe("acknowledged");
   });
 
-  it("keeps the module's own TwiML 404 and re-renders an unknown path as the ApiError shape", async () => {
+  it("answers a vanished contact with TwiML and still 404s an unknown path as the ApiError shape", async () => {
     const env = await telephonyEnv();
+    // A contact can vanish mid-call (demo/reset clears the store). The route must answer with TwiML
+    // and a 200, because Twilio renders a 404 to the caller as "we could not reach your server".
     const missing = await app().fetch(
       new Request("https://api.jadal.test/api/telephony/twiml/ct-unknown", { method: "GET" }),
       env as never,
     );
-    expect(missing.status).toBe(404);
+    expect(missing.status).toBe(200);
     expect(missing.headers.get("content-type")).toContain("text/xml");
+    expect(await missing.text()).toContain("no longer available");
 
+    // An unknown PATH is a different thing and still 404s in the API's error shape.
     const unknown = await call<{ error: { code: string } }>(app(), "GET", "/api/telephony/nope", { env });
     expectStatus(unknown, 404);
     expect(unknown.body.error.code).toBe("not_found");
