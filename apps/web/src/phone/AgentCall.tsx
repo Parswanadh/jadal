@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext';
 import { fetchAgentReply } from './api';
@@ -33,12 +33,10 @@ export default function AgentCall({ contactId, farmerName, simulated, detail }: 
   const [reply, setReply] = useState<Reply | null>(null);
   const [error, setError] = useState(false);
   const [speaking, setSpeaking] = useState(false);
-  const spokenOnce = useRef(false);
   const caps = detectCapabilities();
 
   useEffect(() => {
     let cancelled = false;
-    spokenOnce.current = false;
     setReply(null);
     setError(false);
     setSpeaking(false);
@@ -69,14 +67,11 @@ export default function AgentCall({ contactId, farmerName, simulated, detail }: 
     }
   }
 
-  // The agent answers and speaks as soon as the reply is in. Best-effort: where
-  // the browser will not speak without a fresh gesture, the control below does.
-  useEffect(() => {
-    if (!reply || spokenOnce.current) return;
-    spokenOnce.current = true;
-    speakReply();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reply]);
+  // Speech is user-initiated only. The agent's reply is shown as text (and plays
+  // its real Sarvam audio when the API returns one); the browser voice is a
+  // fallback the user asks for, never something that fires on its own. Auto-
+  // speaking hijacked the screen the moment a request was raised, which is not
+  // what "raise a request" should do.
 
   return (
     <section className="agent-call jadal-phone" aria-labelledby={`agent-call-${contactId}`}>
