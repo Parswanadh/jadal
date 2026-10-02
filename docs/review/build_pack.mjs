@@ -421,7 +421,9 @@ function collectScopes(src) {
     const end = braceMatch(src, open);
     scopes.set(m[1], { kind: "function", name: m[1], text: src.slice(open, end) });
   }
-  const constRe = /(?:^|\n)\s*(?:export\s+)?const\s+([A-Za-z0-9_]+)\s*(?::[^=]*)?=\s*/g;
+  // Module-level only (column 0). Indented `const` inside a function body is a local
+  // variable, not a message; counting it produced a duplicate `voice.status` row.
+  const constRe = /^(?:export\s+)?const\s+([A-Za-z0-9_]+)\s*(?::[^=]*)?=\s*/gm;
   while ((m = constRe.exec(src)) !== null) {
     if (scopes.has(m[1])) continue;
     const end = statementEnd(src, constRe.lastIndex);
@@ -461,7 +463,10 @@ function voiceRows() {
     if (scope.kind !== "function") continue;
     if (used.has(name)) continue;
     const lits = scanLiterals(scope.text);
-    const teLits = lits.filter((l) => TELUGU.test(l.text));
+    // Drop empty literals (`""` from the "omit when unknown" ternaries) and language
+    // switch tokens (`"en"` in farmerGreeting) so Te/En indices line up.
+    const visible = (l) => l.text.trim().length > 0 && l.text !== "en" && l.text !== "te";
+    const teLits = lits.filter((l) => TELUGU.test(l.text) && visible(l));
     if (teLits.length === 0) continue;
 
     let enLits;
@@ -469,10 +474,10 @@ function voiceRows() {
     const twin = scopes.get(`${stem(name)}En`) && scopes.get(`${stem(name)}Te`) ? `${stem(name)}En` : null;
     if (twin && name === `${stem(name)}Te`) {
       const enScope = scopes.get(twin);
-      enLits = scanLiterals(enScope.text).filter((l) => TELUGU.test(l.text) === false);
+      enLits = scanLiterals(enScope.text).filter((l) => !TELUGU.test(l.text) && visible(l));
       used.add(twin);
     } else {
-      enLits = lits.filter((l) => !TELUGU.test(l.text));
+      enLits = lits.filter((l) => !TELUGU.test(l.text) && visible(l));
     }
     if (enLits.length !== teLits.length) mismatch = true;
     used.add(name);
@@ -487,10 +492,12 @@ function voiceRows() {
     });
   }
 
-  // 2. single-string consts: NAME_TE / NAME_EN.
+  // 2. single-string consts: NAME_TE / NAME_EN. Objects and arrays are handled below.
   for (const [name, scope] of scopes) {
     if (scope.kind !== "const") continue;
     if (used.has(name)) continue;
+    const body = scope.text.trimStart();
+    if (body.startsWith("{") || body.startsWith("[")) continue;
     const base = name.replace(/_(TE|EN)$/, "");
     const isTe = name.endsWith("_TE");
     const isEn = name.endsWith("_EN");
