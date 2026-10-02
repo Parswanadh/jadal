@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { Hono } from "hono";
 import type { Contact, System1Result } from "@jadal/contracts";
 import { createTelephonyRoutes, placeCall } from "./index";
+import { forwardTargetForFarmer } from "./twilio";
 import { computeTwilioSignature } from "./signature";
 import { escapeXml } from "./twiml";
 import type { RaiseRequestInput, TelephonyDeps, TelephonyEnv } from "./types";
@@ -526,5 +527,28 @@ describe("per-farmer demo mapping (FARMER_DEMO_NUMBERS)", () => {
     const s = setup();
     await placeCall(s.deps, { contactId: "c1", to: "+919000000001", messageTe: "x", farmerId: "f1" });
     expect(dialled(s.calls)).toBe("+919000000001");
+  });
+});
+
+describe("demo mapping and the call budget share one handset", () => {
+  /**
+   * The burst that prompted the rate limit was several farmers dialling through a demo mapping onto
+   * the SAME real handset. Keying the budget on the farmer's stored (placeholder) number gave each
+   * farmer a separate allowance while every call rang one phone, so the guard could never fire on the
+   * number a person actually had to answer.
+   */
+  it("resolves distinct farmers onto the shared demo handset", () => {
+    const env = { FARMER_DEMO_NUMBERS: "+917207997965, +918610071143" };
+    const seen = ["f1", "f3", "f5", "f7"].map((id) =>
+      forwardTargetForFarmer(env, "+919000000001", id),
+    );
+    // All four placeholder farmers ring the SAME handset...
+    expect(new Set(seen).size).toBe(1);
+    expect(seen[0]).toBe("+917207997965");
+    // ...which is exactly why the budget must be keyed on this resolved value, not on "+919...001".
+  });
+
+  it("is inert with no demo mapping configured", () => {
+    expect(forwardTargetForFarmer({}, "+919000000001", "f1")).toBe("+919000000001");
   });
 });

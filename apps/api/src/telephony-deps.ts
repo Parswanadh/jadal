@@ -36,6 +36,7 @@ import { raiseRequest } from "./requests";
 import { classify, extractVolumeM3 } from "./system1";
 import type { AudioCache, InboundCaller, RaiseRequestInput, StatusDetail, TelephonyDeps, TelephonyEnv } from "./telephony";
 import { placeCall, type PlaceCallInput, type PlaceCallResult } from "./telephony";
+import { forwardTargetForFarmer } from "./telephony/twilio";
 
 /**
  * The bindings slice telephony needs.
@@ -132,7 +133,16 @@ export async function placeCallIfAllowed(
   input: PlaceCallInput,
   label = "outbound call",
 ): Promise<GuardedCallResult> {
-  const decision = await checkOutboundCall(env, input.to);
+  // Key the budget on the number that will ACTUALLY ring, not the one we were handed.
+  //
+  // During a demo, `TWILIO_FORWARD_TO`/`FARMER_DEMO_NUMBERS` redirect every farmer onto the same
+  // handful of real handsets. Keying on the raw (placeholder) number gave each farmer a separate
+  // budget while all of them rang one phone, so four farmers could ring it twelve times and the
+  // guard would never fire. Bounding the dialled destination is the only bound that protects a
+  // person from being called repeatedly. With no mapping configured this resolves to `input.to`
+  // unchanged, so production behaviour is identical.
+  const destination = forwardTargetForFarmer(env, input.to, input.farmerId);
+  const decision = await checkOutboundCall(env, destination);
   logCallDecision(label, decision);
   if (!decision.allowed) return { allowed: false, refusal: decision };
   const placed = await placeCallFromCampaign(env, input);
