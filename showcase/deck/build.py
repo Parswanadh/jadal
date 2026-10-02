@@ -20,6 +20,16 @@ def arc_time(s):  return 0 if (s.get("a_skip") or s.get("appendix")) else speak(
 
 # ---- crop appendix: generated from packages/core/src/data/crop-params.json ----
 CROPS = json.load(open(os.path.join(ROOT, "packages", "core", "src", "data", "crop-params.json"), encoding="utf-8"))
+FAO56_JSON_PATH = os.path.join(ROOT, "showcase", "deck", "fao56-data.json")
+CV_MAP = {}
+if os.path.exists(FAO56_JSON_PATH):
+    try:
+        fao_data = json.load(open(FAO56_JSON_PATH, encoding="utf-8"))
+        for cv in fao_data.get("cross_validation", []):
+            CV_MAP[(cv["shipped_crop"], cv.get("shipped_variant"))] = cv
+    except Exception:
+        pass
+
 GLYPH = {"MEASURED": "●", "ASSUMED": "○", "UNSOURCED": "✕"}
 LBL = {"MEASURED": "checked against the book", "ASSUMED": "assumed", "UNSOURCED": "unsourced"}
 def worst(sts):
@@ -42,18 +52,41 @@ for c in CROPS:
     name = c["crop"].capitalize() + (f" ({c['variant']})" if c.get("variant") else "")
     kc_st = worst([st["kc_ini"], st["kc_mid"], st["kc_end"]]); r = c["root_depth_m"]
     kc = f'{c["kc_ini"]:.2f} · {c["kc_mid"]:.2f} · {c["kc_end"]:.2f}'
-    h = f'{c["max_height_m"]:g}'; root = f'{r["min"]:g}–{r["max"]:g}'; pv = f'{c["depletion_p"]:.2f}'
-    if kc_st == "UNSOURCED" and st["depletion_p"] == "UNSOURCED": src = "unsourced: no valid FAO-56 source"
+    h = f'{c["max_height_m"]:g}'
+    
+    cv = CV_MAP.get((c["crop"], c.get("variant")))
+    root_glyph = g(st["root_depth_m"])
+    if cv and cv.get("root_verdict") == "DIFFERS":
+        root_glyph += " ‡"
+    root = f'{r["min"]:g}–{r["max"]:g} {root_glyph}'
+    pv = f'{c["depletion_p"]:.2f}'
+
+    if kc_st == "UNSOURCED" and st["depletion_p"] == "UNSOURCED":
+        src = "unsourced: no valid FAO-56 source"
     else:
-        kp = pages(cl.get("KC", "")); pp = pages(cl.get("DEPLETION_P", ""))
-        src = f"Tbl 6.2 p.{kp}" if kp else "Tbl 6.2"
-        src += f" · 8.2 p.{pp}" if st["depletion_p"] == "MEASURED" and pp else " · p assumed"
+        pp = pages(cl.get("DEPLETION_P", ""))
+        p_part = f" · 8.2 p.{pp}" if st["depletion_p"] == "MEASURED" and pp else " · p assumed"
+        if cv and cv.get("book_table") and cv.get("book_page"):
+            tbl_part = f"Tbl {cv['book_table']} p.{cv['book_page']}"
+            if cv.get("citation_differs"):
+                tbl_part += " †"
+            src = tbl_part + p_part
+        else:
+            kp = pages(cl.get("KC", ""))
+            src = (f"Tbl 6.2 p.{kp}" if kp else "Tbl 6.2") + p_part
+
     cls = ' class="unsrc"' if kc_st == "UNSOURCED" else ""
-    rows.append(f'      <tr{cls}><td>{html.escape(name)}</td><td class="num">{kc} {g(kc_st)}</td><td class="num">{h} {g(st["max_height_m"])}</td><td class="num">{root} {g(st["root_depth_m"])}</td><td class="num">{pv} {g(st["depletion_p"])}</td><td>{html.escape(src)}</td></tr>')
+    rows.append(f'      <tr{cls}><td>{html.escape(name)}</td><td class="num">{kc} {g(kc_st)}</td><td class="num">{h} {g(st["max_height_m"])}</td><td class="num">{root}</td><td class="num">{pv} {g(st["depletion_p"])}</td><td>{html.escape(src)}</td></tr>')
 n_rows = len(CROPS); n_crops = len({c["crop"] for c in CROPS})
-legend = (f"{n_crops} crops in {n_rows} rows, read from crop-params.json. ● checked against the book (Kc, height, root depth: Table 6.2; p: Table 8.2) · ○ our assumption · ✕ unsourced. "
-          "Every stage length is assumed: the 2025 edition replaced fixed day counts with growing degrees. FAO-56 has no paddy percolation rate. The whole redgram row is unsourced. "
-          f"The book covers many more crops than we ship.")
+if CV_MAP:
+    legend = (f"{n_crops} crops in {n_rows} rows from crop-params.json. ● checked against book · ○ assumed · ✕ unsourced. "
+              "Stages assumed (2025 ed. uses growing degrees); no percolation in FAO-56; redgram unsourced. "
+              "† the file cites Table 6.2 but the row is in Table 6.1. ‡ differs from the book's maximum. "
+              f"The book covers many more crops than we ship.")
+else:
+    legend = (f"{n_crops} crops in {n_rows} rows, read from crop-params.json. ● checked against the book (Kc, height, root depth: Table 6.2; p: Table 8.2) · ○ our assumption · ✕ unsourced. "
+              "Every stage length is assumed: the 2025 edition replaced fixed day counts with growing degrees. FAO-56 has no paddy percolation rate. The whole redgram row is unsourced. "
+              f"The book covers many more crops than we ship.")
 CROP_STATS = {"rows": n_rows, "crops": n_crops, "tagged_fields": sum(counts.values()), **{k.lower(): v for k, v in counts.items()}}
 
 # ---- drift guard + deck notes ----

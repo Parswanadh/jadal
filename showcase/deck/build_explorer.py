@@ -764,9 +764,9 @@ def run_cross_validation(all_book_rows, shipped_crops):
                 "book_kc": None,
                 "book_height": None,
                 "book_root": None,
-                "kc_verdict": "DIFFERS",
-                "height_verdict": "DIFFERS",
-                "root_verdict": "DIFFERS",
+                "kc_verdict": "UNSOURCED",
+                "height_verdict": "UNSOURCED",
+                "root_verdict": "UNSOURCED",
                 "file_cites_table": file_cites,
                 "found_in_table": None,
                 "citation_differs": False,
@@ -1164,8 +1164,8 @@ def build_explorer_html(dataset, output_html_path):
       margin-top: 4px;
     }
     .badge-shipped {
-      background-color: #FBEBD6;
-      color: var(--accent-deep);
+      background-color: #FFE8D6;
+      color: #7A3508;
     }
     .badge-differs {
       background-color: #FBE9E7;
@@ -1177,7 +1177,7 @@ def build_explorer_html(dataset, output_html_path):
     }
     .badge-citation {
       background-color: #FFF3E0;
-      color: #E65100;
+      color: #8A3B00;
       font-weight: 700;
       border: 1px solid #FFE0B2;
     }
