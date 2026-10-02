@@ -106,7 +106,10 @@ export default function AgentCall({ contactId, farmerName, simulated, detail }: 
             <ul className="jadal-phone__transcript" aria-live="polite">
               <li className="jadal-phone__turn jadal-phone__turn--agent">
                 <div className="jadal-phone__turn-meta">{t('phone.agent')}</div>
-                <div>{lang === 'te' ? reply.te : reply.en}</div>
+                {/* The agent speaks Telugu, so the spoken line is always shown;
+                    an English translation follows when the screen is English. */}
+                <div>{reply.te}</div>
+                {lang !== 'te' && <div className="muted small">{reply.en}</div>}
               </li>
             </ul>
 
