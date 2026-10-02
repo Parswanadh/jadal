@@ -22,10 +22,76 @@ Both directions now ring a phone.
 | --- | --- | --- |
 | Farmer raises a request → **coordinator** is phoned for approval | `notifyCoordinatorOfRequest` | `raiseRequest()` in `src/requests.ts`, after the request is durable |
 | Coordinator approves → **farmer** hears the allocation | `notifyFarmerOfAllocation` | the `decideRequest` handler in `src/routes/write.ts`, on `approve` only |
+| **Coordinator presses "Alert the farmer"** → farmer hears the alert | `notifyFarmerOfAlert` via `POST /api/alerts` | the `ALERTS_PATH` handler in `src/routes/write.ts` |
 
-Everything lives in `apps/api/src/coordinator-alert.ts`. Neither call site is a new Twilio client:
-both go through `placeCall` in `src/telephony/twilio.ts`, reached through `placeCallFromCampaign` in
+Everything lives in `apps/api/src/coordinator-alert.ts`, with the endpoint's shape in
+`apps/api/src/alerts.ts`. None of the three call sites is a new Twilio client: all go through
+`placeCall` in `src/telephony/twilio.ts`, reached through `placeCallFromCampaign` in
 `src/telephony-deps.ts` — the same seam the escalation ladder uses.
+
+## `POST /api/alerts` — the coordinator's own alert action
+
+The third row above is the one a coordinator drives from the UI, and it is the critical path: in the
+console a coordinator can press **"Alert the farmer"**, and before this endpoint existed no call went
+out at all. It is the same outbound call as the approval path, reached from the coordinator's action
+rather than as a side effect of a decision.
+
+```
+POST /api/alerts
+{ "farmer_id": "f1", "channel": "call"|"sms"|"whatsapp",
+  "severity": "info"|"warning"|"urgent"|"emergency",
+  "message": "<optional>",
+  "allocation": { "volume_m3": 120, "start": "<ISO>", "end": "<ISO>" } }
+-> 200 { "ok": true, "contact_id": "<id>", "simulated": <boolean>, "detail": "<string>" }
+```
+
+`allocation` is optional and additive. When present **and** `channel` is `"call"`, the spoken message
+states the allocated volume and the window from which to use it, in Telugu and English.
+
+### Why this route is not declared in `packages/contracts`
+
+Every other route in this API is declared in `@jadal/contracts`'s `routes` object. This one is not.
+`packages/contracts` is the integration agreement, only the orchestrator changes it, and a change needs
+the `contracts-ok` label — adding a route there from this lane would be exactly the contract edit the
+rules forbid. So the path, body schema and response schema are declared in `apps/api/src/alerts.ts`,
+with the frozen shape written out verbatim, and registered from `routes/write.ts`.
+
+**The consequence, stated plainly:** the web client and this route agree on a shape that the shared
+contract does not yet know about. Promoting it to `packages/contracts` is a one-file follow-up for
+whoever holds `contracts-ok`; nothing here would change but the import.
+
+### Which template a coordinator alert uses
+
+The severity picks the template, but only a template that is **true** of the alert is used:
+
+| severity | allocation? | template | why |
+| --- | --- | --- | --- |
+| `urgent`, `emergency` | either | night-release warning | the "be ready now" message; releases run 23:00/02:00 |
+| `info`, `warning` | yes | roster-change | states the volume and window; an allocation *is* a turn being set |
+| `info`, `warning` | no | request-update | asserts no reschedule |
+
+And when there is **neither an allocation nor a `message`**, there is no true sentence to say: the
+endpoint dials nothing and returns
+`{"contact_id":"","simulated":true,"detail":"call alert not dispatched: no allocation and no message: nothing true to tell the farmer"}`.
+Inventing a fact is worse than sending nothing.
+
+### Channels
+
+Only `call` is dispatched. `sms` and `whatsapp` are **accepted and audited but nothing is sent** —
+this module owns the voice path and `placeCall` is a voice primitive. Such an alert is recorded as a
+`queued` contact (with the full composed text, so the coordinator's list shows what was meant) and
+returned `simulated: true` with a `detail` that says no transport delivered it.
+
+### Severity is not derived from `triage_score`
+
+`triage_score` is currently a **constant floor of `0.15`** for the demo's short English reasons:
+`apps/api/src/system1.rules.ts` sets `URGENCY_BASE = 0.15` and `scoreUrgency` only *adds* on keyword
+hits, while the term tables are predominantly Telugu, so English demo reasons match nothing and the
+score stays at the floor. That file is another lane's and was not touched here.
+
+Severity is therefore whatever the **coordinator chose** — a presentation choice, never presented as a
+computed measurement. Do not surface `triage_score` as an urgency judgement in any coordinator-facing
+message until that rules file is fixed.
 
 ## No keys, no problem (ADR-003)
 
@@ -155,26 +221,41 @@ it needs `contracts-ok`.
 
 | Name | Required | Purpose |
 | --- | --- | --- |
-| `COORDINATOR_PHONE` | for the coordinator call | E.164 number phoned when a request is raised. Unset ⇒ clean no-op. |
+| `COORDINATOR_PHONE` | for the coordinator call | E.164 number phoned when a request is raised. Unset ⇒ clean no-op. **Set on the development machine together with `REAL_TELEPHONY=true`, so a live run dials for real. The value lives in `.dev.vars` and is not recorded here.** |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `PUBLIC_BASE_URL` | for any real call | Incomplete set ⇒ `{ simulated: true }`, no fetch. |
 | `REAL_TELEPHONY` | optional | `0`/`false` forces simulated mode even with a full credential set. |
 | `TWILIO_FORWARD_TO` | optional, demo only | Redirects the *destination* (honoured inside `placeCall`). **During a demo the coordinator's approval call rings the forwarding number, not `COORDINATOR_PHONE` itself.** |
+
+`COORDINATOR_PHONE` is not yet declared in `apps/api/src/env.ts` (another lane's file) or in
+`.dev.vars.example`. It works without either — `Env` is structural and every key is optional — but a
+deployed Worker would want `wrangler secret put COORDINATOR_PHONE` and a names-only line in the
+example file.
 
 Never commit values; `.dev.vars` is gitignored and only `.dev.vars.example` (names only) is tracked.
 
 ## Tests
 
-`apps/api/src/coordinator-alert.test.ts` — 20 tests. **No real call can be placed from it**: every
-test drives `test/harness.ts`'s `createEnv()`, whose injected `fetch` throws on any URL that is not
-explicitly routed, and the Twilio endpoint is a canned `Response`. The offline case asserts
-`env.calls.length === 0`; the failure case asserts the only call made was the mocked `api.twilio.com`
-one.
+`apps/api/src/coordinator-alert.test.ts` (20 tests) and `apps/api/src/alerts.test.ts` (9 tests).
 
-Covered: exactly one coordinator notification per raised request; no notification and no contact when
-`COORDINATOR_PHONE` is unset; a Twilio 401 does not fail the request; a throwing notifier does not
-fail the request; the composed Telugu/English allocation text; the granted (not asked-for) volume;
-no call on a rejection; one `contact.updated` per attempt; the simulated/real distinction including
-the `REAL_TELEPHONY=0` kill switch.
+**No real call can be placed from either file.** Every test drives `test/harness.ts`'s
+`createEnv(routes)`, whose injected `fetch` throws on any URL that is not explicitly routed, and the
+Twilio endpoint is a canned `Response`. This matters more now that the development machine has
+`REAL_TELEPHONY=true` and a live `COORDINATOR_PHONE`: `placeCall` only ever uses the injected fetch, so
+an un-stubbed dial fails loudly instead of ringing a handset. `alerts.test.ts` pins that property
+explicitly (the injected fetch is never `globalThis.fetch`, and an unrouted URL rejects). The offline
+cases assert `env.calls.length === 0`; the failure cases assert the only call made was the mocked
+`api.twilio.com` one.
+
+Covered for the alert endpoint: the frozen request and response shape field-for-field; the spoken
+volume and window in Telugu and English; volume with no window; the coordinator's `message` appended
+verbatim; every severity and channel accepted; `sms`/`whatsapp` queued and reported as not sent;
+`simulated: true` with zero fetches when Twilio env is absent; a Twilio refusal reported honestly; 404
+unknown farmer; 400 for a bad severity/channel/body/malformed window; one `contact.updated` per alert.
+
+Covered for the approval path: exactly one coordinator notification per raised request; no notification
+and no contact when `COORDINATOR_PHONE` is unset; a Twilio 401 does not fail the request; a throwing
+notifier does not fail the request; the composed allocation text; the granted (not asked-for) volume;
+no call on a rejection; the `REAL_TELEPHONY=0` kill switch.
 
 ## Running it
 
@@ -184,5 +265,6 @@ pnpm --filter api test
 ```
 
 To exercise the real path locally, set `COORDINATOR_PHONE`, the four Twilio variables,
-`REAL_TELEPHONY=true` and — while developing — `TWILIO_FORWARD_TO` to a handset you control. Do not
-place calls to farmers' numbers while developing.
+`REAL_TELEPHONY=true` and — while developing — `TWILIO_FORWARD_TO` to a handset you control. The one
+real call that verified this wiring end to end was placed by the orchestrator, not by this lane:
+nothing in the test suite dials. Do not place calls to farmers' numbers while developing.

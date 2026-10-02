@@ -73,7 +73,7 @@ import { DEMO_CANAL_ID } from "./demo";
 import type { Env } from "./env";
 import { placeCallFromCampaign, type TelephonyBindings } from "./telephony-deps";
 import type { PlaceCallResult } from "./telephony";
-import { formatVolumeM3, templateForPurpose } from "./voice/telugu";
+import { formatVolumeM3, templateForPurpose, type MessageFacts } from "./voice/telugu";
 
 /* ------------------------------------------------------------------ spoken text */
 
@@ -370,6 +370,189 @@ export interface AllocationAlertOutcome extends AlertOutcome {
 }
 
 /**
+ * A coordinator's alert to a farmer — the `POST /api/alerts` payload, minus the transport.
+ *
+ * This is the same call as {@link notifyFarmerOfAllocation} plus two things a coordinator-initiated
+ * alert needs: a `severity` that picks the tone, and an optional free-text `message` the coordinator
+ * wrote themselves.
+ */
+export interface FarmerAlertInput {
+  readonly farmer_id: string;
+  /** How the alert should reach the farmer. Only `call` is dispatched by this module. */
+  readonly channel: AlertChannel;
+  readonly severity: AlertSeverity;
+  /** Optional coordinator-authored text, spoken verbatim (appended to the rendered template). */
+  readonly message?: string;
+  /** Optional allocation the alert is about. See {@link AllocationAlertInput}. */
+  readonly allocation?: {
+    readonly volume_m3: number;
+    readonly start?: string;
+    readonly end?: string;
+  };
+}
+
+/**
+ * How loudly a coordinator's alert should land.
+ *
+ * This is a *presentation* choice, not a measurement: it selects which existing template renders the
+ * message. `urgent` and `emergency` use the night-release warning, because in this canal a release
+ * warning **is** the "act now" message (releases run at 23:00 and 02:00) and it urges the farmer to be
+ * ready at once. `info` and `warning` use the roster-change template, which leads with the facts and
+ * asks the farmer to tell the canal office if it does not suit.
+ *
+ * DELIBERATELY NOT DERIVED FROM `triage_score`. That score is currently a constant floor for English
+ * demo reasons (see `docs/COORDINATOR-ALERT.md`), so treating it as a severity measurement would
+ * present a placeholder as a computed judgement. Severity is whatever the coordinator chose.
+ */
+export type AlertSeverity = "info" | "warning" | "urgent" | "emergency";
+
+/** How a coordinator alert reaches the farmer. `call` is the only channel this module dispatches. */
+export type AlertChannel = "call" | "sms" | "whatsapp";
+
+/**
+ * Which existing template renders a coordinator's alert.
+ *
+ * A template is only chosen when it is *true* of the alert:
+ *
+ *  * `urgent`/`emergency` → the night-release warning (the "be ready now" message).
+ *  * `info`/`warning` **with** an allocation → the roster-change template, which states the volume and
+ *    the window. An allocation is a turn being set, so "your turn has changed" is accurate.
+ *  * `info`/`warning` **without** an allocation → nothing has actually changed, so no template that
+ *    asserts a reschedule or a release may be used. The caller supplies the coordinator's own words as
+ *    the whole message instead (see `notifyFarmerOfAlert`), because inventing a fact is worse than
+ *    sending something terse.
+ */
+function purposeForAlert(severity: AlertSeverity, hasAllocation: boolean): ContactPurpose {
+  if (severity === "urgent" || severity === "emergency") return "release_warning";
+  return hasAllocation ? "roster_change" : "request_update";
+}
+
+/**
+ * Compose a farmer message from a template and dispatch it, without ever throwing.
+ *
+ * Shared by the approval path ({@link notifyFarmerOfAllocation}) and the coordinator's own alert
+ * ({@link notifyFarmerOfAlert}), so both render the same sentence for the same facts and neither can
+ * drift into a second phrasing. `extraTe`/`extraEn` carry free text the coordinator wrote; it is
+ * appended verbatim after the template, which keeps the template's guarantee (the volume and the
+ * window are always stated in the template's own words) intact.
+ *
+ * A non-`call` channel is audited as `queued` rather than dialled and reports `simulated: true`: no
+ * messaging transport is dispatched, so claiming otherwise would be the one thing this module must
+ * never do.
+ */
+async function dispatchFarmerMessage(
+  env: Env,
+  input: {
+    readonly label: string;
+    readonly farmer_id: string;
+    readonly purpose: ContactPurpose;
+    readonly facts: MessageFacts;
+    readonly extraTe: string;
+    readonly extraEn: string;
+    readonly channel?: AlertChannel;
+    readonly requestId?: string;
+  },
+): Promise<AllocationAlertOutcome> {
+  const channel = input.channel ?? "call";
+  const result = await attempt(input.label, async () => {
+    const at = await now(env);
+    const record = await getFarmer(env, input.farmer_id);
+
+    const rendered = templateForPurpose(
+      input.purpose,
+      { farmerName: record?.farmer.name, ...input.facts },
+    );
+    const messageTe = joinText(rendered.te, input.extraTe);
+    const messageEn = joinText(rendered.en, input.extraEn);
+
+    if (channel !== "call") {
+      // Queue it for the coordinator's contacts list. No transport, so no dispatch and no fetch.
+      const queued = await appendContact(env, {
+        farmer_id: input.farmer_id,
+        channel,
+        purpose: input.purpose,
+        status: "queued",
+        messageTe,
+        messageEn,
+        at,
+        contactId: newId("contact"),
+      });
+      return {
+        ...outcome({ simulated: true, alerted: true, contactId: queued }),
+        messageTe,
+        messageEn,
+      };
+    }
+
+    const dispatched = await dispatch(env, {
+      // The farmer's own registered number; `TWILIO_FORWARD_TO` may redirect it (see `placeCall`).
+      to: record?.farmer.phone ?? null,
+      farmer_id: input.farmer_id,
+      channel: "voice",
+      messageTe,
+      messageEn,
+      context: {
+        purpose: input.purpose,
+        ...(input.requestId === undefined ? {} : { requestId: input.requestId }),
+      },
+      at,
+    });
+
+    if (dispatched.skipped !== undefined) {
+      console.log(`coordinator-alert: ${input.label} — ${dispatched.skipped}`);
+    } else if (dispatched.placed !== null) {
+      console.log(`coordinator-alert: ${input.label} → ${describePlacement(dispatched.placed)}`);
+    }
+    return { ...dispatched, messageTe, messageEn };
+  });
+
+  // The text is carried out of the attempt even when the attempt itself failed, so a caller (or a
+  // test) can still see exactly what the farmer would have been told.
+  return "messageTe" in result ? result : { ...result, messageTe: "", messageEn: "" };
+}
+
+/** Append a coordinator's own words to a rendered template, or return the template unchanged. */
+function joinText(template: string, extra: string): string {
+  return extra.length === 0 ? template : `${template} ${extra}`.replace(/\s+/g, " ").trim();
+}
+
+/** Append one `contact.updated` event for a real `Contact`. Returns the contact id. */
+async function appendContact(
+  env: Env,
+  input: {
+    readonly farmer_id: string;
+    readonly channel: Contact["channel"];
+    readonly purpose: ContactPurpose;
+    readonly status: Contact["status"];
+    readonly messageTe: string;
+    readonly messageEn: string;
+    readonly at: string;
+    readonly contactId: string;
+  },
+): Promise<string> {
+  const contact: Contact = {
+    id: input.contactId,
+    farmer_id: input.farmer_id,
+    channel: input.channel,
+    purpose: input.purpose,
+    status: input.status,
+    attempt: 1,
+    message_te: input.messageTe,
+    message_en: input.messageEn,
+    at: input.at,
+  };
+  await appendEvent(env, {
+    id: newId("evt"),
+    at: input.at,
+    canal_id: DEMO_CANAL_ID,
+    actor: { kind: "agent", id: "caller" },
+    type: "contact.updated",
+    contact,
+  });
+  return contact.id;
+}
+
+/**
  * Ring the farmer with the volume allocated to them and the time from which to use it.
  *
  * The spoken text is composed by `templateForPurpose("request_update", …)`, so it is the same
@@ -380,47 +563,86 @@ export interface AllocationAlertOutcome extends AlertOutcome {
  * The status is pinned to `approved`: this call only ever goes out for a granted allocation, so the
  * farmer hears "approved" and the number they were actually granted, never the number they asked
  * for. The template is given the granted volume in both its volume slots for that reason.
- *
- * The message is built before the dispatch, so the text the farmer is told is returned in the
- * outcome even when no call could be placed (a test, or a coordinator demoing offline, can show it).
  */
 export async function notifyFarmerOfAllocation(
   env: Env,
   input: AllocationAlertInput,
 ): Promise<AllocationAlertOutcome> {
-  const result = await attempt(`farmer allocation alert for ${input.farmer_id}`, async () => {
-    const at = await now(env);
-    const record = await getFarmer(env, input.farmer_id);
-
-    const message = templateForPurpose("request_update", {
-      farmerName: record?.farmer.name,
+  return dispatchFarmerMessage(env, {
+    label: `farmer allocation alert for ${input.farmer_id}`,
+    farmer_id: input.farmer_id,
+    purpose: "request_update",
+    facts: {
       allocatedM3: input.volume_m3,
       requestVolumeM3: input.volume_m3,
       requestStatus: "approved",
       ...(input.windowStart === undefined ? {} : { windowStart: input.windowStart }),
       ...(input.windowEnd === undefined ? {} : { windowEnd: input.windowEnd }),
-    });
+    },
+    extraTe: "",
+    extraEn: "",
+    ...(input.requestId === undefined ? {} : { requestId: input.requestId }),
+  });
+}
 
-    const dispatched = await dispatch(env, {
-      // The farmer's own registered number; `TWILIO_FORWARD_TO` may redirect it (see `placeCall`).
-      to: record?.farmer.phone ?? null,
-      farmer_id: input.farmer_id,
-      channel: "voice",
-      messageTe: message.te,
-      messageEn: message.en,
-      context: { purpose: "request_update", ...(input.requestId === undefined ? {} : { requestId: input.requestId }) },
-      at,
-    });
+/**
+ * Ring a farmer because the **coordinator** pressed "Alert the farmer".
+ *
+ * This is the route-facing half of task 2: `POST /api/alerts` reaches this function, so the call goes
+ * out from the coordinator's own action and not only from an approval.
+ *
+ * The spoken text is composed from the same existing templates the approval path uses — the severity
+ * picks which one (see {@link purposeForSeverity}) and both state the allocated volume and the window
+ * from which to use it whenever an `allocation` was supplied. `message`, when the coordinator wrote
+ * one, is appended verbatim to each. **No new Telugu phrase is introduced here.**
+ *
+ * Only `channel: "call"` is dispatched: this module owns voice, and `placeCall` is a voice primitive.
+ * `sms`/`whatsapp` are audited as `queued` — reachable on the coordinator's contacts list and ready
+ * for a messaging transport — but no message is sent. The returned `simulated`/`detail` say so.
+ */
+export async function notifyFarmerOfAlert(env: Env, input: FarmerAlertInput): Promise<AllocationAlertOutcome> {
+  const allocation = input.allocation;
+  const note = input.message?.trim() ?? "";
+  const label = `coordinator alert for ${input.farmer_id}`;
 
-    if (dispatched.skipped !== undefined) {
-      console.log(`coordinator-alert: no allocation call for farmer ${input.farmer_id} — ${dispatched.skipped}`);
-    } else if (dispatched.placed !== null) {
-      console.log(`coordinator-alert: allocation for ${input.farmer_id} → ${describePlacement(dispatched.placed)}`);
-    }
-    return { ...dispatched, messageTe: message.te, messageEn: message.en };
+  // No allocation and nothing the coordinator wrote: there is no true sentence to say. Say so rather
+  // than rendering a template that asserts a reschedule that did not happen.
+  if (allocation === undefined && note.length === 0) {
+    return {
+      ...outcome({
+        simulated: true,
+        alerted: false,
+        skipped: "no allocation and no message: nothing true to tell the farmer",
+      }),
+      messageTe: "",
+      messageEn: "",
+    };
+  }
+
+  const result = await dispatchFarmerMessage(env, {
+    label,
+    farmer_id: input.farmer_id,
+    purpose: purposeForAlert(input.severity, allocation !== undefined),
+    facts: {
+      ...(allocation === undefined
+        ? {}
+        : {
+            allocatedM3: allocation.volume_m3,
+            requestVolumeM3: allocation.volume_m3,
+            ...(allocation.start === undefined ? {} : { windowStart: allocation.start }),
+            ...(allocation.end === undefined ? {} : { windowEnd: allocation.end }),
+          }),
+      requestStatus: input.severity,
+    },
+    extraTe: note,
+    extraEn: note,
+    channel: input.channel,
   });
 
-  // The text is carried out of the attempt even when the attempt itself failed, so a caller (or a
-  // test) can still see exactly what the farmer would have been told.
-  return "messageTe" in result ? result : { ...result, messageTe: "", messageEn: "" };
+  if (input.channel !== "call") {
+    console.log(
+      `coordinator-alert: ${input.channel} alert for ${input.farmer_id} queued (no ${input.channel} transport in this module)`,
+    );
+  }
+  return result;
 }
