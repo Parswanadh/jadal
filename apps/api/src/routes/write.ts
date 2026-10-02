@@ -23,11 +23,13 @@ import type {
   Farmer,
   JadalEvent,
   Plot,
+  ReleaseWindow,
   WaterRequest,
 } from "@jadal/contracts";
 
 import { suggestEntitlements } from "../agents/need";
 import { proposeRoster } from "../agents/scheduler";
+import { notifyFarmerOfAllocation } from "../coordinator-alert";
 import { entriesForDecision, ledger, policy } from "../core-shim";
 import { now } from "../db/clock";
 import { newId } from "../db/id";
@@ -39,6 +41,7 @@ import {
   getSeason,
   listEntitlements,
   listOutlets,
+  listReleaseWindows,
 } from "../db/repo";
 import { appendEvent, planAppend } from "../db/store";
 import { DEMO_CANAL_ID, DEMO_SEASON_SUPPLY_M3 } from "../demo";
@@ -137,6 +140,27 @@ async function appendDecision(
   }
 
   await env.DB.batch(statements.map((statement) => env.DB.prepare(statement.sql).bind(...statement.bindings)));
+}
+
+/**
+ * Pick the release window an approved request's water belongs to.
+ *
+ * A request carries no window FK, so the window has to be inferred. The decision is made *now*, so
+ * the honest choice is the window currently open; failing that the next one to open (a coordinator
+ * approving ahead of a release); failing that nothing at all, and the allocation call goes out with
+ * the volume and no time clause rather than inventing a time nobody agreed.
+ *
+ * `listReleaseWindows` already orders by `start ASC`, so the first match of each pass is the earliest.
+ */
+function windowForDecision(windows: readonly ReleaseWindow[], at: string): ReleaseWindow | null {
+  const nowMs = Date.parse(at);
+  if (Number.isFinite(nowMs)) {
+    const open = windows.find((candidate) => Date.parse(candidate.start) <= nowMs && nowMs < Date.parse(candidate.end));
+    if (open !== undefined) return open;
+    const upcoming = windows.find((candidate) => Date.parse(candidate.start) > nowMs);
+    if (upcoming !== undefined) return upcoming;
+  }
+  return windows[0] ?? null;
 }
 
 /** Register every `POST` route on `app`. */
@@ -382,6 +406,11 @@ export function registerWriteRoutes(app: Hono<{ Bindings: Env }>): void {
       await assertApprovable(c.env, request, body.volume_m3);
     }
 
+    // Where the approved water may be used. A request has no direct window FK, so the window is
+    // inferred from the decision time (see `windowForDecision`); absent one, the allocation call
+    // still goes out with the volume and no time clause.
+    const window = windowForDecision(await listReleaseWindows(c.env), await now(c.env));
+
     const event: Extract<JadalEvent, { type: "request.decided" }> = {
       id: newId("evt"),
       at: await now(c.env),
@@ -399,6 +428,29 @@ export function registerWriteRoutes(app: Hono<{ Bindings: Env }>): void {
     if (stored === undefined) {
       throw new HttpError("internal_error", `request ${requestId} vanished after being decided`, 500);
     }
+
+    /**
+     * Task B: an approved allocation is phoned to the farmer.
+     *
+     * Only on `approve`, and only with the volume the coordinator actually granted (`body.volume_m3`,
+     * not the volume that was asked for) — a partial grant must be read out as the partial number,
+     * which is the whole point of the call. The window comes from the request's own release window
+     * when it has one; a request with no window still gets the volume, because the amount is the part
+     * the farmer cannot infer.
+     *
+     * Best effort, exactly like the coordinator alert on the way in: `notifyFarmerOfAllocation`
+     * catches every failure and returns it. The decision is already in the log and in the ledger, and
+     * a phone that will not ring must never roll that back.
+     */
+    if (event.decision === "approve") {
+      await notifyFarmerOfAllocation(c.env, {
+        farmer_id: request.farmer_id,
+        volume_m3: event.volume_m3,
+        requestId,
+        ...(window === null ? {} : { windowStart: window.start, windowEnd: window.end }),
+      });
+    }
+
     return c.json(parseResponse(routes.decideRequest.response, stored));
   });
 }
