@@ -64,11 +64,17 @@ describe('cropEngine (Task A2)', () => {
   });
 
   describe('weeklyNeed - FAO-56 section 5 worked examples', () => {
-    it('reproduces Groundnut worked example (§5.2) within 0.5 m3', () => {
+    it('DOC-ONLY inputs: the §5.2 adjusted Kc_mid (1.1325) reproduces the documented 462.12 m3', () => {
       // Exact inputs from fao56-model.md §5.1 and §5.2:
       // Area = 1.0 ha, Furrow Ea = 0.65, sandy_loam (theta_FC - theta_WP = 0.13)
       // Mid-season week: ET0 = 5.0 mm/day, Day 3 rain = 15.0 mm (others 0)
       // Groundnut: Zr = 0.80 m, p_base = 0.50, Kc_mid = 1.1325
+      //
+      // These params are HAND-TYPED from the prose worked example. `kc_mid: 1.1325` and
+      // `root_depth_m.max: 0.8` appear in NO data file — the shipped crop-params.json says
+      // 1.05 / 1.0. This test documents what the doc's arithmetic produces; it is NOT a test of
+      // the production parameter path. The shipped path is pinned by the next test.
+      // See docs/decisions/ADR-groundnut-worked-example.md (status: NEEDS-OWNER-DECISION).
       const plot: Plot = {
         id: 'plot-gn',
         farmer_id: 'farmer-1',
