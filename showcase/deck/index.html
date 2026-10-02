@@ -124,6 +124,44 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
 .arrow{align-self:center;text-align:center;font-size:40px;color:var(--deep)}
 .rm{display:inline-block;font:600 34px var(--body);padding:8px 26px;border:3px dashed var(--deep);color:var(--deep);border-radius:999px;margin-top:6px}
 .closer{font-family:var(--display);font-size:60px;font-weight:600;letter-spacing:-.015em;line-height:1.08;margin-top:26px;max-width:none;white-space:nowrap}
+.calc{background:var(--bg);border:2px solid var(--hair);border-radius:16px;padding:8px 28px}
+.calc-h{font:600 28px var(--body);color:var(--grey);padding:12px 0 10px;border-bottom:2px solid var(--hair)}
+.cr{display:flex;justify-content:space-between;align-items:baseline;gap:24px;padding:9px 0;border-bottom:2px solid var(--hair);font-size:30px;line-height:1.2}
+.cr b{font-family:var(--display);font-size:40px;font-weight:600;white-space:nowrap}
+.cr.total{border-bottom:0}.cr.total b{color:var(--deep);font-size:46px}
+.uses{list-style:none}
+.uses li{font-size:32px;line-height:1.28;max-width:none;padding:10px 0;border-bottom:2px solid var(--hair)}
+.uses li b{font-weight:600;color:var(--deep)}
+.band{margin-top:18px}
+.bandhead{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:14px}
+.bandhead h3{font-size:42px}
+.srcpills{display:flex;gap:10px;align-items:center;font-size:28px;color:var(--grey);white-space:nowrap}
+.srcpills code{font-size:28px;background:var(--white);border:2px solid var(--hair);color:var(--ink);padding:2px 12px}
+.chain{display:grid;grid-template-columns:minmax(0,1fr) 120px minmax(0,1fr) 120px minmax(0,1fr);align-items:stretch}
+.mcard{background:var(--white);border:2px solid var(--hair);border-radius:16px;padding:18px 24px;display:flex;flex-direction:column;gap:6px}
+.mcard .mh{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.mcard h3{font-size:46px}
+.mcard .kind{font:600 28px var(--body);color:var(--deep);white-space:nowrap}
+.mcard p{font-size:30px;line-height:1.3;max-width:none}
+.mcard p b{font-weight:600}
+.chip{margin-top:auto;align-self:flex-start;font:600 28px var(--body);padding:5px 18px;border-radius:999px;border:2px solid var(--ink);color:var(--ink)}
+.chip.on{background:var(--deep);border-color:var(--deep);color:#FFFFFF}
+.chip.off{border-style:dashed;border-color:var(--grey);color:var(--grey)}
+.marrow{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:28px;color:var(--grey);line-height:1.1}
+.marrow i{font-style:normal;font-size:44px;line-height:1.2;color:var(--deep)}
+.band2{display:flex;align-items:center;gap:40px;margin-top:22px;padding-top:18px;border-top:2px solid var(--hair)}
+.band2 h3{font-size:42px;white-space:nowrap}
+.s2chain{display:flex;align-items:center;gap:14px;font-size:32px;flex-wrap:nowrap}
+.s2chain span{background:var(--white);border:2px solid var(--hair);border-radius:12px;padding:8px 18px;font-weight:600;white-space:nowrap}
+.s2chain i{font-style:normal;color:var(--deep);font-size:40px}
+table.crops{width:100%;border-collapse:collapse;margin-top:12px;table-layout:fixed}
+.crops th,.crops td{font-size:28px;line-height:1.15;padding:5px 10px 5px 0;text-align:left;border-bottom:2px solid var(--hair);white-space:nowrap;overflow:hidden}
+.crops th{color:var(--grey);font-weight:600}
+.crops td.num{font-variant-numeric:tabular-nums}
+.crops td:first-child{font-family:var(--display);font-weight:600;font-size:30px}
+.crops tr.unsrc td{color:var(--deep)}
+.legend{font-size:28px;line-height:1.3;color:var(--ink);max-width:none;margin-top:10px}
+.legend a,.foot a{color:var(--deep);text-underline-offset:4px}
 @media (prefers-reduced-motion:reduce){.drop,.dash{animation:none}.track i{transition:none}}
 </style>
 </head>
@@ -227,6 +265,30 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
   <aside hidden>Cue: Point at the equation, then at each term as you name it. — That is the idea in one line. T sub i equals V sub i divided by Q of x sub i. V is the volume farm i needs this week, from the crop-water model. Q of x is the flow that actually reaches its outlet after seepage. Time is the answer, not the input. And this arithmetic lives in one package. There is no water arithmetic anywhere else in the codebase. — ARCHITECT CUT: So we share by volume and solve for time. T sub i equals V sub i over Q of x sub i: the volume a farm needs, divided by the flow that reaches its outlet. All of that arithmetic lives in one package.</aside>
 </section>
 
+<!-- 6b · FAO-56 -->
+<section class="slide light" data-title="FAO-56 to cubic metres">
+  <h2>FAO-56: how a crop becomes cubic metres.</h2>
+  <div class="cols wide-l top" style="margin-top:32px">
+    <div class="calc" role="table" aria-label="One week of flooded rice, worked from the shipped crop table">
+      <div class="calc-h">One week, 1 ha of flooded rice, read from crop-params.json</div>
+      <div class="cr"><span>Crop use: Kc 1.2 × ET₀ 5 mm/day × 7 days</span><b>42.0 mm</b></div>
+      <div class="cr"><span>+ percolation, 3.5 mm/day × 7</span><b>24.5 mm</b></div>
+      <div class="cr"><span>− effective rain, one 15 mm storm</span><b>15.0 mm</b></div>
+      <div class="cr"><span>= net irrigation need</span><b>51.5 mm</b></div>
+      <div class="cr"><span>÷ irrigation efficiency 0.8 = gross</span><b>64.375 mm</b></div>
+      <div class="cr total"><span>× 10 m³ per mm per ha × 1 ha</span><b>643.75 m³</b></div>
+    </div>
+    <ul class="uses">
+      <li><b>Kc</b> per crop and growth stage: initial, mid-season, end.</li>
+      <li><b>Root depth and p</b> set how much water the root zone holds and can lose before stress.</li>
+      <li><b>Effective rain and efficiency</b> turn crop use into a gross volume.</li>
+      <li><b>ET₀</b> arrives as an input. The core does not compute it.</li>
+    </ul>
+  </div>
+  <p class="foot">Engine run on crop-params.json (clay soil, efficiency 0.8). The groundnut example does not reproduce.</p>
+  <aside hidden>Cue: Walk the calculation top to bottom. Say 'run on the shipped file' once. — FAO-56 is the FAO's guideline for computing crop water requirements; we use the 2025 revision. Crop use is a crop coefficient times reference evapotranspiration, which comes into the core as an input. Here is one week of flooded rice, run on the shipped crop table: crop use of 42 millimetres, plus percolation, minus a 15 millimetre storm, is a net 51.5. Divide by an irrigation efficiency of 0.8, and one hectare needs 643.75 cubic metres. We ran the engine on the file itself to check that it reproduces. — ARCHITECT CUT: The crop physics is FAO-56, revised in 2025: crop use is a coefficient times reference evapotranspiration, which is an input to the core. For one week of flooded rice on the shipped crop table, crop use is 42 millimetres, percolation adds 24.5, and a 15 millimetre storm takes 15 off, giving 51.5; at efficiency 0.8 that is 643.75 cubic metres per hectare. We reproduced that by running the engine on the file itself. Not every worked example reproduces: groundnut gives 417.69 against 462.12 in our own document, and an owner has to choose.</aside>
+</section>
+
 <!-- 7 · who decides -->
 <section class="slide light" data-title="Who decides">
   <h2>Models suggest. Code calculates. An approval step decides.</h2>
@@ -236,6 +298,40 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
     <div><div class="big">An approval step decides</div><p>A roster is released through an approval step. Every outbound call, from any path, passes one rate-limited function. Who may approve is not yet enforced by the server.</p><p class="src" style="margin-top:18px">apps/api/src/agents/loop.ts</p></div>
   </div>
   <aside hidden>Cue: Left to right across the three columns. Say the last sentence plainly; the next slide returns to it. — Who decides? Models suggest, code calculates, and an approval step decides. Language models read farmer requests and draft options, but a tool marked gated only returns a proposal. The deterministic core does the calculation, with no network and no model calls. A roster is released through an approval step, and every outbound call, from any path, passes one rate-limited function. Who is allowed to approve is not yet enforced by the server, and I will come back to that. — ARCHITECT CUT: Models suggest, code calculates, and an approval step decides. Language models draft options, and a gated tool only returns a proposal. The deterministic core does every water calculation. A roster is released through an approval step, and every outbound call passes one rate-limited function. I am not claiming that nothing can reach a farmer without approval: coordinator alerts and the escalation ladder also place calls, and I have verified the single call function, not every path's gating.</aside>
+</section>
+
+<!-- 7b · two speeds -->
+<section class="slide dark" data-title="Two speeds of thinking">
+  <h2>Two speeds of thinking.</h2>
+  <div class="band">
+    <div class="bandhead"><h3>System 1 · fast classifiers</h3>
+      <div class="srcpills"><span>every result carries</span><code>source: laya</code><code>jev</code><code>rules</code></div></div>
+    <div class="chain">
+      <div class="mcard"><div class="mh"><h3>Laya</h3><span class="kind">AI · local</span></div>
+        <p>mmBERT-based, port 8099</p>
+        <p><b>Trusted:</b> intent, crop stress.</p>
+        <p><b>Not trusted:</b> urgency, release time. Discarded in code; rules supply urgency.</p>
+        <p>Telugu: 4 probes, unvalidated.</p>
+        <span class="chip on">On in this demo</span></div>
+      <div class="marrow"><span>falls to</span><i>→</i></div>
+      <div class="mcard"><div class="mh"><h3>Jev</h3><span class="kind">AI · hosted</span></div>
+        <p>typesafe/jev-1.13 through OpenRouter.</p>
+        <p>Schema-bounded answers: choice, score, noul.</p>
+        <p>Needs a key. Not run by us.</p>
+        <span class="chip off">Off: no key</span></div>
+      <div class="marrow"><span>falls to</span><i>→</i></div>
+      <div class="mcard"><div class="mh"><h3>Rules</h3><span class="kind">Deterministic</span></div>
+        <p>Telugu keyword tables.</p>
+        <p>Pure, offline, no network.</p>
+        <p>Always the floor. Never throws.</p>
+        <p>Supplies urgency.</p>
+        <span class="chip">Always on</span></div>
+    </div>
+  </div>
+  <div class="band2"><h3>System 2 · slow, proposes</h3>
+    <div class="s2chain"><span>Agent loop</span><i>→</i><span>Gated tool</span><i>→</i><span>Proposal only</span><i>→</i><span>Approval step</span></div></div>
+  <p class="foot">Live here: Laya, then rules. Jev is off. Neither AI model computes water; the core does.</p>
+  <aside hidden>Cue: Top band first, left to right; then the bottom band. Say which tier is live before you move on. — There are two speeds of thinking. System 1 is a fast chain of classifiers: Laya, then Jev, then keyword rules. Laya is a local model, trusted for intent only; its urgency and release-time answers are discarded, and its Telugu is unvalidated, tested on four probes. Jev is a hosted model that needs a key, which this build does not have, so the live chain is Laya, then the rules. Every result carries its source. System 2 is the agent loop, whose gated tools only propose. Neither computes water; the core does. — ARCHITECT CUT: Two speeds of thinking, and neither computes water. System 1 is a classifier chain: Laya, then Jev, then keyword rules. Laya is a local multilingual encoder. From the verdict document it got intent right on four of four short Telugu probes and crop stress on five of five, which is four probes, not a Telugu evaluation. Its urgency and release-time answers were unreliable, so both are discarded in code and the deterministic rules supply urgency. The live service reports cuda; the 27 to 43 millisecond figure is from an earlier CPU run, and we have not measured the cuda run. Jev is typesafe jev-1.13 through OpenRouter's Decisions API, with schema-bounded answers; it needs a key this build does not have, so it is skipped, and we have not run it. The live chain is Laya, then rules. Any failure moves down the chain, the rules never throw, and every result carries its source. Why a small encoder rather than a large language model? Our reasoning: latency, running locally, and a bounded output, since it picks a label and cannot write an instruction. System 2 is the agent loop, where gated tools only return proposals. — PAUSE for questions on model choice, failure handling and Telugu validation (about 30 s). Confirm which tier is live from the source field of a real result. Point at apps/api/src/system1.ts, docs/decisions/ADR-006-system1-providers.md, docs/research/laya-verdict.md.</aside>
 </section>
 
 <!-- 7b · trust -->
@@ -257,7 +353,7 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
     <li><b>Webhooks fail closed.</b> A bad signature or missing config returns 403.</li>
   </ul>
   <p class="notyet"><b>Not built yet:</b> server-side sign-in (the role gate is client-side) · a tamper-evident log (append-only by convention) · masking of stored phone numbers.</p>
-  <aside hidden>Cue: Left to right across the diagram. Then read the bottom strip aloud. Do not skip the strip. — How does it stay trustworthy? Three boundaries. A model's output is only ever a proposal. The core calculates, with no network access. And a call can only be placed through one function, behind a rate limit and a kill switch. Every result says whether it came from a model or a fallback, and whether a call was real or simulated. What it does not yet have is server-side sign-in, a tamper-evident log, or protection for stored phone numbers. — ARCHITECT CUT: How does it stay trustworthy? Three boundaries, each enforced in code you can read. One: a model's output is a proposal. Tools marked gated return a proposal and never apply it; that is in the contracts file and the agent loop. Two: the core is pure. It has no network access, and a search of its source finds no fetch or environment reads. Three: a call can only be placed through one function. A static test scans the source and fails on any other route, and we watched it fail on a planted bypass. Behind it, the limit is three calls per sixty seconds per handset, a sliding window consumed in one atomic statement, and setting REAL_TELEPHONY to false stops all dialling without a deploy. Telephony webhooks fail closed: missing configuration or a bad signature returns 403. Every result carries its source and a simulated flag, so a fallback is never reported as a model call. Now the gaps. There is no server-side authentication: the role gate is client-side, and the approve route records a fixed coordinator identity. The event log is append-only by convention, with no hash chain. Phone numbers are stored in plain text. — PAUSE here for the evaluator's questions on trust boundaries (about 40 s). Point at the code if asked: packages/contracts/src/agents.ts, apps/api/src/agents/loop.ts, apps/api/src/placecall-guard.test.ts, apps/api/src/noloop.ts.</aside>
+  <aside hidden>Cue: Left to right across the diagram. Then read the bottom strip aloud. Do not skip the strip. — How does it stay trustworthy? Three boundaries. A model's output is only ever a proposal. The core calculates, with no network access. And a call can only be placed through one function, behind a rate limit and a kill switch. Every result says whether it came from a model or a fallback, and whether a call was real or simulated. What it does not yet have is server-side sign-in, a tamper-evident log, or protection for stored phone numbers. — ARCHITECT CUT: How does it stay trustworthy? Three boundaries, each enforced in code. A model's output is a proposal: gated tools return a proposal and never apply it. The core is pure: a search of its source finds no network or environment reads. And a call can only be placed through one function, which a static test enforces and which we watched fail on a planted bypass. Behind it, three calls per sixty seconds per handset, a sliding window consumed in one atomic statement, and REAL_TELEPHONY set to false stops all dialling without a deploy. Webhooks fail closed. Every result carries its source and a simulated flag. Now the gaps. There is no server-side authentication: the role gate is client-side, and the approve route records a fixed coordinator identity. The event log is append-only by convention, with no hash chain. Phone numbers are stored in plain text. — PAUSE here for the evaluator's questions on trust boundaries (about 40 s). Point at the code if asked: packages/contracts/src/agents.ts, apps/api/src/agents/loop.ts, apps/api/src/placecall-guard.test.ts, apps/api/src/noloop.ts.</aside>
 </section>
 
 <!-- 8 · product -->
@@ -322,7 +418,34 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
     <li><b>A pilot must answer:</b> gauge accuracy, spoofing and tamper resistance, connectivity, and who maintains the devices.</li>
   </ul>
   <p class="closer">Next step: measure the water, not only model it.</p>
-  <aside hidden>Cue: Say 'roadmap, not built' before you read anything. The slide ends on a closing line; say it and stop. — This is a roadmap, not something built. Today the flows are modelled from the seed, not read from gauges. The next step would be flow gauges at the outlets, readings signed at the device, buffered at the edge for patchy rural connectivity, and compared with the model so drift is visible. None of that exists yet. Fair water starts with measuring it. Thank you. — ARCHITECT CUT: This is a roadmap, and none of it is built. Today the flow at each outlet is modelled from the seed with a fixed decay constant. The core would need a measured-flow input beside the modelled one. A pilot would put a flow gauge at each outlet, sign the reading on the device, and buffer it at the edge, because rural connectivity is patchy. The system would compare each reading with the model, flag drift, and alert the coordinator when they diverge, which is also the first defence against a faulty or spoofed sensor. Device fleet management and over-the-air updates come after a pilot, not before. What a pilot has to answer is gauge accuracy, tamper resistance, connectivity, and who owns and maintains the devices. Before questions, the open items in one breath: SMS and WhatsApp are simulated, live calls are not demo-reliable, the Telugu copy is not natively reviewed, sign-in is client-side, and two product decisions wait on an owner. Models propose, the core computes, an approval step decides, and I have said where each is not yet enforced. I would like to hear what you would harden first. — OPEN THE FLOOR. Ask the closing questions in docs/EVALUATOR-BRIEF.md if the floor stays quiet. Pause for about 45 s. — Closing remark (say it, then stop): Fair water starts with measuring it. Thank you. — IF ASKED — If asked: what did you catch in your own work? (was a slide): We checked our own claims, and some failed. The handoff said the tail meets about 42 percent of its need. Core says otherwise: on the seed, planned need-met is 280.8 percent at the head and 205.5 at the tail, which is over-allocation, Gini 0.059, so we do not claim the 42. The fairness comparison read zero in the live path because need-met was capped at 100, and that is fixed. The urgency score was a constant 0.15 and now reports unscored. And a model's QA pass approved a video with invented ledger figures; a forty-line script found them, so for numbers we trust mechanical checks over model checks. — IF ASKED — If asked: what is still simulated or open? (was a slide): SMS and WhatsApp are simulated and nothing is sent. Live calls are not demo-reliable: the Twilio account is a trial with a zero balance. The Telugu copy is machine-written and not natively reviewed. The groundnut worked example says 462.12 cubic metres while the shipped table gives 417.69, and an owner has to choose. Equal volume on the raw season-scaled seed starves the tail, which is a product decision about weekly versus seasonal entitlement. Two contract changes, climate inputs and place_call gating, are written up and wait on a contracts-ok label. Sign-in is client-side, so the server does not check who approves, and the demo reset routes are unauthenticated. The event log is append-only by convention, and phone numbers are stored in plain text.</aside>
+  <aside hidden>Cue: Say 'roadmap, not built' before you read anything. The slide ends on a closing line; say it and stop. — This is a roadmap, not something built. Today the flows are modelled from the seed, not read from gauges. The next step would be flow gauges at the outlets, readings signed at the device, buffered at the edge for patchy rural connectivity, and compared with the model so drift is visible. None of that exists yet. Fair water starts with measuring it. Thank you. — ARCHITECT CUT: This is a roadmap, and none of it is built. Today each outlet's flow is modelled from the seed. A pilot would put a flow gauge at each outlet, sign the reading on the device, and buffer it at the edge for patchy connectivity. The system would compare readings with the model and alert the coordinator on divergence, which is also the first defence against a faulty or spoofed sensor. The core would need a measured-flow input beside the modelled one. Fleet management and over-the-air updates come after a pilot. A pilot must answer gauge accuracy, tamper resistance, connectivity, and who maintains the devices. Before questions, the open items in one breath: SMS and WhatsApp are simulated, live calls are not demo-reliable, the Telugu copy is not natively reviewed, sign-in is client-side, and two product decisions wait on an owner. I have said where each boundary is not yet enforced, and I would like to hear what you would harden first. — OPEN THE FLOOR. Ask the closing questions in docs/EVALUATOR-BRIEF.md if the floor stays quiet. Pause for about 40 s. — Closing remark (say it, then stop): Fair water starts with measuring it. Thank you. — IF ASKED — If asked: what did you catch in your own work? (was a slide): We checked our own claims, and some failed. The handoff said the tail meets about 42 percent of its need. Core says otherwise: on the seed, planned need-met is 280.8 percent at the head and 205.5 at the tail, which is over-allocation, Gini 0.059, so we do not claim the 42. The fairness comparison read zero in the live path because need-met was capped at 100, and that is fixed. The urgency score was a constant 0.15 and now reports unscored. And a model's QA pass approved a video with invented ledger figures; a forty-line script found them, so for numbers we trust mechanical checks over model checks. — IF ASKED — If asked: what is still simulated or open? (was a slide): SMS and WhatsApp are simulated and nothing is sent. Live calls are not demo-reliable: the Twilio account is a trial with a zero balance. The Telugu copy is machine-written and not natively reviewed. The groundnut worked example says 462.12 cubic metres while the shipped table gives 417.69, and an owner has to choose. Equal volume on the raw season-scaled seed starves the tail, which is a product decision about weekly versus seasonal entitlement. Two contract changes, climate inputs and place_call gating, are written up and wait on a contracts-ok label. Sign-in is client-side, so the server does not check who approves, and the demo reset routes are unauthenticated. The event log is append-only by convention, and phone numbers are stored in plain text.</aside>
+</section>
+
+<!-- 15b · appendix -->
+<section class="slide light" data-title="Appendix: crop data we ship" data-appendix="true">
+  <h2>Appendix: crop data we ship.</h2>
+  <table class="crops">
+    <colgroup><col style="width:17%"><col style="width:20%"><col style="width:8%"><col style="width:12%"><col style="width:8%"><col style="width:35%"></colgroup>
+    <thead><tr><th>Crop</th><th>Kc ini · mid · end</th><th>h (m)</th><th>Root (m)</th><th>p</th><th>Source</th></tr></thead>
+    <tbody>
+<!-- CROPS:START -->
+      <tr><td>Rice (flooded)</td><td class="num">1.05 · 1.20 · 1.05 <span aria-label="checked against the book">●</span></td><td class="num">1 <span aria-label="checked against the book">●</span></td><td class="num">0.5–1 <span aria-label="checked against the book">●</span></td><td class="num">0.20 <span aria-label="assumed">○</span></td><td>Tbl 6.2 p.170 · p assumed</td></tr>
+      <tr><td>Rice (intermittent)</td><td class="num">0.95 · 1.20 · 1.00 <span aria-label="checked against the book">●</span></td><td class="num">1 <span aria-label="checked against the book">●</span></td><td class="num">0.5–0.7 <span aria-label="checked against the book">●</span></td><td class="num">0.20 <span aria-label="checked against the book">●</span></td><td>Tbl 6.2 p.168–170 · 8.2 p.260</td></tr>
+      <tr><td>Maize</td><td class="num">0.30 · 1.20 · 0.30 <span aria-label="checked against the book">●</span></td><td class="num">2.5 <span aria-label="checked against the book">●</span></td><td class="num">0.6–1.5 <span aria-label="checked against the book">●</span></td><td class="num">0.50 <span aria-label="checked against the book">●</span></td><td>Tbl 6.2 p.168–170 · 8.2 p.260</td></tr>
+      <tr><td>Groundnut</td><td class="num">0.40 · 1.05 · 0.60 <span aria-label="checked against the book">●</span></td><td class="num">0.5 <span aria-label="checked against the book">●</span></td><td class="num">0.5–1 <span aria-label="checked against the book">●</span></td><td class="num">0.50 <span aria-label="checked against the book">●</span></td><td>Tbl 6.2 p.168–170 · 8.2 p.260</td></tr>
+      <tr><td>Cotton</td><td class="num">0.40 · 1.10 · 0.50 <span aria-label="checked against the book">●</span></td><td class="num">1.2 <span aria-label="checked against the book">●</span></td><td class="num">1–1.7 <span aria-label="checked against the book">●</span></td><td class="num">0.60 <span aria-label="checked against the book">●</span></td><td>Tbl 6.2 p.168–170 · 8.2 p.260</td></tr>
+      <tr><td>Chilli</td><td class="num">0.60 · 1.10 · 0.80 <span aria-label="checked against the book">●</span></td><td class="num">0.75 <span aria-label="checked against the book">●</span></td><td class="num">0.5–1.2 <span aria-label="checked against the book">●</span></td><td class="num">0.40 <span aria-label="checked against the book">●</span></td><td>Tbl 6.2 p.168–170 · 8.2 p.260</td></tr>
+      <tr><td>Sugarcane</td><td class="num">0.40 · 1.20 · 0.80 <span aria-label="checked against the book">●</span></td><td class="num">3 <span aria-label="checked against the book">●</span></td><td class="num">1–1.5 <span aria-label="checked against the book">●</span></td><td class="num">0.60 <span aria-label="checked against the book">●</span></td><td>Tbl 6.2 p.168–170 · 8.2 p.260</td></tr>
+      <tr><td>Greengram</td><td class="num">0.40 · 1.10 · 0.40 <span aria-label="checked against the book">●</span></td><td class="num">0.6 <span aria-label="checked against the book">●</span></td><td class="num">0.4–1 <span aria-label="checked against the book">●</span></td><td class="num">0.45 <span aria-label="checked against the book">●</span></td><td>Tbl 6.2 p.168–170 · 8.2 p.260</td></tr>
+      <tr><td>Blackgram</td><td class="num">0.40 · 1.10 · 0.35 <span aria-label="checked against the book">●</span></td><td class="num">0.5 <span aria-label="checked against the book">●</span></td><td class="num">0.6–1 <span aria-label="checked against the book">●</span></td><td class="num">0.45 <span aria-label="checked against the book">●</span></td><td>Tbl 6.2 p.168–170 · 8.2 p.260</td></tr>
+      <tr class="unsrc"><td>Redgram</td><td class="num">0.35 · 1.10 · 0.40 <span aria-label="unsourced">✕</span></td><td class="num">1.8 <span aria-label="unsourced">✕</span></td><td class="num">1–1.5 <span aria-label="unsourced">✕</span></td><td class="num">0.60 <span aria-label="unsourced">✕</span></td><td>unsourced: no valid FAO-56 source</td></tr>
+      <tr><td>Chickpea</td><td class="num">0.40 · 1.05 · 0.35 <span aria-label="checked against the book">●</span></td><td class="num">0.5 <span aria-label="checked against the book">●</span></td><td class="num">0.7–1 <span aria-label="checked against the book">●</span></td><td class="num">0.45 <span aria-label="checked against the book">●</span></td><td>Tbl 6.2 p.168–170 · 8.2 p.260</td></tr>
+<!-- CROPS:END -->
+    </tbody>
+  </table>
+  <p class="legend"><span id="crop-legend"><!-- LEGEND:START -->10 crops in 11 rows, read from crop-params.json. ● checked against the book (Kc, height, root depth: Table 6.2; p: Table 8.2) · ○ our assumption · ✕ unsourced. Every stage length is assumed: the 2025 edition replaced fixed day counts with growing degrees. FAO-56 has no paddy percolation rate. The whole redgram row is unsourced. The book covers many more crops than we ship.<!-- LEGEND:END --></span> Every crop we hold, searchable: <a href="fao56-explorer.html">fao56-explorer.html</a></p>
+  <p class="foot">Groundnut's worked example: shipped table 417.69 m³ vs 462.12 m³ in our doc. Owner decision pending.</p>
+  <aside hidden>Cue: Appendix. Not presented unless asked. Point at the three symbols in the legend first. — Appendix. This table is generated from the shipped crop file: ten crops in eleven rows. A filled circle means checked against the book's Tables 6.2 and 8.2, a hollow circle means our assumption, and a cross means unsourced. Stage lengths are assumed everywhere, because the 2025 edition replaced fixed day counts with growing degrees. There is no paddy percolation rate in FAO-56, and the whole redgram row is unsourced. The book covers many more crops than we ship; the explorer page lists every crop we hold in the repo. — ARCHITECT CUT: (skipped in this cut)</aside>
 </section>
 
 <!-- ============ chrome ============ -->
@@ -352,7 +475,7 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
   const stage=document.getElementById('stage'), slides=[...document.querySelectorAll('.slide')], N=slides.length;
   const notes=document.getElementById('notes'), count=document.getElementById('count');
   const fillrect=document.getElementById('fillrect'), reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
-  let cur=0;
+  const MAIN=slides.filter(x=>!x.dataset.appendix).length; let cur=0;
 
   function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform='scale('+s+')';}
   addEventListener('resize',fit);fit();
@@ -409,7 +532,7 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
   function show(i,push){
     i=Math.max(0,Math.min(N-1,i)); cur=i;
     slides.forEach((s,k)=>s.classList.toggle('active',k===i));
-    fillrect.setAttribute('width',(1760*(i/(N-1))).toFixed(1));
+    fillrect.setAttribute('width',(1760*Math.min(1,i/(MAIN-1))).toFixed(1));
     count.textContent=(i+1)+' / '+N;
     const a=slides[i].querySelector('aside');
     notes.innerHTML=a?'<b>Notes · '+slides[i].dataset.title+'</b><br>'+a.textContent:'';

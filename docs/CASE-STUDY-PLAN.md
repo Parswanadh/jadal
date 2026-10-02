@@ -72,19 +72,22 @@ The deck is 13 slides. Two former slides, *What we caught in our own work* and *
 | Slide | Beat | Standard | Architect |
 |---|---|---|---|
 | 1 Title | One question; everything numeric is labelled | 0:31 | 0:24 |
-| 2 The place | 3 km, 8 outlets, unlined; demo data, not gauges | 0:23 | skipped |
+| 2 The place | 3 km, 8 outlets, unlined; demo data, not gauges | skip when short | skipped |
 | 3 Warabandi | Wara and bandi; equal hours; the register records time | 0:29 | 0:15 |
 | 4 Hours are not water | 0.145 vs 0.106 m³/s; 3.5% vs 29.4%; about 0.73 | 0:32 | 0:22 |
 | 5 Hours or water | Click Equal volume: the tail's turn stretches about 1.37× | 0:33 | skipped |
 | 6 Our answer | Tᵢ = Vᵢ ÷ Q(xᵢ) | 0:30 | 0:18 |
-| 7 Who decides | Propose, compute, approve; code evidence; sign-in gap named | 0:33 | 0:32 |
-| 8 How it stays trustworthy | Trust boundaries, controls, and the 'not built yet' strip | 0:33 | 2:02 |
-| 9 The product | Coordinator console and farmer view; demo data | 0:22 | skipped |
-| 10 Voice and ledger | Optional; caveats stated first | skip when short | skipped |
-| 11 Launch film | Play about 54 s; say nothing over it | 1:06 | skipped |
-| 12 What we measured | 862 tests; 3 per 60 s; one route; 605 keys | 0:33 | 0:12 |
-| 13 Path to field telemetry | Roadmap, not built; closing line; open items and what we caught are spoken, not shown | 0:27 | 2:04 |
-| **Total** | computed at 145 wpm, plus fixed seconds and pauses; not rehearsed | **6:32** | **6:09** |
+| 7 FAO-56 to cubic metres | One week of flooded rice, run on the shipped crop table: 643.75 m³ per hectare | 0:37 | 0:39 |
+| 8 Who decides | Propose, compute, approve; code evidence; sign-in gap named | 0:33 | 0:32 |
+| 9 Two speeds of thinking | System 1 classifier chain laya → jev → rules; System 2 gated agent loop; which is live | 0:38 | 1:46 |
+| 10 How it stays trustworthy | Trust boundaries, controls, and the 'not built yet' strip | 0:33 | 1:30 |
+| 11 The product | Coordinator console and farmer view; demo data | 0:22 | skipped |
+| 12 Voice and ledger | Optional; caveats stated first | skip when short | skipped |
+| 13 Launch film | Play about 54 s; say nothing over it | 1:06 | skipped |
+| 14 What we measured | 862 tests; 3 per 60 s; one route; 605 keys | 0:33 | 0:12 |
+| 15 Path to field telemetry | Roadmap, not built; closing line; open items and what we caught are spoken, not shown | 0:27 | 1:47 |
+| 16 Appendix: crop data we ship | Generated from crop-params.json: 10 crops in 11 rows, each field tagged; the explorer lists every crop we hold | appendix | appendix |
+| **Total** | computed at 145 wpm, plus fixed seconds and pauses; not rehearsed | **7:24** | **7:45** |
 <!-- TALK-TRACK:END -->
 
 Short versions (30 s and 2 min) are in the script file.

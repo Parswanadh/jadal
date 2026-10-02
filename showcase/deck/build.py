@@ -14,9 +14,47 @@ def mmss(t): t = int(round(t)); return f"{t//60}:{t%60:02d}"
 def words(t): return len(re.findall(r"\S+", t))
 def speak(t): return math.ceil(words(t) / WPM * 60)
 
-def std_time(s):  return 0 if s.get("skip_short") else speak(s["say"]) + s.get("fixed", 0)
+def std_time(s):  return 0 if (s.get("skip_short") or s.get("appendix")) else speak(s["say"]) + s.get("fixed", 0)
 def arc_text(s):  return s.get("a_say", s["say"])
-def arc_time(s):  return 0 if s.get("a_skip") else speak(arc_text(s)) + s.get("a_fixed", s.get("fixed", 0) if "a_say" not in s else 0) + s.get("pause_s", 0) * (1 if s.get("pause") else 0)
+def arc_time(s):  return 0 if (s.get("a_skip") or s.get("appendix")) else speak(arc_text(s)) + s.get("a_fixed", s.get("fixed", 0) if "a_say" not in s else 0) + s.get("pause_s", 0) * (1 if s.get("pause") else 0)
+
+# ---- crop appendix: generated from packages/core/src/data/crop-params.json ----
+CROPS = json.load(open(os.path.join(ROOT, "packages", "core", "src", "data", "crop-params.json"), encoding="utf-8"))
+GLYPH = {"MEASURED": "●", "ASSUMED": "○", "UNSOURCED": "✕"}
+LBL = {"MEASURED": "checked against the book", "ASSUMED": "assumed", "UNSOURCED": "unsourced"}
+def worst(sts):
+    for k in ("UNSOURCED", "ASSUMED"):
+        if k in sts: return k
+    return "MEASURED"
+def pages(clause):
+    m = re.search(r"p\.\s*([\d][\d\-–, ]*\d|\d)", clause or ""); return m.group(1).replace("-", "–").replace(" ", "") if m else ""
+def clauses(src):
+    out = {}
+    for seg in src.split("||"):
+        m = re.match(r"\s*([A-Z_/]+):", seg)
+        if m: out[m.group(1)] = seg
+    return out
+def g(st): return f'<span aria-label="{LBL[st]}">{GLYPH[st]}</span>'
+rows = []; counts = {"MEASURED": 0, "ASSUMED": 0, "UNSOURCED": 0}
+for c in CROPS:
+    st = c["constant_status"]; cl = clauses(c["source"])
+    for v in st.values(): counts[v] += 1
+    name = c["crop"].capitalize() + (f" ({c['variant']})" if c.get("variant") else "")
+    kc_st = worst([st["kc_ini"], st["kc_mid"], st["kc_end"]]); r = c["root_depth_m"]
+    kc = f'{c["kc_ini"]:.2f} · {c["kc_mid"]:.2f} · {c["kc_end"]:.2f}'
+    h = f'{c["max_height_m"]:g}'; root = f'{r["min"]:g}–{r["max"]:g}'; pv = f'{c["depletion_p"]:.2f}'
+    if kc_st == "UNSOURCED" and st["depletion_p"] == "UNSOURCED": src = "unsourced: no valid FAO-56 source"
+    else:
+        kp = pages(cl.get("KC", "")); pp = pages(cl.get("DEPLETION_P", ""))
+        src = f"Tbl 6.2 p.{kp}" if kp else "Tbl 6.2"
+        src += f" · 8.2 p.{pp}" if st["depletion_p"] == "MEASURED" and pp else " · p assumed"
+    cls = ' class="unsrc"' if kc_st == "UNSOURCED" else ""
+    rows.append(f'      <tr{cls}><td>{html.escape(name)}</td><td class="num">{kc} {g(kc_st)}</td><td class="num">{h} {g(st["max_height_m"])}</td><td class="num">{root} {g(st["root_depth_m"])}</td><td class="num">{pv} {g(st["depletion_p"])}</td><td>{html.escape(src)}</td></tr>')
+n_rows = len(CROPS); n_crops = len({c["crop"] for c in CROPS})
+legend = (f"{n_crops} crops in {n_rows} rows, read from crop-params.json. ● checked against the book (Kc, height, root depth: Table 6.2; p: Table 8.2) · ○ our assumption · ✕ unsourced. "
+          "Every stage length is assumed: the 2025 edition replaced fixed day counts with growing degrees. FAO-56 has no paddy percolation rate. The whole redgram row is unsourced. "
+          f"The book covers many more crops than we ship.")
+CROP_STATS = {"rows": n_rows, "crops": n_crops, "tagged_fields": sum(counts.values()), **{k.lower(): v for k, v in counts.items()}}
 
 # ---- drift guard + deck notes ----
 idx_path = os.path.join(D, "index.html"); idx = open(idx_path, encoding="utf-8").read()
@@ -36,10 +74,12 @@ def repl(_m):
     return "<aside hidden>" + html.escape(" — ".join(parts), quote=False) + "</aside>"
 new, n = re.subn(r"<aside hidden>.*?</aside>", repl, idx, flags=re.S)
 if n != len(slides): sys.exit(f"DRIFT: {n} asides vs {len(slides)} slides")
+new = re.sub(r"<!-- CROPS:START -->.*?<!-- CROPS:END -->", lambda m: "<!-- CROPS:START -->\n" + "\n".join(rows) + "\n<!-- CROPS:END -->", new, flags=re.S)
+new = re.sub(r"<!-- LEGEND:START -->.*?<!-- LEGEND:END -->", lambda m: "<!-- LEGEND:START -->" + html.escape(legend, quote=False) + "<!-- LEGEND:END -->", new, flags=re.S)
 open(idx_path, "w", encoding="utf-8").write(new)
 
 std_total = sum(std_time(s) for s in slides); arc_total = sum(arc_time(s) for s in slides)
-std_full = sum(speak(s["say"]) + s.get("fixed", 0) for s in slides)
+std_full = sum(speak(s["say"]) + s.get("fixed", 0) for s in slides if not s.get("appendix"))
 
 # ---- markdown ----
 L = ["# Jadal — speaker script", "",
@@ -53,6 +93,7 @@ L = ["# Jadal — speaker script", "",
      "| # | Slide | Standard | Architect | Note |", "|---|---|---|---|---|"]
 for i, s in enumerate(slides, 1):
     note = ("skip when short (standard)" if s.get("skip_short") else "") + (" · " if s.get("skip_short") and s.get("a_skip") else "") + ("skipped in architect cut" if s.get("a_skip") else "")
+    if s.get("appendix"): L.append(f"| {i} | {s['title']} | appendix | appendix | not timed |"); continue
     L.append(f"| {i} | {s['title']} | {mmss(speak(s['say']) + s.get('fixed', 0))} | {mmss(arc_time(s)) if not s.get('a_skip') else '—'} | {note} |")
 L += ["", "## Standard cut — slide by slide", ""]
 for i, s in enumerate(slides, 1):
@@ -79,8 +120,8 @@ if os.path.exists(plan_path):
     if m0 in plan and m1 in plan:
         rows = ["| Slide | Beat | Standard | Architect |", "|---|---|---|---|"]
         for i, s in enumerate(slides, 1):
-            st = "skip when short" if s.get("skip_short") else mmss(speak(s["say"]) + s.get("fixed", 0))
-            ar = "skipped" if s.get("a_skip") else mmss(arc_time(s))
+            st = "appendix" if s.get("appendix") else ("skip when short" if s.get("skip_short") else mmss(speak(s["say"]) + s.get("fixed", 0)))
+            ar = "appendix" if s.get("appendix") else ("skipped" if s.get("a_skip") else mmss(arc_time(s)))
             rows.append(f"| {i} {s['title']} | {s.get('beat','')} | {st} | {ar} |")
         rows.append(f"| **Total** | computed at {WPM} wpm, plus fixed seconds and pauses; not rehearsed | **{mmss(std_total)}** | **{mmss(arc_total)}** |")
         plan = plan[:plan.index(m0) + len(m0)] + "\n" + "\n".join(rows) + "\n" + plan[plan.index(m1):]
@@ -95,7 +136,7 @@ def block(i, s, cut):
         t, say, pause, skipped = arc_time(s), arc_text(s), s.get("pause", ""), bool(s.get("a_skip"))
     cls = "slide skipped" if skipped else "slide"
     h = [f'<section class="{cls}" id="{cut}-s{i}" data-n="{i}">',
-         f'<h2><span class="n">{i}</span>{E(s["title"])}<span class="t">{"skipped" if skipped and cut=="arc" else mmss(t)}</span></h2>']
+         f'<h2><span class="n">{i}</span>{E(s["title"])}<span class="t">{"appendix" if s.get("appendix") else ("skipped" if skipped and cut=="arc" else mmss(t))}</span></h2>']
     if s.get("cue") and not (skipped and cut == "arc" and not s.get("cue")): h.append(f'<p class="cue"><b>Cue</b> {E(s["cue"])}</p>')
     if not (skipped and cut == "arc"): h.append(f'<p class="say">{E(say)}</p>')
     if pause: h.append(f'<p class="pause">{E(pause)}</p>')
@@ -189,5 +230,6 @@ section[id^=short],section#ifasked{{padding:30px 0;border-bottom:2px solid var(-
 </script></body></html>
 """
 open(os.path.join(D, "speaker-script.html"), "w", encoding="utf-8").write(page)
+print("crop table:", CROP_STATS)
 print(f"ok: {len(slides)} slides | standard {mmss(std_total)} (all slides {mmss(std_full)}) | architect {mmss(arc_total)} | words std {sum(words(s['say']) for s in slides)} arc {sum(words(arc_text(s)) for s in slides if not s.get('a_skip'))}")
-for i, s in enumerate(slides, 1): print(f"  {i:2} {s['title']:28} std {mmss(speak(s['say'])+s.get('fixed',0)):>5}  arc {('skip' if s.get('a_skip') else mmss(arc_time(s))):>5}")
+for i, s in enumerate(slides, 1): print(f"  {i:2} {s['title'][:28]:28} std {mmss(speak(s['say'])+s.get('fixed',0)):>5}  arc {('skip' if s.get('a_skip') else mmss(arc_time(s))):>5}")

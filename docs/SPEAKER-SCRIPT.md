@@ -12,24 +12,27 @@ Only numbers on the allowed list in showcase/video/facts.md, or numbers derived 
 
 Timings are computed at 145 words per minute, plus fixed seconds (the video, the toggle click) and the pauses for questions. They are estimates, not measurements of a rehearsal. Rehearse once and adjust.
 
-- **Standard cut** (general judges): **6:32** with the slides marked *skip when short* left out; 6:54 if you speak every slide.
-- **Architect cut** (an evaluator who will probe the architecture): **6:09**, including pauses for questions. Less story, more on trust boundaries and honest limits; the video is not played (offer it afterwards).
+- **Standard cut** (general judges): **7:24** with the slides marked *skip when short* left out; 8:09 if you speak every slide.
+- **Architect cut** (an evaluator who will probe the architecture): **7:45**, including pauses for questions. Less story, more on trust boundaries and honest limits; the video is not played (offer it afterwards).
 
 | # | Slide | Standard | Architect | Note |
 |---|---|---|---|---|
 | 1 | Title | 0:31 | 0:24 |  |
-| 2 | The place | 0:23 | — | skipped in architect cut |
+| 2 | The place | 0:23 | — | skip when short (standard) · skipped in architect cut |
 | 3 | Warabandi | 0:29 | 0:15 |  |
 | 4 | Hours are not water | 0:32 | 0:22 |  |
 | 5 | Hours or water | 0:33 | — | skipped in architect cut |
 | 6 | Our answer | 0:30 | 0:18 |  |
-| 7 | Who decides | 0:33 | 0:32 |  |
-| 8 | How it stays trustworthy | 0:33 | 2:02 |  |
-| 9 | The product | 0:22 | — | skipped in architect cut |
-| 10 | Voice and ledger | 0:22 | — | skip when short (standard) · skipped in architect cut |
-| 11 | Launch film | 1:06 | — | skipped in architect cut |
-| 12 | What we measured | 0:33 | 0:12 |  |
-| 13 | Path to field telemetry | 0:27 | 2:04 |  |
+| 7 | FAO-56 to cubic metres | 0:37 | 0:39 |  |
+| 8 | Who decides | 0:33 | 0:32 |  |
+| 9 | Two speeds of thinking | 0:38 | 1:46 |  |
+| 10 | How it stays trustworthy | 0:33 | 1:30 |  |
+| 11 | The product | 0:22 | — | skipped in architect cut |
+| 12 | Voice and ledger | 0:22 | — | skip when short (standard) · skipped in architect cut |
+| 13 | Launch film | 1:06 | — | skipped in architect cut |
+| 14 | What we measured | 0:33 | 0:12 |  |
+| 15 | Path to field telemetry | 0:27 | 1:47 |  |
+| 16 | Appendix: crop data we ship | appendix | appendix | not timed |
 
 ## Standard cut — slide by slide
 
@@ -69,43 +72,55 @@ Timings are computed at 145 words per minute, plus fixed seconds (the video, the
 
 > That is the idea in one line. T sub i equals V sub i divided by Q of x sub i. V is the volume farm i needs this week, from the crop-water model. Q of x is the flow that actually reaches its outlet after seepage. Time is the answer, not the input. And this arithmetic lives in one package. There is no water arithmetic anywhere else in the codebase.
 
-### Slide 7 — Who decides (0:33)
+### Slide 7 — FAO-56 to cubic metres (0:37)
+
+**Stage cue:** Walk the calculation top to bottom. Say 'run on the shipped file' once.
+
+> FAO-56 is the FAO's guideline for computing crop water requirements; we use the 2025 revision. Crop use is a crop coefficient times reference evapotranspiration, which comes into the core as an input. Here is one week of flooded rice, run on the shipped crop table: crop use of 42 millimetres, plus percolation, minus a 15 millimetre storm, is a net 51.5. Divide by an irrigation efficiency of 0.8, and one hectare needs 643.75 cubic metres. We ran the engine on the file itself to check that it reproduces.
+
+### Slide 8 — Who decides (0:33)
 
 **Stage cue:** Left to right across the three columns. Say the last sentence plainly; the next slide returns to it.
 
 > Who decides? Models suggest, code calculates, and an approval step decides. Language models read farmer requests and draft options, but a tool marked gated only returns a proposal. The deterministic core does the calculation, with no network and no model calls. A roster is released through an approval step, and every outbound call, from any path, passes one rate-limited function. Who is allowed to approve is not yet enforced by the server, and I will come back to that.
 
-### Slide 8 — How it stays trustworthy (0:33)
+### Slide 9 — Two speeds of thinking (0:38)
+
+**Stage cue:** Top band first, left to right; then the bottom band. Say which tier is live before you move on.
+
+> There are two speeds of thinking. System 1 is a fast chain of classifiers: Laya, then Jev, then keyword rules. Laya is a local model, trusted for intent only; its urgency and release-time answers are discarded, and its Telugu is unvalidated, tested on four probes. Jev is a hosted model that needs a key, which this build does not have, so the live chain is Laya, then the rules. Every result carries its source. System 2 is the agent loop, whose gated tools only propose. Neither computes water; the core does.
+
+### Slide 10 — How it stays trustworthy (0:33)
 
 **Stage cue:** Left to right across the diagram. Then read the bottom strip aloud. Do not skip the strip.
 
 > How does it stay trustworthy? Three boundaries. A model's output is only ever a proposal. The core calculates, with no network access. And a call can only be placed through one function, behind a rate limit and a kill switch. Every result says whether it came from a model or a fallback, and whether a call was real or simulated. What it does not yet have is server-side sign-in, a tamper-evident log, or protection for stored phone numbers.
 
-### Slide 9 — The product (0:22)
+### Slide 11 — The product (0:22)
 
 **Stage cue:** Point at the Approve button on the coordinator console.
 
 > This is the app in mock mode, so everything you see is demo data. On the left, the coordinator console: an urgent request, Jadal's suggested partial grant, and an Approve button. The farmer view shows the next turn and the weekly share. The phone screen is a simulator, not a real call.
 
-### Slide 10 — Voice and ledger (0:22)
+### Slide 12 — Voice and ledger (0:22)
 
 **Stage cue:** Optional. Skip this slide if you are short of time. If you show it, say the caveats before anything else.
 
 > The caller agent is built to phone farmers who have no smartphone, in Telugu. Live calls are not demo-reliable, SMS and WhatsApp are simulated only, and the Telugu copy is machine-written and awaiting a native speaker's review. Every cubic metre is recorded double-entry, and the ledger is checked for conservation: debits equal credits.
 
-### Slide 11 — Launch film (1:06)
+### Slide 13 — Launch film (1:06)
 
 **Stage cue:** Not played in this cut. Offer it afterwards.
 
 > Here is the launch film, about fifty-four seconds. [Play. Stay silent.] That is footage from the app in mock mode. The Telugu captions are machine-written and unreviewed.
 
-### Slide 12 — What we measured (0:33)
+### Slide 14 — What we measured (0:33)
 
 **Stage cue:** Read the four figures down the left.
 
 > What we measured. 862 tests pass across three packages, and typecheck is clean, on the merged build. The call limiter allows at most three calls per sixty seconds to a handset. It is a sliding window, and it stays atomic when twelve requests arrive at once. A test fails if any code path dials outside the one allowed function. And 605 interface strings in English and Telugu are in parity, key for key. That is parity, not translation quality.
 
-### Slide 13 — Path to field telemetry (0:27)
+### Slide 15 — Path to field telemetry (0:27)
 
 **Stage cue:** Say 'roadmap, not built' before you read anything. The slide ends on a closing line; say it and stop.
 
@@ -120,6 +135,12 @@ Timings are computed at 145 words per minute, plus fixed seconds (the video, the
 **Not on a slide. If asked: what is still simulated or open? (was a slide)**
 
 > SMS and WhatsApp are simulated and nothing is sent. Live calls are not demo-reliable: the Twilio account is a trial with a zero balance. The Telugu copy is machine-written and not natively reviewed. The groundnut worked example says 462.12 cubic metres while the shipped table gives 417.69, and an owner has to choose. Equal volume on the raw season-scaled seed starves the tail, which is a product decision about weekly versus seasonal entitlement. Two contract changes, climate inputs and place_call gating, are written up and wait on a contracts-ok label. Sign-in is client-side, so the server does not check who approves, and the demo reset routes are unauthenticated. The event log is append-only by convention, and phone numbers are stored in plain text.
+
+### Slide 16 — Appendix: crop data we ship (0:37)
+
+**Stage cue:** Appendix. Not presented unless asked. Point at the three symbols in the legend first.
+
+> Appendix. This table is generated from the shipped crop file: ten crops in eleven rows. A filled circle means checked against the book's Tables 6.2 and 8.2, a hollow circle means our assumption, and a cross means unsourced. Stage lengths are assumed everywhere, because the 2025 edition replaced fixed day counts with growing degrees. There is no paddy percolation rate in FAO-56, and the whole redgram row is unsourced. The book covers many more crops than we ship; the explorer page lists every crop we hold in the repo.
 
 ## Architect cut — slide by slide
 
@@ -153,39 +174,53 @@ Same deck, same order. Slides marked *skipped* are not shown or are clicked past
 
 > So we share by volume and solve for time. T sub i equals V sub i over Q of x sub i: the volume a farm needs, divided by the flow that reaches its outlet. All of that arithmetic lives in one package.
 
-### Slide 7 — Who decides (0:32)
+### Slide 7 — FAO-56 to cubic metres (0:39)
+
+**Stage cue:** Walk the calculation top to bottom. Say 'run on the shipped file' once.
+
+> The crop physics is FAO-56, revised in 2025: crop use is a coefficient times reference evapotranspiration, which is an input to the core. For one week of flooded rice on the shipped crop table, crop use is 42 millimetres, percolation adds 24.5, and a 15 millimetre storm takes 15 off, giving 51.5; at efficiency 0.8 that is 643.75 cubic metres per hectare. We reproduced that by running the engine on the file itself. Not every worked example reproduces: groundnut gives 417.69 against 462.12 in our own document, and an owner has to choose.
+
+### Slide 8 — Who decides (0:32)
 
 **Stage cue:** Left to right across the three columns. Say the last sentence plainly; the next slide returns to it.
 
 > Models suggest, code calculates, and an approval step decides. Language models draft options, and a gated tool only returns a proposal. The deterministic core does every water calculation. A roster is released through an approval step, and every outbound call passes one rate-limited function. I am not claiming that nothing can reach a farmer without approval: coordinator alerts and the escalation ladder also place calls, and I have verified the single call function, not every path's gating.
 
-### Slide 8 — How it stays trustworthy (2:02)
+### Slide 9 — Two speeds of thinking (1:46)
+
+**Stage cue:** Top band first, left to right; then the bottom band. Say which tier is live before you move on.
+
+> Two speeds of thinking, and neither computes water. System 1 is a classifier chain: Laya, then Jev, then keyword rules. Laya is a local multilingual encoder. From the verdict document it got intent right on four of four short Telugu probes and crop stress on five of five, which is four probes, not a Telugu evaluation. Its urgency and release-time answers were unreliable, so both are discarded in code and the deterministic rules supply urgency. The live service reports cuda; the 27 to 43 millisecond figure is from an earlier CPU run, and we have not measured the cuda run. Jev is typesafe jev-1.13 through OpenRouter's Decisions API, with schema-bounded answers; it needs a key this build does not have, so it is skipped, and we have not run it. The live chain is Laya, then rules. Any failure moves down the chain, the rules never throw, and every result carries its source. Why a small encoder rather than a large language model? Our reasoning: latency, running locally, and a bounded output, since it picks a label and cannot write an instruction. System 2 is the agent loop, where gated tools only return proposals.
+
+**PAUSE for questions on model choice, failure handling and Telugu validation (about 30 s). Confirm which tier is live from the source field of a real result. Point at apps/api/src/system1.ts, docs/decisions/ADR-006-system1-providers.md, docs/research/laya-verdict.md.**
+
+### Slide 10 — How it stays trustworthy (1:30)
 
 **Stage cue:** Left to right across the diagram. Then read the bottom strip aloud. Do not skip the strip.
 
-> How does it stay trustworthy? Three boundaries, each enforced in code you can read. One: a model's output is a proposal. Tools marked gated return a proposal and never apply it; that is in the contracts file and the agent loop. Two: the core is pure. It has no network access, and a search of its source finds no fetch or environment reads. Three: a call can only be placed through one function. A static test scans the source and fails on any other route, and we watched it fail on a planted bypass. Behind it, the limit is three calls per sixty seconds per handset, a sliding window consumed in one atomic statement, and setting REAL_TELEPHONY to false stops all dialling without a deploy. Telephony webhooks fail closed: missing configuration or a bad signature returns 403. Every result carries its source and a simulated flag, so a fallback is never reported as a model call. Now the gaps. There is no server-side authentication: the role gate is client-side, and the approve route records a fixed coordinator identity. The event log is append-only by convention, with no hash chain. Phone numbers are stored in plain text.
+> How does it stay trustworthy? Three boundaries, each enforced in code. A model's output is a proposal: gated tools return a proposal and never apply it. The core is pure: a search of its source finds no network or environment reads. And a call can only be placed through one function, which a static test enforces and which we watched fail on a planted bypass. Behind it, three calls per sixty seconds per handset, a sliding window consumed in one atomic statement, and REAL_TELEPHONY set to false stops all dialling without a deploy. Webhooks fail closed. Every result carries its source and a simulated flag. Now the gaps. There is no server-side authentication: the role gate is client-side, and the approve route records a fixed coordinator identity. The event log is append-only by convention, with no hash chain. Phone numbers are stored in plain text.
 
 **PAUSE here for the evaluator's questions on trust boundaries (about 40 s). Point at the code if asked: packages/contracts/src/agents.ts, apps/api/src/agents/loop.ts, apps/api/src/placecall-guard.test.ts, apps/api/src/noloop.ts.**
 
-### Slide 9 — The product (skipped)
+### Slide 11 — The product (skipped)
 
-### Slide 10 — Voice and ledger (skipped)
+### Slide 12 — Voice and ledger (skipped)
 
-### Slide 11 — Launch film (skipped)
+### Slide 13 — Launch film (skipped)
 
-### Slide 12 — What we measured (0:12)
+### Slide 14 — What we measured (0:12)
 
 **Stage cue:** Read the four figures down the left.
 
 > What we measured: 862 tests pass and typecheck is clean on the merged build. The rate limiter stays at three calls per sixty seconds under twelve simultaneous requests.
 
-### Slide 13 — Path to field telemetry (2:04)
+### Slide 15 — Path to field telemetry (1:47)
 
 **Stage cue:** Say 'roadmap, not built' before you read anything. The slide ends on a closing line; say it and stop.
 
-> This is a roadmap, and none of it is built. Today the flow at each outlet is modelled from the seed with a fixed decay constant. The core would need a measured-flow input beside the modelled one. A pilot would put a flow gauge at each outlet, sign the reading on the device, and buffer it at the edge, because rural connectivity is patchy. The system would compare each reading with the model, flag drift, and alert the coordinator when they diverge, which is also the first defence against a faulty or spoofed sensor. Device fleet management and over-the-air updates come after a pilot, not before. What a pilot has to answer is gauge accuracy, tamper resistance, connectivity, and who owns and maintains the devices. Before questions, the open items in one breath: SMS and WhatsApp are simulated, live calls are not demo-reliable, the Telugu copy is not natively reviewed, sign-in is client-side, and two product decisions wait on an owner. Models propose, the core computes, an approval step decides, and I have said where each is not yet enforced. I would like to hear what you would harden first.
+> This is a roadmap, and none of it is built. Today each outlet's flow is modelled from the seed. A pilot would put a flow gauge at each outlet, sign the reading on the device, and buffer it at the edge for patchy connectivity. The system would compare readings with the model and alert the coordinator on divergence, which is also the first defence against a faulty or spoofed sensor. The core would need a measured-flow input beside the modelled one. Fleet management and over-the-air updates come after a pilot. A pilot must answer gauge accuracy, tamper resistance, connectivity, and who maintains the devices. Before questions, the open items in one breath: SMS and WhatsApp are simulated, live calls are not demo-reliable, the Telugu copy is not natively reviewed, sign-in is client-side, and two product decisions wait on an owner. I have said where each boundary is not yet enforced, and I would like to hear what you would harden first.
 
-**OPEN THE FLOOR. Ask the closing questions in docs/EVALUATOR-BRIEF.md if the floor stays quiet. Pause for about 45 s.**
+**OPEN THE FLOOR. Ask the closing questions in docs/EVALUATOR-BRIEF.md if the floor stays quiet. Pause for about 40 s.**
 
 **Not on a slide. If asked: what did you catch in your own work? (was a slide)**
 
@@ -194,6 +229,8 @@ Same deck, same order. Slides marked *skipped* are not shown or are clicked past
 **Not on a slide. If asked: what is still simulated or open? (was a slide)**
 
 > SMS and WhatsApp are simulated and nothing is sent. Live calls are not demo-reliable: the Twilio account is a trial with a zero balance. The Telugu copy is machine-written and not natively reviewed. The groundnut worked example says 462.12 cubic metres while the shipped table gives 417.69, and an owner has to choose. Equal volume on the raw season-scaled seed starves the tail, which is a product decision about weekly versus seasonal entitlement. Two contract changes, climate inputs and place_call gating, are written up and wait on a contracts-ok label. Sign-in is client-side, so the server does not check who approves, and the demo reset routes are unauthenticated. The event log is append-only by convention, and phone numbers are stored in plain text.
+
+### Slide 16 — Appendix: crop data we ship (skipped)
 
 ## 30-second version
 
@@ -260,3 +297,31 @@ Same deck, same order. Slides marked *skipped* are not shown or are clicked past
 **What is still simulated or open?**
 
 > SMS and WhatsApp are simulated and nothing is sent. Live calls are not demo-reliable: the Twilio account is a trial with a zero balance. The Telugu copy is machine-written and not natively reviewed. The groundnut worked example says 462.12 cubic metres while the shipped table gives 417.69, and an owner has to choose. Equal volume on the raw season-scaled seed starves the tail, which is a product decision about weekly versus seasonal entitlement. Two contract changes, climate inputs and place_call gating, are written up and wait on a contracts-ok label. Sign-in is client-side, so the server does not check who approves, and the demo reset routes are unauthenticated. The event log is append-only by convention, and phone numbers are stored in plain text.
+
+**Which AI is actually running in the demo?**
+
+> Laya is on and Jev is off. LAYA_ENDPOINT is set and the Laya sidecar's health counter rose after a request through the API, so the API does call it. There is no OpenRouter key in this build, so Jev is skipped. The live chain is Laya, then the rules, and every result's source says which one answered. Laya contributes the intent; urgency still comes from the rules, because Laya's urgency is discarded by design.
+
+**Why a small encoder like Laya instead of a large language model?**
+
+> Our reasoning, not a benchmark: it is fast on CPU, it runs locally and offline, and its output is a bounded label rather than free text, so it cannot be talked into writing an instruction. The cost is limited ability: we trust it for intent only, and the verdict found its urgency and release-time answers unusable.
+
+**What happens when Laya is wrong, or down?**
+
+> If it is down, unreachable, rate limited, timing out, or returns something malformed or out of schema, the chain moves to Jev and then to the rules, and the result's source says which answered. If it is wrong, a request is mis-scored for the coordinator, who still decides; System 1 never decides water. We have not measured Laya's error rate on real Telugu.
+
+**Is Laya's Telugu validated?**
+
+> No. The verdict tested four Telugu probes and one English control, and intent was correct on all of them, but that is not an evaluation. The verdict calls for a labelled Telugu agricultural set of at least 200 real utterances before trusting it, and the checkpoint ships with no fitted calibration.
+
+**Why FAO-56?**
+
+> It is the standard method for crop water requirements: crop water use is a crop coefficient times reference evapotranspiration, with tabulated coefficients per crop. Using a published method means every constant can be traced to a table and a page, or flagged as an assumption, which is what the provenance document does.
+
+**How are the crop constants sourced?**
+
+> From the FAO-56 Rev. 1 (2025) tables where we could verify them: Kc, plant height and root depth against Table 6.2 (pages 168 to 170) and the depletion fraction p against Table 8.2 (page 260). Of 109 tagged fields, 59 are measured against the book, 43 are our assumptions and 7 are unsourced. Every stage length is assumed, because the 2025 edition replaced fixed day counts with growing degrees. The redgram row has no valid source and is tagged unsourced.
+
+**Does the product ingest the whole book?**
+
+> No. The product's table holds ten crops in eleven rows. Our research extract tabulates 17 crop rows, and the book tabulates more than that. We use the crops grown in the scenario.
