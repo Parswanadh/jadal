@@ -66,18 +66,25 @@ test('a backwards turn time is refused before it is sent', async ({ page, consol
   expect(consoleErrors).toEqual([]);
 });
 
-test('the alert control reports simulated dispatch', async ({ page, consoleErrors }) => {
+test('the alert control reports simulated dispatch at the chosen severity', async ({ page, consoleErrors }) => {
   await signInAs(page, 'coordinator');
   await page.goto('/coordinator?tab=farmers');
 
   const card = page.locator('.req-card').first();
   await card.getByText(en.coord.alert.title, { exact: true }).click();
   await card.getByRole('button', { name: en.coord.alert.channel.whatsapp, exact: true }).click();
+  await card.getByRole('button', { name: en.coord.alert.severity.urgent, exact: true }).click();
   await card.getByRole('button', { name: en.coord.alert.send, exact: true }).click();
 
   const result = card.getByRole('status');
   await expect(result).toContainText(en.coord.alert.simulated.split('{')[0]?.trim() ?? '');
   await expect(result).toContainText(en.coord.alert.channel.whatsapp);
+  await expect(result).toContainText(en.coord.alert.severity.urgent);
+
+  // The alert, with its severity, is recorded in the audit trail.
+  await page.getByRole('tab', { name: en.coord.tabs.accounts, exact: true }).click();
+  await page.getByText(en.coord.acc.findings, { exact: true }).click();
+  await expect(page.getByText(/Alert queued for/i)).toBeVisible();
 
   await settle(page);
   expect(consoleErrors).toEqual([]);
