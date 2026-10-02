@@ -1,0 +1,8 @@
+Canal water shared by volume, not by hours.
+
+On unlined canals, seepage robs tail-end farms of up to 29.4% of their flow per second. Traditional schedules divide hours equally, leaving the tail starved.
+
+Jadal pairs open-channel hydraulics with FAO-56 crop physics to compute equal-volume turns. With Telugu voice outreach for non-smartphone farmers and double-entry conservation ledger verification, Jadal brings fair water to the tail end.
+
+Architecture rule: LLMs propose · Core computes · Coordinator approves.
+Explore the verified open-source core: github.com/Parswanadh/jadal
