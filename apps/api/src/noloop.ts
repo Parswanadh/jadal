@@ -12,51 +12,62 @@
  * added would have the same hole.
  *
  * So the bound lives here, beneath every path: **no destination is dialled more than
- * {@link DEFAULT_MAX_CALLS} times in {@link DEFAULT_WINDOW_SECONDS}, whoever asks.** The escalation
+ * {@link DEFAULT_MAX_CALLS} times in any {@link DEFAULT_WINDOW_SECONDS}, whoever asks.** The escalation
  * ladder and the coordinator alert both go through it, and a future call site that forgets to is a
  * missing line in one seam rather than a new loop.
  *
- * ## The budget is consumed by ONE atomic statement, in D1
+ * ## The window SLIDES, and the budget is consumed by ONE atomic statement
  *
- * This is the whole point of the file, and it is the second version of it. The first stored the
- * counter in `KV`, which has **no atomic increment**: two callers that read the same counter in the
- * same instant both wrote `1` and both were allowed. N simultaneous requests to `POST /api/alerts`
- * therefore all dialled at once, and repeated rapid button presses produced a continuous stream of
- * calls. The user's complaint — *"if we give out multiple calls at same time we will get the
- * ratelimit errors"* — is precisely the concurrent case, and no amount of care in a JavaScript
- * read-then-write fixes it: the window between the read and the write is the bug.
+ * This is the third version of the guard. The first stored a counter in `KV`, which has **no atomic
+ * increment**: two callers that read the same counter in the same instant both wrote `1` and both were
+ * allowed. The second moved the counter into **D1** and consumed it with one conditional
+ * `INSERT … ON CONFLICT … WHERE n < ?`, which fixed the race but counted in **fixed windows**
+ * (`floor(now / window)`) — so a burst straddling a window boundary could place `maxCalls` in each of
+ * two adjacent windows and reach `2 × maxCalls`, and `releaseCall` was a decrement of a shared counter
+ * rather than a rollback of one call.
  *
- * So the counter lives in **D1** (`env.DB`, already bound, already required for the app to work) and
- * is consumed by a single statement:
+ * Both gaps have the same root: a window was a *bucket*, not a *span*. This version stores **one row
+ * per counted call** in `call_rate_hit` (migration `0004_call_rate_hit.sql`) and counts the rows in the
+ * trailing window:
  *
  * ```sql
- * INSERT INTO call_rate_window (destination, window_key, n, not_live)
- *      VALUES (?1, ?2, 1, COALESCE((SELECT n FROM call_rate_window
- *                                    WHERE destination = ?1 AND window_key = ?2 - 1), 0))
- * ON CONFLICT (destination, window_key) DO UPDATE
- *         SET n = n + 1
- *       WHERE n < ?3
- *   RETURNING n
+ * INSERT INTO call_rate_hit (destination, at)
+ * SELECT ?1, ?2
+ *  WHERE (SELECT COUNT(*) FROM call_rate_hit
+ *          WHERE destination = ?1 AND at > ?2 - ?3) < ?4
+ * RETURNING id, (SELECT COUNT(*) FROM call_rate_hit
+ *                 WHERE destination = ?1 AND at > ?2 - ?3) AS n
  * ```
  *
- * **Why this is atomic, and not merely shorter.** It is one SQL statement, so SQLite executes it
- * inside a single write transaction: another connection's `INSERT`/`UPDATE` of the same primary key
- * cannot interleave between the `WHERE n < ?3` test and the `n = n + 1` assignment. The condition and
- * the increment are *the same statement*, so there is no instant at which two callers can both
- * observe `n = 0`. The write lock a rejected conflict takes is what removes the interleaving: a
- * second concurrent writer waits, then re-evaluates `WHERE n < ?3` against the already-incremented
- * row, and the `ON CONFLICT` clause updates nothing, so no row is produced. In the test shim this is
- * exact because `node:sqlite` is synchronous; in D1 the same guarantee comes from SQLite's own
- * statement-level transaction, held by the single D1 instance that owns the database.
+ * **Why this is still atomic.** It is one SQL statement, so SQLite executes it inside a single write
+ * transaction: another connection's `INSERT` of a row for the same destination cannot interleave
+ * between the `COUNT(*) < ?4` test and the insert. The condition and the write are *the same
+ * statement*, so there is no instant at which two callers can both observe room. D1 serialises writes
+ * to a database through one instance, which is the premise the previous version already relied on.
  *
  * **The statement is the arbiter, and it is read once.** The decision comes from *whether the
- * statement produced a row*: `RETURNING n` yields exactly one row when the INSERT or the conditional
- * UPDATE took effect, and none when the `WHERE n < ?3` test rejected the update. That one row is the
- * permission. Nothing re-reads the counter to decide, because a read-back is exactly the race this
- * replaced. No `SELECT` precedes the consume and no follow-up statement decides anything: there is one
- * write, and its having happened *is* the permission. The refusal path's single read is descriptive
- * only — it supplies `priorCalls` and `retryAfterAt` for the message, and cannot turn a refusal into
- * an allow. See {@link atomicStatements}.
+ * statement produced a row*: `RETURNING` yields exactly one row when the insert took effect and none
+ * when the `COUNT(*) < ?4` test rejected it. That one row is the permission. Nothing re-reads the
+ * count to decide, because a read-back is exactly the race this replaced. The refusal path's single
+ * `SELECT` is descriptive only — it supplies `priorCalls` and `retryAfterAt` for the message, and
+ * cannot turn a refusal into an allow. See {@link atomicStatements}.
+ *
+ * ## Sliding, so a burst cannot straddle a boundary
+ *
+ * A call counted at `t` is in the window of every attempt at `t'` with `t > t' - windowMs`, and leaves
+ * it exactly one window after `t`. A burst that would have straddled a fixed boundary therefore does
+ * not get a fresh budget when the clock ticks: it must wait for the *oldest* call to age out, and
+ * slots free **one at a time** rather than all at once. `retryAfterAt` is the moment the oldest
+ * counted call expires.
+ *
+ * ## `releaseCall` is a true rollback, not a decrement
+ *
+ * The consume returns the id of the row it inserted — the {@link CallToken} on the decision.
+ * {@link releaseCall} deletes **that row**, and only that row, so giving a slot back cannot take the
+ * slot another caller is holding. Without a token it does nothing: there is no longer a shared
+ * counter to decrement, and a decrement was never a rollback. It is used after a transport refusal,
+ * where the guard spent a slot for a call that never reached a handset; it is best-effort and never
+ * throws.
  *
  * ## Refusal is visible, never silent
  *
@@ -70,54 +81,27 @@
  * ## Fail-open, and why it is STILL the answer now that the counter is in D1
  *
  * If the counter store cannot be read or written, the guard **allows the call**
- * ({@link RATE_LIMIT_FAILURE_MODE} `open`). This was argued for KV in the first version; D1 changes
- * one premise and the conclusion survives it, so the argument is restated rather than carried over.
- *
- * The premise that changed matters and is not waved away: **D1 is not a peripheral cache, it is the
- * store the app already needs to function.** KV could be down while an emergency call still went out
- * correctly, so a KV blip was an isolated event. That is no longer true — if D1 is unreachable then
- * `appendEvent` is failing too, the ladder cannot read the contact it is escalating, the coordinator
- * alert cannot read the farmer, and the guard is not the thing that has broken. The argument that a
- * store outage is uncorrelated with a call loop is therefore *weaker* under D1: the outage and the
- * burst can now share a cause, because the same failing database is what an app-level retry storm
- * would be retrying against.
- *
- * The conclusion is nevertheless unchanged, for a reason that does not depend on the correlation
- * argument: **failing open and failing closed are not symmetric costs, and the asymmetry survives D1.**
- * Failing closed converts a database blip into a silently dropped *emergency* call — a night-release
- * warning nobody receives, in a state where the audit trail records the contact as merely `failed`,
- * indistinguishable from a bad number. Failing open degrades to exactly the pre-guard behaviour for
- * the duration of the outage, which is still bounded by the ladder's attempt cap, its per-contact
- * idempotency and the queue's redelivery cap. Failing open loses a backstop; failing closed loses the
- * emergency. A burst is bounded and visible; a dropped emergency call is neither.
- *
- * Note also *what* fails here. With the migration applied, a guard failure means D1 itself is
- * unreachable — in which case the request that would place the call is failing on its own next step
- * anyway, so the guard is not the only line of defence and usually not the first to break. The
- * residual risk of failing open is therefore narrower under D1 than it was under KV, not wider:
- * the window in which the guard is open and the app is otherwise healthy is small.
- *
- * `closed` remains available by env for a deployment that would rather drop calls than risk a burst,
- * and `docs/ops/CALL-SAFETY.md` §4 records the decision and the trigger for revisiting it.
+ * ({@link RATE_LIMIT_FAILURE_MODE} `open`). The argument is unchanged from the fixed-window version and
+ * is restated in short: failing closed converts a database blip into a silently dropped *emergency*
+ * call — a night-release warning nobody receives, recorded as merely `failed` and indistinguishable
+ * from a bad number. Failing open degrades to exactly the pre-guard behaviour for the duration of the
+ * outage, which is still bounded by the ladder's attempt cap, its per-contact idempotency and the
+ * queue's redelivery cap. Failing open loses a backstop; failing closed loses the emergency. A burst
+ * is bounded and visible; a dropped emergency call is neither. The fuller argument, and the trigger
+ * for revisiting it, are in `docs/ops/CALL-SAFETY.md` §4.
  *
  * ## State: the table, and why it does not grow without bound
  *
- * Counters live in `call_rate_window` (migration `0003_call_rate_limit.sql`), keyed by
- * `(destinationKey, windowKey)`. {@link destinationKey} normalises a number to its digits for the same
- * reason `telephony-deps.phoneKey` does: `+91 90000 00001`, `+919000000001` and `tel:+919000000001`
- * are one handset and must share one budget. Without that, a caller could spend the budget three times
- * over by formatting the number three ways.
+ * Rows live in `call_rate_hit`, keyed by an autoincrement `id` with `(destination, at)` indexed.
+ * {@link destinationKey} normalises a number to its digits for the same reason `telephony-deps.phoneKey`
+ * does: `+91 90000 00001`, `+919000000001` and `tel:+919000000001` are one handset and must share one
+ * budget. Without that, a caller could spend the budget three times over by formatting one number
+ * three ways.
  *
- * The `window_key` is the window *start* (`floor(now / windowMs)`), not a rolling list of instants as
- * in the KV version, and the window start is derived rather than stored, because the window length is
- * an env var an operator may change mid-incident. That also bounds the table without a scheduled
- * prune: a destination's budget rolls over by addressing a *new* key, so a row is created at most once
- * per destination per window in which that destination is called, and it is never updated again once
- * its window has passed. A quiet destination costs one row that is never touched again. Each row
- * carries the previous window's count in `not_live` so that a refusal can still report
- * `retryAfterAt` without a second query. {@link pruneCallRateWindows} exists to reclaim the boundary
- * rows of a long-lived database and is deliberately not on the guard's path: a lock inside the
- * request-critical statement is a far worse failure mode than a few stale rows.
+ * Unlike the fixed-window table, this one *does* grow with traffic — one row per counted call — so it
+ * needs a prune. {@link pruneCallRateHits} deletes rows that can no longer count, and is deliberately
+ * off the guard's path: a table-wide `DELETE` inside the request-critical statement would be a far
+ * worse failure mode than a few stale rows.
  *
  * ## Honest limits (reported, not papered over)
  *
@@ -127,12 +111,9 @@
  *    counter must be read and written on the primary.
  *  * **It bounds calls, not spend.** Two different destinations each get a full budget, so a loop
  *    that walks the whole roster one farmer at a time is not stopped. See `CALL-SAFETY.md` §6.
- *  * **Windows are fixed, not sliding.** A burst straddling a boundary can place up to
- *    `2 × maxCalls`. The KV version's rolling hit-list did not have this gap; the atomicity is worth
- *    it, the gap is bounded by construction, and a sliding window would need the same statement with
- *    a per-hit row — a later change, not a silent regression. Recorded as a limit, not hidden.
- *  * **A `releaseCall` is a decrement, not a rollback.** Giving a slot back can let a slot be taken
- *    twice under a race, which errs toward allowing a call; it is only used after a transport refusal.
+ *  * **The hit log grows with traffic.** One row per counted call, so a busy deployment needs
+ *    {@link pruneCallRateHits} run periodically. Until it is, the table is larger but the limit is
+ *    still correct: old rows simply stop counting.
  */
 
 /* ------------------------------------------------------------------ configuration */
@@ -197,8 +178,8 @@ export interface RateLimitResolution extends RateLimitConfig {
   readonly problems: readonly string[];
 }
 
-/** The counter table. Named here so the statement, the prune and the docs cannot drift apart. */
-export const CALL_RATE_TABLE = "call_rate_window";
+/** The hit log. Named here so the statement, the prune and the docs cannot drift apart. */
+export const CALL_RATE_TABLE = "call_rate_hit";
 
 /**
  * Parse a positive-integer env var.
@@ -241,33 +222,28 @@ export function destinationKey(to: string): string {
 }
 
 /**
- * The counter key for one destination, as it appears in `call_rate_window.destination`.
+ * The counter key for one destination, as it appears in `call_rate_hit.destination`.
  *
- * This replaced `rateLimitKey()`, whose `callcap:v1:<digits>` form was a **KV** key name. There is no
- * key-value store in the design any more, so an operator clearing counters during an incident deletes
- * rows instead: `DELETE FROM call_rate_window WHERE destination = '<digits>'`. Documented in
- * `docs/ops/CALL-SAFETY.md` §1 so the recovery procedure moves with the state.
+ * Kept as an alias of {@link destinationKey} because callers and docs used the old KV-era name. There
+ * is no key-value store in the design; an operator clearing counters during an incident deletes rows
+ * instead (`docs/ops/CALL-SAFETY.md` §1).
  */
 export function rateLimitKey(to: string): string {
   return destinationKey(to);
-}
-
-/**
- * The window a call falls into, as an integer.
- *
- * `floor(now / windowMs)`, so every instant inside one window maps to one key and the budget rolls
- * over by addressing the next key rather than by mutating (or deleting) a row. The window *length*
- * is deliberately not stored: it is `CALL_RATE_WINDOW_SECONDS`, an env var an operator may change
- * during an incident, and the row key must keep meaning "the Nth window" under the new length too.
- */
-export function windowKeyAt(now: Date, windowSeconds: number): number {
-  return Math.floor(now.getTime() / (windowSeconds * 1000));
 }
 
 /* ------------------------------------------------------------------ decisions */
 
 /** Why a call was refused, or `unknown` when it was allowed. */
 export type RateLimitReason = "rate_limited" | "counter_unavailable" | "unknown";
+
+/**
+ * The rollback token for one counted call: the `id` of the `call_rate_hit` row the guard inserted.
+ *
+ * Opaque to callers — it is only ever passed back to {@link releaseCall}. It is a number because D1
+ * returns an INTEGER primary key as a number.
+ */
+export type CallToken = number;
 
 /** The guard's answer for one attempted destination. */
 export interface CallDecision {
@@ -289,6 +265,11 @@ export interface CallDecision {
    * an allowed call and for a failure-mode refusal, where no window exists to wait for.
    */
   readonly retryAfterAt: string | null;
+  /**
+   * The row this call consumed, to be passed to {@link releaseCall} if it is never dialled. Non-null
+   * only on an allowed, counted call; `null` for a refusal and for a failure-mode allow.
+   */
+  readonly token: CallToken | null;
   /** Human-readable, safe to log, and the text a caller reports as its refusal reason. */
   readonly detail: string;
 }
@@ -307,6 +288,7 @@ function failOpenDecision(to: string, config: RateLimitResolution, detail: strin
     windowSeconds: config.windowSeconds,
     reason: "counter_unavailable",
     retryAfterAt: null,
+    token: null,
     detail,
   };
 }
@@ -328,6 +310,7 @@ function rateLimitedDecision(
     windowSeconds: config.windowSeconds,
     reason: "rate_limited",
     retryAfterAt,
+    token: null,
     detail:
       `rate limited: ${to} already has ${priorCalls} call(s) in the last ${config.windowSeconds}s ` +
       `(limit ${config.maxCalls})${misconfigured}`,
@@ -340,40 +323,38 @@ function rateLimitedDecision(
  * The two statements the guard runs, and the reason each is safe to run.
  *
  * Exported (as SQL text) so a test can assert on the *shape* of what ships — that the consume is a
- * single `INSERT … ON CONFLICT … WHERE n < ?`, and that nothing in the guard's path is a
+ * single `INSERT … SELECT … WHERE (SELECT COUNT(*) …) < ?`, and that nothing in the guard's path is a
  * read-then-write. The strings are the single source: {@link checkOutboundCall} binds these exact
  * constants, so a test cannot pass against a copy that has drifted from the code.
  *
- * `?1`..`?4` are numbered because the destination is referenced twice (or three times) — once as the
- * inserted value, once in the conflict target's implicit key, and once inside the subquery that
- * carries the previous window's count forward.
+ * `?1`..`?4` are, in order: the destination key, the attempt instant in epoch milliseconds, the window
+ * length in milliseconds, and the ceiling. The count subquery appears twice — once as the condition,
+ * once in `RETURNING` to number the call for the log — but both are inside one statement.
  */
 export const atomicStatements = {
   /**
    * **Consume one unit of the budget, or change nothing.** The atomic point.
    *
-   * Returns one row iff the budget was actually spent. That row's *presence* is what the guard
-   * branches on (`first()` → `null` means refused); its `n` value is what the caller reports as
-   * `priorCalls`. This is a single statement, so its condition and its increment are not separable.
+   * The `WHERE (SELECT COUNT(*) …) < ?4` condition and the insert are inseparable: a single statement,
+   * evaluated inside one SQLite write transaction. `RETURNING` yields exactly one row iff the insert
+   * took effect, so the row's *presence* is the permission and its `id` is the rollback token.
    */
   consume: (table = CALL_RATE_TABLE): string =>
-    `INSERT INTO ${table} (destination, window_key, n, not_live) ` +
-    `VALUES (?1, ?2, 1, COALESCE((SELECT n FROM ${table} WHERE destination = ?1 AND window_key = ?2 - 1), 0)) ` +
-    `ON CONFLICT (destination, window_key) DO UPDATE SET n = n + 1 WHERE n < ?3 ` +
-    `RETURNING n`,
+    `INSERT INTO ${table} (destination, at) ` +
+    `SELECT ?1, ?2 ` +
+    `WHERE (SELECT COUNT(*) FROM ${table} WHERE destination = ?1 AND at > ?2 - ?3) < ?4 ` +
+    `RETURNING id, (SELECT COUNT(*) FROM ${table} WHERE destination = ?1 AND at > ?2 - ?3) AS n`,
 
   /**
-   * **Read the row's counters without writing anything, and without ever changing the statement.**
+   * **Read the window's count and its oldest hit without writing anything.**
    *
-   * One statement, run in every case. When the row exists this reports it; when it does not (a fresh
-   * destination, or a window old enough to have been pruned) it reports `not_live` from the previous
-   * window, so a refusal can still name the instant the window frees up. This is deliberately *not*
-   * `UPDATE … RETURNING`, which would do nothing when exhausted but would write `sqlite_stat1`
-   * statistics when it did something, on the path every allowed call takes.
+   * One statement, run only to *describe* a refusal. The `oldest` instant is the one that frees the
+   * next slot, so `retryAfterAt` is `oldest + windowMs`. A stale or empty read can make the message
+   * less specific; it can never change the decision, which the consume already settled.
    */
   read: (table = CALL_RATE_TABLE): string =>
-    `SELECT (SELECT n FROM ${table} WHERE destination = ?1 AND window_key = ?2) AS n, ` +
-    `(SELECT COALESCE((SELECT n FROM ${table} WHERE destination = ?1 AND window_key = ?2 - 1), 0)) AS not_live`,
+    `SELECT COUNT(*) AS n, MIN(at) AS oldest FROM ${table} ` +
+    `WHERE destination = ?1 AND at > ?2 - ?3`,
 } as const;
 
 /**
@@ -388,10 +369,11 @@ function rows<T>(result: { results?: T[] } | undefined): T[] {
   return result?.results ?? [];
 }
 
-/** One row of `call_rate_window`, as the two statements return it. */
+/** One row of `call_rate_hit`, as the two statements return it. */
 interface CounterRow {
+  readonly id?: number | null;
   readonly n?: number | null;
-  readonly not_live?: number | null;
+  readonly oldest?: number | null;
 }
 
 /** A finite, non-negative integer read out of a row, or `0` for anything else (null, junk, a string). */
@@ -399,22 +381,16 @@ function count(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }
 
-/** Both counters from one {@link atomicStatements.read} result. */
-function readCounters(result: { results?: CounterRow[] } | undefined): { live: number; notLive: number } {
-  const row = rows<CounterRow>(result)[0];
-  return { live: count(row?.n), notLive: count(row?.not_live) };
-}
-
 /**
- * When the current window's counted calls age out.
+ * When the oldest counted call ages out of the window.
  *
- * The answer is exact when the row is live: all of this window's calls were counted before the window
- * ends, so they have all expired one full window after it does. When the row is missing the answer is
- * the previous window's end, i.e. "now" — the honest reading of a row that has already rolled over.
+ * A call counted at `oldest` stops counting for an attempt at `now` once `oldest <= now - windowMs`,
+ * so the next slot frees at `oldest + windowMs`. `null` when no instant could be read, which is the
+ * honest "unknown" for a refusal message.
  */
-function windowFreesAt(window: number, live: number, windowSeconds: number): string | null {
-  if (live <= 0) return null;
-  return new Date((window + 1) * windowSeconds * 1000).toISOString();
+function windowFreesAt(oldest: number | null, windowMs: number): string | null {
+  if (oldest === null || !Number.isFinite(oldest)) return null;
+  return new Date(oldest + windowMs).toISOString();
 }
 
 /* ------------------------------------------------------------------ the guard */
@@ -425,7 +401,7 @@ function windowFreesAt(window: number, live: number, windowSeconds: number): str
  * The counter is *consumed here* rather than left to the caller: a caller that forgot to record would
  * otherwise be unlimited, and the whole point is that no path can opt out of the budget. Callers that
  * are refused for a reason other than the limit itself (a malformed number, for instance) must say so
- * with {@link releaseCall}, or they spend a slot they never used.
+ * with {@link releaseCall}, passing the decision's `token`, or they spend a slot they never used.
  *
  * Never throws. A store failure becomes a decision — allowed under the fail-open default, refused
  * under `closed` — and never an exception, because a caller mid-way through ringing a farmer must not
@@ -460,6 +436,7 @@ export async function checkOutboundCall(
         ...ceiling,
         reason: "counter_unavailable",
         retryAfterAt: null,
+        token: null,
         detail: line,
       };
     }
@@ -474,19 +451,22 @@ export async function checkOutboundCall(
   }
 
   const destination = destinationKey(to);
-  const window = windowKeyAt(now, config.windowSeconds);
+  const nowMs = now.getTime();
+  const windowMs = config.windowSeconds * 1000;
 
   // ---- Consume the budget, or don't. One statement decides; nothing here branches on a prior read.
   //
-  // The statement reports one `RETURNING n` row iff it actually spent a slot, so that row is the
+  // The statement reports one `RETURNING` row iff it actually spent a slot, so that row is the
   // permission. It is read through `first()`, whose contract is `T | null` — a *row*, not a row count,
-  // so the answer does not depend on how a driver reports `meta.changes`. (The in-memory D1 shim can
-  // only offer `total_changes()`, a cumulative figure, which is not the statement's own change count;
-  // `first()` is the one shape both it and the real binding agree on.)
+  // so the answer does not depend on how a driver reports `meta.changes`.
   let spent = false;
   let thisCall = 0;
+  let token: CallToken | null = null;
   try {
-    const row = await db.prepare(atomicStatements.consume()).bind(destination, window, config.maxCalls).first<CounterRow>();
+    const row = await db
+      .prepare(atomicStatements.consume())
+      .bind(destination, nowMs, windowMs, config.maxCalls)
+      .first<CounterRow>();
     if (row !== null) {
       spent = true;
       // `RETURNING n` is the count *after* this call. It is used only to number the call in the log
@@ -494,6 +474,7 @@ export async function checkOutboundCall(
       // or unreadable still means the slot was spent, so the call number falls back to the ceiling
       // rather than inventing a smaller one.
       thisCall = count(row.n) || config.maxCalls;
+      token = typeof row.id === "number" && Number.isFinite(row.id) ? row.id : null;
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -511,65 +492,63 @@ export async function checkOutboundCall(
       ...ceiling,
       reason: "unknown",
       retryAfterAt: null,
+      token,
       detail: `allowed: call ${thisCall} of ${config.maxCalls} to ${to} in ${config.windowSeconds}s${misconfigured}`,
     };
   }
 
-  // ---- Refused: the statement produced no row, which means the budget was already spent.
-  // Read the two counters back only to *describe* the refusal (`priorCalls`, `retryAfterAt`). The
-  // refusal itself was already decided by the statement above, so nothing in this read can allow a
+  // ---- Refused: the statement produced no row, which means the trailing window is full.
+  // Read the count and the oldest hit only to *describe* the refusal (`priorCalls`, `retryAfterAt`).
+  // The refusal itself was already decided by the statement above, so nothing in this read can allow a
   // call: a failing or empty read can only make the message less specific, never the decision.
   let live = config.maxCalls;
-  let notLive = 0;
+  let oldest: number | null = null;
   try {
     const result = await db
       .prepare(atomicStatements.read())
-      .bind(destination, window)
+      .bind(destination, nowMs, windowMs)
       .all<CounterRow>();
-    const counters = readCounters(result);
-    if (counters.live > 0) live = counters.live;
-    notLive = counters.notLive;
+    const row = rows<CounterRow>(result)[0];
+    const observed = count(row?.n);
+    if (observed > 0) live = observed;
+    oldest = typeof row?.oldest === "number" && Number.isFinite(row.oldest) ? row.oldest : null;
   } catch {
     /* described with the ceiling instead of the exact count; the refusal stands either way */
   }
 
-  return rateLimitedDecision(
-    to,
-    config,
-    live,
-    windowFreesAt(window, live > 0 ? live : notLive, config.windowSeconds),
-    misconfigured,
-  );
+  return rateLimitedDecision(to, config, live, windowFreesAt(oldest, windowMs), misconfigured);
 }
 
 /**
- * Give back a slot consumed by a call that was never dialled.
+ * Roll back a slot consumed by a call that was never dialled: delete exactly the hit row the call
+ * inserted, identified by its {@link CallToken}.
  *
- * Used when the caller has already passed the guard and then discovers a reason not to dial — the
- * counted case is the escalation ladder's `placeCall` returning a transport refusal, which is a
- * *failed* call that the ladder still counts as an attempt. Best-effort and never throws: releasing a
- * slot is an accuracy improvement, not a correctness requirement.
+ * This replaced a decrement of the fixed-window counter. A decrement was not a rollback: it could hand
+ * back a slot another concurrent caller had just taken, and it could not name *which* call it was
+ * undoing. Deleting the token's row does both — the slot is returned to the destination's window, and
+ * no other caller's slot can be touched.
  *
- * The decrement is guarded by `n > 0` so a stale release from a previous window (addressed by
- * {@link releaseKey}) cannot drive the counter negative, which the table's CHECK would reject.
- * `releaseKey` is the helper for a caller that still holds the key the slot was spent against; the
- * `at` argument of the old signature was an epoch millisecond instant, which is what it accepts.
+ * Without a usable token it is a no-op, deliberately. There is no call to roll back if we cannot
+ * identify it, and guessing (e.g. deleting the newest row) would be a decrement by another name. The
+ * destination is included in the delete so a token from another destination can never be applied,
+ * and `AUTOINCREMENT` keeps an id from being reused after a prune, so a stale token cannot alias a
+ * newer call.
+ *
+ * Best-effort and never throws: releasing a slot is an accuracy improvement, not a correctness
+ * requirement. A lost release only makes the guard slightly stricter for one window.
  */
 export async function releaseCall(
   env: RateLimitBindings,
   to: string,
-  at?: number | string,
+  token?: CallToken | null,
 ): Promise<void> {
   const db = env.DB;
   if (db === undefined) return;
-  const config = rateLimitConfig(env);
-  const window = releaseKey(at, config.windowSeconds, new Date());
+  if (typeof token !== "number" || !Number.isFinite(token)) return;
   try {
     await db
-      .prepare(
-        `UPDATE ${CALL_RATE_TABLE} SET n = n - 1 WHERE destination = ?1 AND window_key = ?2 AND n > 0`,
-      )
-      .bind(destinationKey(to), window)
+      .prepare(`DELETE FROM ${CALL_RATE_TABLE} WHERE id = ?1 AND destination = ?2`)
+      .bind(token, destinationKey(to))
       .run();
   } catch {
     /* best effort: a lost release only makes the guard slightly stricter */
@@ -577,35 +556,18 @@ export async function releaseCall(
 }
 
 /**
- * The window a release refers to.
+ * Delete hit rows that can no longer count.
  *
- * A release names the slot's own window (the increment it is undoing happened in that window), so an
- * `at` instant is mapped back to its window key. Without a usable instant the current window is used,
- * which is right for the common case of a call that failed within seconds of being counted.
+ * A hit counted at `at` stops counting for an attempt at `now` once `at <= now - windowMs`, so rows
+ * older than `keepWindows × windowMs` can never affect a decision and are safe to delete. Unlike the
+ * fixed-window table this one grows with traffic (one row per counted call), so unlike before the
+ * prune is not pure hygiene: a long-lived, busy deployment should run it periodically.
+ *
+ * **Called off the guard's path, deliberately**, for the same reason as before: a table-wide `DELETE`
+ * (and the write lock it takes) inside the request-critical statement would be a far worse failure
+ * mode than a few stale rows. The limit stays correct without it; the table is just larger.
  */
-export function releaseKey(at: number | string | undefined, windowSeconds: number, now: Date): number {
-  if (typeof at === "number" && Number.isFinite(at)) return windowKeyAt(new Date(at), windowSeconds);
-  if (typeof at === "string") {
-    const parsed = Date.parse(at);
-    if (Number.isFinite(parsed)) return windowKeyAt(new Date(parsed), windowSeconds);
-  }
-  return windowKeyAt(now, windowSeconds);
-}
-
-/**
- * Delete counter rows from windows that can no longer refuse anything.
- *
- * A row is useless once this window has moved past it: the guard addresses `window` and `window - 1`
- * and nothing older, so a row whose key is `<= window - 2` can never be read again. Deleting them
- * keeps a long-lived database from accumulating one small row per (destination, window) forever.
- *
- * **Called off the guard's path, deliberately.** Pruning can be run from an operator command or a
- * scheduled job; it must not run inside `checkOutboundCall`, because that would put a table-wide
- * `DELETE` (and the write lock it takes) inside the request-critical statement, turning a tidy-up
- * into a contention source on exactly the path whose atomicity is the point. The table is bounded
- * without it — see the file docstring — so this is hygiene, not a requirement.
- */
-export async function pruneCallRateWindows(
+export async function pruneCallRateHits(
   env: RateLimitBindings,
   now: Date = new Date(),
   keepWindows = 2,
@@ -613,22 +575,21 @@ export async function pruneCallRateWindows(
   const db = env.DB;
   if (db === undefined) return 0;
   const config = rateLimitConfig(env);
-  const oldest = windowKeyAt(now, config.windowSeconds) - Math.max(keepWindows, 1);
+  const cutoff = now.getTime() - Math.max(keepWindows, 1) * config.windowSeconds * 1000;
   try {
     // The number of rows removed is measured as the difference between the row count before and
     // after, rather than read from `meta.changes`: D1 reports the statement's own change count there,
     // but the in-memory shim can only offer `total_changes()`, which is cumulative across the
-    // connection. Counting rows is the one reading both agree on, and it is what the caller wants to
-    // know ("how much did the prune reclaim?") rather than an engine bookkeeping figure.
+    // connection. Counting rows is the one reading both agree on.
     const before = await rowCount(db);
-    await db.prepare(`DELETE FROM ${CALL_RATE_TABLE} WHERE window_key <= ?1`).bind(oldest).run();
+    await db.prepare(`DELETE FROM ${CALL_RATE_TABLE} WHERE at <= ?1`).bind(cutoff).run();
     return Math.max(before - (await rowCount(db)), 0);
   } catch {
     return 0;
   }
 }
 
-/** How many rows the counter table holds. `null` when it cannot be counted. */
+/** How many rows the hit log holds. `null` when it cannot be counted read as `0` by {@link count}. */
 async function rowCount(db: CounterDb): Promise<number> {
   const row = await db
     .prepare(`SELECT COUNT(*) AS n FROM ${CALL_RATE_TABLE}`)
@@ -639,9 +600,8 @@ async function rowCount(db: CounterDb): Promise<number> {
 /**
  * A human-readable one-line log for a decision, so every call site reports the same way.
  *
- * `console.warn` for a refusal and `console.log` for an allowed call that was not simply counted, so
- * a refusal is greppable in the Worker's log stream (`rate limited:`) without drowning in the happy
- * path.
+ * `console.warn` for a refusal and for a failure-mode allow, `console.log` otherwise, so a refusal is
+ * greppable in the Worker's log stream (`rate limited:`) without drowning in the happy path.
  */
 export function logCallDecision(label: string, decision: CallDecision): void {
   const line = `noloop: ${label} — ${decision.detail}`;

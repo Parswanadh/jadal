@@ -22,7 +22,7 @@
  *  * a refusal is visible: returned on the decision, and carried into each call site's own outcome.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { now as clockNow } from "./db/clock";
 import { deterministicId } from "./db/id";
@@ -37,17 +37,16 @@ import {
   checkOutboundCall,
   destinationKey,
   logCallDecision,
-  pruneCallRateWindows,
+  pruneCallRateHits,
   rateLimitConfig,
   rateLimitKey,
   releaseCall,
-  windowKeyAt,
 } from "./noloop";
 import type { CallDecision } from "./noloop";
 import type { Contact } from "@jadal/contracts";
 import { createEnv, createTestDb, type TestEnv } from "../test/harness";
 import { ShimDatabase, type ShimStatement } from "../test/d1-shim";
-import { CALL_RATE_LIMIT_SQL } from "./db/schema.sql";
+import { CALL_RATE_HIT_SQL } from "./db/schema.sql";
 import { seedScenario } from "../test/fixtures";
 import { runEscalation } from "./campaigns/escalation";
 import { notifyFarmerOfAllocation } from "./coordinator-alert";
@@ -113,11 +112,11 @@ class FlakyDb {
     return this.inner.exec(sql);
   }
 
-  /** The counter rows, so a test can prove what the atomic statement actually did to the table. */
-  async counterRows(): Promise<{ destination: string; window_key: number; n: number; not_live: number }[]> {
+  /** The hit rows, so a test can prove what the atomic statement actually did to the table. */
+  async counterRows(): Promise<{ id: number; destination: string; at: number }[]> {
     const result = await this.inner
-      .prepare(`SELECT destination, window_key, n, not_live FROM ${CALL_RATE_TABLE} ORDER BY window_key`)
-      .all<{ destination: string; window_key: number; n: number; not_live: number }>();
+      .prepare(`SELECT id, destination, at FROM ${CALL_RATE_TABLE} ORDER BY at, id`)
+      .all<{ id: number; destination: string; at: number }>();
     return result.results ?? [];
   }
 }
@@ -125,7 +124,7 @@ class FlakyDb {
 /**
  * A minimal env carrying only what the guard reads, with the counter migration applied.
  *
- * The database is migrated rather than bare on purpose: a bare one has no `call_rate_window` table, so
+ * The database is migrated rather than bare on purpose: a bare one has no `call_rate_hit` table, so
  * every call would take the *failure* path and the test would be measuring fail-open instead of the
  * limit. `node:sqlite`'s `exec` is synchronous, so the migration is applied right here and every test
  * can use `guardEnv()` exactly as before.
@@ -134,13 +133,13 @@ function guardEnv(extra: Record<string, unknown> = {}): { DB: FlakyDb } & Record
   return Object.assign({ DB: migratedDb() }, extra);
 }
 
-/** A `FlakyDb` over a fresh in-memory database carrying the counter table. */
+/** A `FlakyDb` over a fresh in-memory database carrying the sliding-window hit log. */
 function migratedDb(): FlakyDb {
   const db = new FlakyDb(new ShimDatabase());
   // `ShimDatabase.exec` runs its statements synchronously underneath (only its return value is a
   // promise), so the table exists before this function returns. That is what lets `guardEnv()` stay
   // synchronous and every existing test keep its shape.
-  void db.exec(CALL_RATE_LIMIT_SQL);
+  void db.exec(CALL_RATE_HIT_SQL);
   return db;
 }
 
@@ -188,74 +187,98 @@ describe("destinationKey", () => {
   });
 });
 
-describe("windowKeyAt", () => {
-  it("maps every instant in one window to one key, and rolls over at the boundary", () => {
-    // Aligned to a window boundary on purpose: the key is a floor, so the test must start on a
-    // multiple of the window or `+59_999` can land in the next window and the assertion would be
-    // measuring the offset rather than the window.
-    const t0 = 1_760_000_000_000 - (1_760_000_000_000 % 60_000);
-    const key = (ms: number): number => windowKeyAt(new Date(ms), 60);
-    expect(key(t0)).toBe(key(t0 + 59_999));
-    expect(key(t0 + 60_000)).toBe(key(t0) + 1);
-    // The window length is not baked into the key, so an operator changing it re-addresses windows
-    // rather than misreading old rows.
-    expect(windowKeyAt(new Date(t0), 30)).toBe(key(t0) * 2);
+describe("the window slides", () => {
+  it("frees slots one at a time, exactly one window after the call that spent each one", async () => {
+    // Three calls inside 25 s, then the window is full. Under the old fixed-window guard the whole
+    // budget would reset when the clock crossed a boundary; here each slot frees only when its own
+    // call is a full window old, so the budget thins rather than snapping back to three.
+    const env = guardEnv();
+    for (const offset of [0, 12, 25]) {
+      expect((await checkOutboundCall(env, PHONE, at(offset))).allowed).toBe(true);
+    }
+    expect((await checkOutboundCall(env, PHONE, at(40))).allowed).toBe(false);
+
+    // At T0+60 the call made at T0 is exactly one window old and no longer counts: one slot frees.
+    const atSixty = await checkOutboundCall(env, PHONE, at(60));
+    expect(atSixty.allowed).toBe(true);
+    expect(atSixty.priorCalls).toBe(2);
+    expect(atSixty.detail).toContain("call 3 of 3");
+
+    // And the window is immediately full again, because the calls at 12 s and 25 s still count.
+    expect((await checkOutboundCall(env, PHONE, at(61))).allowed).toBe(false);
+
+    // At T0+72 the call at 12 s ages out, freeing exactly one more slot.
+    expect((await checkOutboundCall(env, PHONE, at(72))).allowed).toBe(true);
+    expect((await checkOutboundCall(env, PHONE, at(73))).allowed).toBe(false);
+  });
+
+  it("never counts a hit older than the window, and never forgets a newer one", async () => {
+    const env = guardEnv();
+    for (const offset of [0, 12, 25]) await checkOutboundCall(env, PHONE, at(offset));
+    // Twenty-five seconds after the oldest hit has aged out, only the 25 s hit is still within 60 s.
+    const later = await checkOutboundCall(env, PHONE, at(72));
+    expect(later.allowed).toBe(true);
+    expect(later.priorCalls).toBe(1);
+    expect((await env.DB.counterRows()).map((row) => row.at)).toEqual([
+      T0.getTime(),
+      at(12).getTime(),
+      at(25).getTime(),
+      at(72).getTime(),
+    ]);
   });
 });
 
 /* ------------------------------------------------------------------ the SQL itself */
 
 describe("the consume is one atomic statement", () => {
-  it("consumes the budget with a single conditional INSERT ... ON CONFLICT ... WHERE n < ?", () => {
+  it("consumes the budget with a single conditional INSERT ... SELECT ... WHERE (COUNT) < ?", () => {
     const sql = atomicStatements.consume();
     expect(sql).toContain("INSERT INTO");
-    expect(sql).toContain("ON CONFLICT");
-    expect(sql).toContain("DO UPDATE");
-    expect(sql).toContain("WHERE n < ?3");
+    expect(sql).toContain("SELECT ?1, ?2");
+    expect(sql).toMatch(/WHERE \(SELECT COUNT\(\*\)[\s\S]*\) < \?4/);
     expect(sql).toContain("RETURNING");
     // One statement, not a batch: `db.batch()` would still be atomic, but the brief asks for the
-    // check-and-increment to be inseparable, and a single statement is the strongest form of that.
+    // check-and-insert to be inseparable, and a single statement is the strongest form of that.
     expect(sql.split(";").filter((part) => part.trim().length > 0)).toHaveLength(1);
   });
 
   it("has no read-then-write anywhere on the guard's path", () => {
     // The defect being fixed was two statements with a JavaScript decision in between. The guard's
-    // *only* writes are the atomic consume and the release decrement; everything else it runs is a
-    // pure read that cannot permit a call.
-    const writes = [atomicStatements.consume(), atomicStatements.read()].filter((sql) =>
-      /^\s*(INSERT|UPDATE|DELETE)/i.test(sql),
-    );
-    expect(writes).toHaveLength(1);
-    expect(writes[0]).toBe(atomicStatements.consume());
+    // consume is one statement; its descriptive read is a pure SELECT that cannot permit a call, and
+    // its release is a token-scoped DELETE that cannot either.
+    expect(atomicStatements.consume()).toMatch(/^\s*INSERT/i);
+    expect(atomicStatements.read()).toMatch(/^\s*SELECT/i);
+    expect(atomicStatements.read()).not.toMatch(/\b(INSERT|UPDATE|DELETE)\b/i);
   });
 
-  it("doesn't condition the increment on a value read in JavaScript", () => {
-    // `WHERE n < ?3` compares the *stored* column against the ceiling bound into the statement, and
-    // the statement is what increments. If the guard ever consulted a JavaScript-side count first,
-    // this shape would not hold: there would be a SELECT to decide on.
-    expect(atomicStatements.consume()).toMatch(/SET n = n \+ 1\s+WHERE n < \?3/);
+  it("doesn't condition the insert on a value read in JavaScript", () => {
+    // The condition is a COUNT over the hit log, evaluated by SQLite inside the same statement that
+    // inserts. If the guard ever consulted a JavaScript-side count first, this shape would not hold:
+    // there would be a SELECT to decide on.
+    expect(atomicStatements.consume()).toMatch(/WHERE \(SELECT COUNT\(\*\)/);
     expect(atomicStatements.consume()).not.toMatch(/SELECT[\s\S]*\)\s*AS allowed/);
   });
 
-  it("increments the stored counter exactly max times under a simultaneous burst", async () => {
-    // The statement's own behaviour, at the SQL level and without the guard around it: six statements
-    // prepared before any of them runs, then run back to back, with a ceiling of 3.
+  it("inserts exactly max rows under a burst, and the count refuses the rest", async () => {
+    // The statement's own behaviour, at the SQL level and without the guard around it: six identical
+    // attempts, run back to back, with a ceiling of 3.
     const db = new ShimDatabase();
-    await db.exec(`CREATE TABLE ${CALL_RATE_TABLE} (destination TEXT NOT NULL, window_key INTEGER NOT NULL, n INTEGER NOT NULL DEFAULT 0, not_live INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (destination, window_key)) WITHOUT ROWID`);
+    await db.exec(
+      `CREATE TABLE ${CALL_RATE_TABLE} (id INTEGER PRIMARY KEY AUTOINCREMENT, destination TEXT NOT NULL, at INTEGER NOT NULL)`,
+    );
     let spent = 0;
     for (let i = 0; i < 6; i += 1) {
       // A fresh statement per attempt, exactly as the guard uses it: `bind()` is additive on the
       // shim and on D1 alike, so a re-bound statement would stack parameters rather than rebind them.
       const row = await db
         .prepare(atomicStatements.consume())
-        .bind(destinationKey(PHONE), 1, 3)
-        .first<{ n: number }>();
+        .bind(destinationKey(PHONE), 0, 60_000, 3)
+        .first<{ id: number }>();
       if (row !== null) spent += 1;
     }
     expect(spent).toBe(3);
     const row = await db
-      .prepare(`SELECT n FROM ${CALL_RATE_TABLE} WHERE destination = ?1 AND window_key = ?2`)
-      .bind(destinationKey(PHONE), 1)
+      .prepare(`SELECT COUNT(*) AS n FROM ${CALL_RATE_TABLE}`)
       .first<{ n: number }>();
     expect(row?.n).toBe(3);
   });
@@ -292,10 +315,10 @@ describe("checkOutboundCall — simultaneous load", () => {
     expect(refused.every((d) => d.detail.includes("rate limited"))).toBe(true);
     expect(refused.every((d) => d.retryAfterAt !== null)).toBe(true);
 
-    // And the table agrees: exactly three units were consumed, not twelve.
+    // And the hit log agrees: exactly three rows were inserted, not twelve.
     const rows = await env.DB.counterRows();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.n).toBe(3);
+    expect(rows).toHaveLength(3);
+    expect(rows.every((row) => row.destination === destinationKey(PHONE) && row.at === T0.getTime())).toBe(true);
   });
 
   it("allows exactly N when N simultaneous calls are fired with max N", async () => {
@@ -306,7 +329,7 @@ describe("checkOutboundCall — simultaneous load", () => {
       Array.from({ length: 10 }, () => checkOutboundCall(env, PHONE, T0)),
     );
     expect(decisions.filter((d) => d.allowed)).toHaveLength(5);
-    expect((await env.DB.counterRows())[0]?.n).toBe(5);
+    expect(await env.DB.counterRows()).toHaveLength(5);
   });
 
   it("bounds repeated rapid presses: 30 simultaneous requests to one handset dial at most 3 times", async () => {
@@ -329,7 +352,9 @@ describe("checkOutboundCall — simultaneous load", () => {
     ]);
     expect(decisions.filter((d) => d.allowed)).toHaveLength(6);
     const rows = await env.DB.counterRows();
-    expect(rows.map((row) => row.n).sort()).toEqual([3, 3]);
+    const countFor = (to: string): number => rows.filter((row) => row.destination === destinationKey(to)).length;
+    expect(countFor(PHONE)).toBe(3);
+    expect(countFor("+919000000002")).toBe(3);
   });
 
   it("still refuses sequentially after a simultaneous burst", async () => {
@@ -383,26 +408,23 @@ describe("checkOutboundCall — the burst", () => {
     expect(details[2]).toContain("call 3 of 3");
   });
 
-  it("resets after the window", async () => {
+  it("is completely fresh once every call has aged out, a window after the last one", async () => {
     const env = guardEnv();
     for (const offset of [0, 12, 25]) await checkOutboundCall(env, PHONE, at(offset));
     expect((await checkOutboundCall(env, PHONE, at(40))).allowed).toBe(false);
 
-    // Still inside the same window: still refused.
-    expect((await checkOutboundCall(env, PHONE, at(59))).allowed).toBe(false);
-
-    // At T0+61s the window has rolled over and the budget is fresh: the expired window's three calls
-    // cannot block a call in a window they do not belong to. This is the property the KV version got
-    // from a TTL and the SQL version gets from addressing a new key.
-    const afterWindow = await checkOutboundCall(env, PHONE, at(61));
+    // At T0+85 the 25 s call is exactly one window old: every original call has aged out and the
+    // budget is fresh. This is the property the fixed-window version got from a boundary roll-over
+    // and this one gets from the trailing count.
+    const afterWindow = await checkOutboundCall(env, PHONE, at(85));
     expect(afterWindow.allowed).toBe(true);
     expect(afterWindow.priorCalls).toBe(0);
     expect(afterWindow.detail).toContain("call 1 of 3");
 
-    // Two rows: the expired window's, and the new one's. The old row is left in place (it is never
-    // read again) rather than deleted on the hot path — see `pruneCallRateWindows`.
+    // Every hit row is still in the log (pruning is off the hot path); only the rows inside the
+    // trailing window can decide anything.
     const rows = await env.DB.counterRows();
-    expect(rows.map((row) => row.n)).toEqual([3, 1]);
+    expect(rows).toHaveLength(4);
   });
 
   it("counts per destination, not globally", async () => {
@@ -427,25 +449,32 @@ describe("checkOutboundCall — the burst", () => {
     expect((await env.DB.counterRows())[0]?.destination).toBe(destinationKey(PHONE));
   });
 
-  it("stores one row per destination and window, with no absolute instant in the key", async () => {
+  it("stores one row per counted call, carrying its destination and instant", async () => {
     const env = guardEnv();
     await checkOutboundCall(env, PHONE, at(0));
+    await checkOutboundCall(env, PHONE, at(30));
     const rows = await env.DB.counterRows();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.destination).toBe(destinationKey(PHONE));
-    expect(rows[0]?.window_key).toBe(windowKeyAt(T0, DEFAULT_WINDOW_SECONDS));
-    expect(rows[0]?.n).toBe(1);
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.destination === destinationKey(PHONE))).toBe(true);
+    expect(rows.map((row) => row.at)).toEqual([T0.getTime(), at(30).getTime()]);
   });
 
-  it("carries the previous window's count forward so a refusal can still name a retry time", async () => {
+  it("counts against the trailing window only, so a boundary does not hand the budget back", async () => {
     const env = guardEnv();
-    for (const offset of [0, 5, 10]) await checkOutboundCall(env, PHONE, at(offset)); // window 0: 3
-    const nextWindow = await checkOutboundCall(env, PHONE, at(61)); // window 1: 1
-    expect(nextWindow.allowed).toBe(true);
-    const rows = await env.DB.counterRows();
-    expect(rows[1]?.not_live).toBe(3);
-    // The previous window's count is *not* charged against the new window's budget.
-    expect(rows[1]?.n).toBe(1);
+    for (const offset of [0, 5, 10]) await checkOutboundCall(env, PHONE, at(offset)); // 3 of 3
+
+    // At T0+65 the calls at 0 s and 5 s are more than a window old; only the 10 s call still counts.
+    const atSixtyFive = await checkOutboundCall(env, PHONE, at(65));
+    expect(atSixtyFive.allowed).toBe(true);
+    expect(atSixtyFive.priorCalls).toBe(1);
+    expect(atSixtyFive.detail).toContain("call 2 of 3");
+
+    // A fixed-window guard would have handed back all three at the boundary; this one does not, and
+    // the window fills again one slot at a time.
+    expect((await checkOutboundCall(env, PHONE, at(66))).allowed).toBe(true);
+    expect((await checkOutboundCall(env, PHONE, at(67))).allowed).toBe(false);
+
+    expect(await env.DB.counterRows()).toHaveLength(5);
   });
 
   it("honours a tighter limit from env and blocks the 2nd call", async () => {
@@ -464,64 +493,143 @@ describe("checkOutboundCall — the burst", () => {
   });
 });
 
-/* ------------------------------------------------------------------ append-only invariants */
+/* ------------------------------------------------------------------ the window boundary */
 
-describe("releaseCall", () => {
-  it("gives a consumed slot back, so a call that was never dialled is not charged", async () => {
-    const env = guardEnv({ CALL_RATE_MAX_CALLS: "1" });
-    const first = await checkOutboundCall(env, PHONE, T0);
-    expect(first.allowed).toBe(true);
-    expect((await checkOutboundCall(env, PHONE, at(1))).allowed).toBe(false);
+/**
+ * The fixed-window guard's other hole: the window was a *bucket*, so a burst straddling a boundary
+ * got a fresh budget when the clock crossed it and could reach `2 × maxCalls`.
+ *
+ * These tests drive the *production* clock path — `checkOutboundCall`'s default `now` is `new Date()`
+ * — with fake timers, rather than the injectable `now` the rest of the file uses. That is deliberate:
+ * it proves the shipped call site, not a test-only parameter, is sliding.
+ */
+describe("checkOutboundCall — the window boundary (fake timers)", () => {
+  /** A whole-second-aligned 60 s boundary, so "just before" and "just after" are unambiguous. */
+  const BOUNDARY = 1_760_000_000_000 - (1_760_000_000_000 % 60_000);
 
-    await releaseCall(env, PHONE, T0.getTime());
-    expect((await env.DB.counterRows())[0]?.n).toBe(0);
-    expect((await checkOutboundCall(env, PHONE, at(2))).allowed).toBe(true);
+  it("does not reset the budget at a fixed boundary: a straddling burst cannot reach 2 x maxCalls", async () => {
+    vi.useFakeTimers();
+    try {
+      const env = guardEnv();
+      // Three calls a second before the boundary and three a second after: two full fixed windows.
+      const offsets = [
+        BOUNDARY - 1000,
+        BOUNDARY - 1000,
+        BOUNDARY - 1000,
+        BOUNDARY + 1000,
+        BOUNDARY + 1000,
+        BOUNDARY + 1000,
+      ];
+      const allowed: boolean[] = [];
+      for (const ms of offsets) {
+        vi.setSystemTime(new Date(ms));
+        allowed.push((await checkOutboundCall(env, PHONE)).allowed);
+      }
+
+      // The fixed-window guard would have returned six trues here; the sliding guard allows three.
+      expect(allowed).toEqual([true, true, true, false, false, false]);
+      expect(allowed.filter(Boolean)).toHaveLength(DEFAULT_MAX_CALLS);
+      expect(await env.DB.counterRows()).toHaveLength(DEFAULT_MAX_CALLS);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it("never drives the counter below zero, and never throws on a stale release", async () => {
-    const env = guardEnv();
-    await releaseCall(env, PHONE, T0.getTime()); // nothing was ever counted
-    expect((await env.DB.counterRows())[0]?.n ?? 0).toBe(0);
-    await checkOutboundCall(env, PHONE, T0);
-    await releaseCall(env, PHONE, T0.getTime());
-    await releaseCall(env, PHONE, T0.getTime());
-    expect((await env.DB.counterRows())[0]?.n).toBe(0);
-  });
+  it("frees a slot exactly one window after the oldest call, under the real clock path", async () => {
+    vi.useFakeTimers();
+    try {
+      const env = guardEnv();
+      for (const ms of [BOUNDARY, BOUNDARY + 1000, BOUNDARY + 2000]) {
+        vi.setSystemTime(new Date(ms));
+        expect((await checkOutboundCall(env, PHONE)).allowed).toBe(true);
+      }
+      vi.setSystemTime(new Date(BOUNDARY + 2000));
+      expect((await checkOutboundCall(env, PHONE)).allowed).toBe(false);
 
-  it("does nothing when there is no counter store", async () => {
-    await expect(releaseCall({}, PHONE, T0.getTime())).resolves.toBeUndefined();
+      // The first call is now exactly one window old and has aged out; one slot is free.
+      vi.setSystemTime(new Date(BOUNDARY + 60_000));
+      const freed = await checkOutboundCall(env, PHONE);
+      expect(freed.allowed).toBe(true);
+      expect(freed.priorCalls).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
-describe("pruneCallRateWindows", () => {
-  it("deletes windows the guard can no longer address, and keeps the live ones", async () => {
-    const env = guardEnv();
-    await checkOutboundCall(env, PHONE, at(0)); // window k
-    await checkOutboundCall(env, PHONE, at(61)); // window k+1
-    await checkOutboundCall(env, PHONE, at(122)); // window k+2
+/* ------------------------------------------------------------------ append-only invariants */
 
-    const deleted = await pruneCallRateWindows(env, at(122));
+describe("releaseCall", () => {
+  it("rolls back exactly the slot the call consumed, so a call that was never dialled is not charged", async () => {
+    const env = guardEnv({ CALL_RATE_MAX_CALLS: "1" });
+    const first = await checkOutboundCall(env, PHONE, T0);
+    expect(first.allowed).toBe(true);
+    expect(first.token).not.toBeNull();
+    expect((await checkOutboundCall(env, PHONE, at(1))).allowed).toBe(false);
+
+    await releaseCall(env, PHONE, first.token);
+    expect(await env.DB.counterRows()).toHaveLength(0);
+    expect((await checkOutboundCall(env, PHONE, at(2))).allowed).toBe(true);
+  });
+
+  it("deletes only the token's row, so a stale release cannot free another caller's slot", async () => {
+    const env = guardEnv(); // max 3
+    const first = await checkOutboundCall(env, PHONE, T0);
+    const second = await checkOutboundCall(env, PHONE, at(1));
+    expect(first.token).not.toBe(second.token);
+
+    // Releasing the first call's token twice deletes its row once and cannot touch the second call.
+    await releaseCall(env, PHONE, first.token);
+    await releaseCall(env, PHONE, first.token);
+    const rows = await env.DB.counterRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.id).toBe(second.token);
+
+    // The window therefore still has two slots spent (the second call plus the one just re-taken).
+    expect((await checkOutboundCall(env, PHONE, at(2))).allowed).toBe(true);
+    expect((await checkOutboundCall(env, PHONE, at(3))).allowed).toBe(true);
+    expect((await checkOutboundCall(env, PHONE, at(4))).allowed).toBe(false);
+  });
+
+  it("is a no-op without a token, and never throws on an unknown one", async () => {
+    // There is no shared counter to decrement any more: without a token there is no row to identify
+    // and nothing is released. That is safer than guessing which call to undo.
+    const env = guardEnv({ CALL_RATE_MAX_CALLS: "1" });
+    await checkOutboundCall(env, PHONE, T0);
+    await releaseCall(env, PHONE); // no token
+    await releaseCall(env, PHONE, null);
+    await releaseCall(env, PHONE, 999_999); // a token that was never issued
+    expect(await env.DB.counterRows()).toHaveLength(1);
+    expect((await checkOutboundCall(env, PHONE, at(1))).allowed).toBe(false);
+  });
+
+  it("does nothing when there is no counter store", async () => {
+    await expect(releaseCall({}, PHONE, 1)).resolves.toBeUndefined();
+  });
+});
+
+describe("pruneCallRateHits", () => {
+  it("deletes hits that can no longer count, and keeps the ones inside the trailing window", async () => {
+    const env = guardEnv();
+    await checkOutboundCall(env, PHONE, at(0)); // older than keepWindows
+    await checkOutboundCall(env, PHONE, at(61)); // within the retention margin, outside the trailing window
+    await checkOutboundCall(env, PHONE, at(122));
+
+    // At t=122 with a 60 s window and keepWindows=2 the cutoff is t=2, so only the hit at t=0 goes.
+    const deleted = await pruneCallRateHits(env, at(122));
     expect(deleted).toBe(1);
     const rows = await env.DB.counterRows();
-    expect(rows).toHaveLength(2);
-    // The pruned window is the one two windows back; both addressable windows survive, so pruning
-    // cannot free a slot that the guard still counts against.
-    expect(rows.map((row) => row.window_key)).toEqual([
-      windowKeyAt(at(61), DEFAULT_WINDOW_SECONDS),
-      windowKeyAt(at(122), DEFAULT_WINDOW_SECONDS),
-    ]);
+    expect(rows.map((row) => row.at)).toEqual([at(61).getTime(), at(122).getTime()]);
 
-    // The surviving windows still refuse once exhausted: pruning two windows back removes only rows
-    // the guard no longer addresses, so it cannot hand back a slot that is still in use. Window k+2
-    // has spent one of three, so two more are allowed and the third is refused — and the prune did
-    // not change that.
+    // The prune removed only hits that could no longer count, so it cannot hand back a slot that is
+    // still in use: the trailing window at t=122 still holds its one hit, and fills to three.
     expect((await checkOutboundCall(env, PHONE, at(123))).allowed).toBe(true);
     expect((await checkOutboundCall(env, PHONE, at(124))).allowed).toBe(true);
     expect((await checkOutboundCall(env, PHONE, at(125))).allowed).toBe(false);
   });
 
   it("is a no-op without a counter store", async () => {
-    expect(await pruneCallRateWindows({})).toBe(0);
+    expect(await pruneCallRateHits({})).toBe(0);
   });
 });
 
