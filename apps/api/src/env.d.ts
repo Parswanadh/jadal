@@ -5,6 +5,8 @@
 // The telephony variables B9 wires up live on `Env` there:
 //   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER, PUBLIC_BASE_URL, SARVAM_API_KEY,
 //   DEEPGRAM_API_KEY, SARVAM_TTS_SPEAKER, REAL_TELEPHONY, SKIP_TWILIO_SIGNATURE
+// The System-1 (Jev / Laya / rules) variables live on `Env` there too:
+//   SYSTEM1_PROVIDER, LAYA_ENDPOINT, LAYA_TIMEOUT_MS, OPENROUTER_API_KEY, JEV_MODEL, JEV_TIMEOUT_MS
 // Their local *names* (never values) are listed in `.dev.vars.example`.
 
 // Ambient Cloudflare Worker type fallback declarations

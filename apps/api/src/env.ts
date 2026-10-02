@@ -20,7 +20,22 @@ export interface Env {
   DEMO_MODE?: string;
   ENVIRONMENT?: string;
   AI_GATEWAY_URL?: string;
+  // --- System 1 (src/system1.ts). One entry point, several providers, chosen by SYSTEM1_PROVIDER.
+  /** `laya` | `jev` | `rules` | `auto`. Unset => `auto` (Laya, then Jev, then rules). */
+  SYSTEM1_PROVIDER?: string;
+  /** Local Laya sidecar base URL, e.g. `http://127.0.0.1:8099/decide`. Unset => Laya is skipped. */
+  LAYA_ENDPOINT?: string;
+  /** Deadline for one Laya call, in milliseconds as a string. Default 4000; clamped to 100..15000. */
+  LAYA_TIMEOUT_MS?: string;
   OPENROUTER_API_KEY?: string;
+  /**
+   * Jev route slug on OpenRouter's Decisions API. Unset => the module default `typesafe/jev-1.13`
+   * (see `src/system1.ts`). `~typesafe/jev-latest` floats to the newest release; `typesafe/jev-router`
+   * is a chat-model router and is NOT a valid Decisions model (ADR-006).
+   */
+  JEV_MODEL?: string;
+  /** Deadline for one Jev call, in milliseconds as a string. Default 4000; clamped to 250..15000. */
+  JEV_TIMEOUT_MS?: string;
   SARVAM_API_KEY?: string;
   // --- telephony (B8 module, mounted by B9). Names only; values live in `.dev.vars` or `wrangler
   // secret put`. Real calls need the four Twilio/public-URL names together.
