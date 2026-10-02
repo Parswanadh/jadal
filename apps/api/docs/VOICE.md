@@ -131,30 +131,32 @@ with none of them the offline demo path runs unchanged and the agent falls back 
 ## Wiring the inbound path
 
 The routes are registered inside `createTelephonyRoutes`, which `app.ts` already mounts at
-`/api/telephony`, so **no route mount or env var is needed**. One dep is:
+`/api/telephony`, so **no route mount or env var is needed**. The one dep that was missing is now
+wired in `buildTelephonyDeps` (`apps/api/src/telephony-deps.ts`):
 
 ```ts
 // apps/api/src/telephony-deps.ts — buildTelephonyDeps(env)
-import { listFarmers } from "./db/repo";
-
-async resolveCaller(phone) {
-  const digits = phone.replace(/\D/g, "").slice(-10);
-  const farmers = await listFarmers(env);
-  const hit = farmers.find((f) => f.farmer.phone.replace(/\D/g, "").endsWith(digits));
-  return hit === undefined ? null : { farmerId: hit.farmer.id, farmerName: hit.farmer.name };
+resolveCaller(phone) {
+  return resolveInboundCaller(env, phone); // digits-only roster match + the farmer's open contact
 },
-async nextTurnFor(farmerId) { /* the farmer's next release as MessageFacts, or null */ },
-async onSpeechPath(d) { console.log("[voice]", JSON.stringify(d)); },
 ```
 
-Without `resolveCaller` the agent still answers, greets, listens, transcribes and classifies; it just
-cannot attribute a raised request and says `caller_unknown`. Without `nextTurnFor` a release-time
-question is answered with `schedule_hold` rather than an invented time.
+`resolveInboundCaller` normalises `From` to digits (`phoneKey`), matches it against `listFarmers`,
+resolves ties to the lowest farmer `id`, and attaches the farmer's most recent **open** contact
+(`queued`/`sent`/`delivered`) so DTMF `1` can acknowledge something real. An unknown number returns
+`null`, which the module already treats as an honest "not on the roster".
+
+Two optional deps remain unwired, and each degrades honestly: `nextTurnFor` (a release-time question is
+answered with `schedule_hold` rather than an invented time) and `onSpeechPath` (provider choices are
+not logged to the console). `docs/INBOUND.md` has the end-to-end proof and the steps to enable real
+inbound calling.
 
 ## Local testing and a live check
 
 * **Unit/integration** — `pnpm --filter api test`. The network is always stubbed; no test calls Sarvam,
-  Deepgram or Twilio. `src/telephony/inbound.test.ts` replays signed webhooks through a real Hono mount.
+  Deepgram or Twilio. `src/telephony/inbound.test.ts` replays signed webhooks through a real Hono mount,
+  and `src/telephony/inbound-e2e.test.ts` drives the mounted `/api/telephony` through the real
+  `createApp()` with the wired `buildTelephonyDeps`.
 * **Replay a webhook by hand** — run the Worker with `SKIP_TWILIO_SIGNATURE=1` and POST a Twilio-shaped
   form body to `/api/telephony/inbound`; the response is the TwiML above.
 * **Live smoke (one-off, from the shell)** — POST one short Telugu sentence to

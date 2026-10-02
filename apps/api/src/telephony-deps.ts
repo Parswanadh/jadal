@@ -26,14 +26,14 @@ import type { Contact, System1Result } from "@jadal/contracts";
 
 import { now } from "./db/clock";
 import { newId } from "./db/id";
-import { getContact, getFarmer } from "./db/repo";
+import { getContact, getFarmer, listContacts, listFarmers } from "./db/repo";
 import { appendEvent } from "./db/store";
 import { DEMO_CANAL_ID } from "./demo";
 import type { Env } from "./env";
 import { providerEnv } from "./http";
 import { raiseRequest } from "./requests";
 import { classify, extractVolumeM3 } from "./system1";
-import type { AudioCache, RaiseRequestInput, StatusDetail, TelephonyDeps, TelephonyEnv } from "./telephony";
+import type { AudioCache, InboundCaller, RaiseRequestInput, StatusDetail, TelephonyDeps, TelephonyEnv } from "./telephony";
 import { placeCall, type PlaceCallInput, type PlaceCallResult } from "./telephony";
 
 /**
@@ -116,6 +116,28 @@ async function updateContact(env: Env, contact: Contact): Promise<void> {
   });
 }
 
+/**
+ * Normalise a phone number for comparison.
+ *
+ * Twilio always sends E.164 (`+919000000001`), and the seed stores E.164, but a human-entered number
+ * may arrive with spaces, dashes, parentheses or a `tel:` prefix. Two numbers are "the same handset"
+ * when their digits match, so the comparison is on digits only — this is a *matching* key, never a
+ * value written back to the store.
+ */
+export function phoneKey(raw: string): string {
+  return raw.replace(/^tel:/i, "").replace(/\D+/g, "");
+}
+
+/**
+ * Statuses that mean "this contact is still open for the farmer to answer".
+ *
+ * `queued`, `sent` and `delivered` are the pre-answer states; `failed` is excluded because a call that
+ * could not be delivered is not something the farmer is confirming, and a `failed` contact stays
+ * `failed` under `updateContactStatus`'s monotonic guard anyway. `acknowledged` and `escalated` are
+ * terminal for this purpose: a second `1` must not reopen a confirmed contact.
+ */
+const OPEN_CONTACT_STATUSES: readonly Contact["status"][] = ["queued", "sent", "delivered"];
+
 /** Strip the repo's extra columns so only the contract's `Contact` is written to the log. */
 function plainContact(record: Contact): Contact {
   return {
@@ -129,6 +151,46 @@ function plainContact(record: Contact): Contact {
     message_en: record.message_en,
     at: record.at,
     ...(record.transcript === undefined ? {} : { transcript: record.transcript }),
+  };
+}
+
+/**
+ * Map an inbound `From` number to the farmer it belongs to.
+ *
+ * This is the one dep the B8 inbound module needs but deliberately does not own (see the docstring in
+ * `telephony/inbound.ts`). Without it an inbound call is answered and understood but can never be
+ * *attributed*, so `raiseFromInbound` refuses and the agent tells the caller their number is unknown —
+ * which is exactly what happened before this function existed.
+ *
+ * Matching is on digits ({@link phoneKey}) so `+91 90000 00001`, `+919000000001` and `tel:+919000000001`
+ * are one handset. `listFarmers` is a full scan; the roster is eight farmers in the demo and a few
+ * thousand in the field, and this runs once per inbound webhook, not per farmer — the same trade the
+ * read routes already make. When two farmers share a number the lowest `id` wins, so the result is
+ * deterministic rather than whichever row the database happened to return first.
+ *
+ * The contact is the farmer's most recent *open* contact, if any. A farmer calling to raise an urgent
+ * request usually has no contact at all, which is why `contactId` is optional — an acknowledgement
+ * (`DTMF 1`) is only written when there is something open to acknowledge.
+ */
+async function resolveInboundCaller(env: Env, phone: string): Promise<InboundCaller | null> {
+  const wanted = phoneKey(phone);
+  if (wanted.length === 0) return null;
+
+  const records = await listFarmers(env);
+  const matches = records
+    .filter((record) => phoneKey(record.farmer.phone) === wanted)
+    .sort((a, b) => (a.farmer.id < b.farmer.id ? -1 : a.farmer.id > b.farmer.id ? 1 : 0));
+  const match = matches[0];
+  if (match === undefined) return null;
+
+  const farmerId = match.farmer.id;
+  const contacts = await listContacts(env, { farmerId });
+  const open = contacts.filter((contact) => OPEN_CONTACT_STATUSES.includes(contact.status));
+
+  return {
+    farmerId,
+    farmerName: match.farmer.name,
+    ...(open.length === 0 ? {} : { contactId: open[open.length - 1]?.id }),
   };
 }
 
@@ -214,6 +276,17 @@ export function buildTelephonyDeps(env: Env): TelephonyDeps {
       const record = await getContact(env, contactId);
       if (record === null) return;
       await updateContact(env, { ...plainContact(record), transcript });
+    },
+
+    /**
+     * Attribute an inbound call (`From`, E.164) to a farmer.
+     *
+     * The missing dep B8 named for B9: without it the agent answers but cannot raise a request, so
+     * `docs/VOICE.md`'s "unknown caller" reply is all a farmer would ever hear. Unknown numbers resolve
+     * to `null`, which the module already treats as an honest "not on the roster", not an error.
+     */
+    resolveCaller(phone: string): Promise<InboundCaller | null> {
+      return resolveInboundCaller(env, phone);
     },
   };
 }
