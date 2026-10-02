@@ -55,6 +55,7 @@ The following claims are strictly **FORBIDDEN** from appearing on screen, in voi
 ### 2b. Added by orchestrator review (RAN/READ)
 
 - **"Tail meets ~42% of crop need" and any equal-hours vs equal-water need-met percentage** — the only numeric source is the mock formula `max(40, 98 - i*8)` (`apps/web/src/api/mock.ts:322`, labelled ASSUMED/illustrative). Forbidden until a core-computed planned need-met is merged (lane `gini-planned`) and this table is updated.
+- **The `/canal` page's per-farmer "NN% of need met" bars** (visible in `capture/canal.png` and `capture/canal-seepage.webm`, e.g. 98%, 82%): these are the mock formula, not core output. Core's planned need-met on the shipped seed is 280.8% head / 205.5% tail (ADR-need-met-planned.md). Crop them out or use only the ribbon + flow labels; any frame showing those bars is a QA FAIL.
 - **A bare test count** — quote only a number measured at render time.
 - **"Urgency score" as a measured quantity** — an unscored request now reports `urgency: 0` as a marker, not a measurement.
 

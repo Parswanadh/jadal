@@ -26,3 +26,8 @@ Total footage size: **3.72 MB** (budget: ~25 MB).
 2. **Error States:** Zero unhandled errors or `.notice-crit` alert banners on any captured screen.
 3. **Water Figure Provenance:** All water volumes, flow rates, and turn hours rendered in the UI originate deterministically from `@jadal/core` fixtures.
 4. **Compression:** All PNG files were compressed using `ffmpeg` mixed prediction filter with zlib level 9 compression. Video recordings were encoded in VP9 webm format at 1080p 30fps.
+
+
+## Orchestrator review warning (RAN/READ)
+
+`canal.png` and `canal-seepage.webm` show per-farmer "NN% of need met" bars. Those values come from the mock formula in `apps/web/src/api/mock.ts:322` (labelled ASSUMED/illustrative) and contradict core's computed planned need-met. **Do not use frames that show those bars**; crop to the canal ribbon (top card) only. The ribbon's "Outlet 1" label is also clipped by its marker ("utle") — avoid a close-up on it.
