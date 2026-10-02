@@ -86,12 +86,22 @@ describe("scratch", () => {
       console.log(mode, "pct", need.map((n) => [n.outlet_id, round(n.pct, 2)]));
       console.log(mode, "shortfall", roster.shortfall_m3);
     }
-    // also: crop need as demand (unscaled)
+    // also: crop need as demand (unscaled), summed per farmer (as the scheduler does)
+    const perFarmer = new Map<string, { farmer_id: string; outlet_id: string; volume_m3: number; priority: number }>();
+    for (const b of byFarmer) {
+      const key = `${b.farmer_id}:${b.outlet_id}`;
+      const cur = perFarmer.get(key);
+      if (cur) cur.volume_m3 += b.need_m3;
+      else perFarmer.set(key, { farmer_id: b.farmer_id, outlet_id: b.outlet_id, volume_m3: b.need_m3, priority: 1 });
+    }
+    const cropDemands = [...perFarmer.values()];
     for (const mode of ["equal_hours", "equal_water"] as const) {
-      const input: RosterInput = { canal, outlets, window, demands: byFarmer.map((b) => ({ farmer_id: b.farmer_id, outlet_id: b.outlet_id, volume_m3: b.need_m3, priority: 1 })), mode };
+      const input: RosterInput = { canal, outlets, window, demands: cropDemands, mode };
       const roster = rosterEngine.build(input, "scratch2-" + mode);
-      const need = rosterEngine.needMet(input, roster);
-      console.log("CROPNEED", mode, "pct", need.map((n) => [n.outlet_id, round(n.pct, 2)]));
+      const planned = rosterEngine.plannedNeedMet(input, roster);
+      const vals = planned.map((n) => n.pct);
+      console.log("CROPNEED", mode, "planned pct", planned.map((n) => [n.outlet_id, round(n.pct, 3)]));
+      console.log("CROPNEED", mode, "gini", (() => { const n=vals.length; let sd=0,sv=0; for(let i=0;i<n;i++){sv+=vals[i]!; for(let j=0;j<n;j++) sd+=Math.abs(vals[i]!-vals[j]!);} return sv===0?0:sd/(2*n*sv); })());
     }
   });
 });
