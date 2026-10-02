@@ -29,7 +29,17 @@
  * so a workflow is just the durable ordering of their calls.
  */
 
-import { runEscalation, type CampaignEnv } from "./escalation";
+import { RETRY_DELAY_MINUTES, runEscalation, type CampaignEnv } from "./escalation";
+
+/**
+ * The durable retry sleep, derived from the ladder's own gap.
+ *
+ * `escalation.ts` owns the 15-minute retry (`RETRY_DELAY_MINUTES`) and is the single source of
+ * truth for it. This module used to hardcode the literal `"15 minutes"` in two places, so changing
+ * the ladder's constant would have silently left the durable workflow sleeping the old gap. The
+ * duration string is built from the constant instead.
+ */
+const RETRY_SLEEP = `${RETRY_DELAY_MINUTES} minutes`;
 
 /* ------------------------------------------------------------------ runtime surface (local stand-ins) */
 
@@ -116,7 +126,7 @@ export class UrgentRequestWorkflow extends WorkflowEntrypoint<CampaignEnv, Urgen
 
     let finalId = firstId;
     if (ack === null) {
-      await step.sleep("15 minutes");
+      await step.sleep(RETRY_SLEEP);
       const retry = await step.do("retry-call", () => runEscalation(this.env, firstId));
       if (retry !== null) finalId = retry.id;
     }
@@ -144,6 +154,24 @@ export interface CallCampaignResult {
 export const DEFAULT_MAX_ATTEMPTS = 4;
 
 /**
+ * Coerce a caller-supplied retry ceiling into a locally bounded, finite integer.
+ *
+ * `maxAttempts` arrives in the trigger payload, so it is untrusted input. As written it was used
+ * verbatim: a `NaN` made `index <= limit` never true, so the campaign silently stopped after the
+ * first rung, and an `Infinity` left the loop with no local bound at all (its only stop condition
+ * was the `escalated` status produced by `escalation.ts`). A safety ceiling has to bound the loop
+ * *here*, so anything that is not a finite number falls back to {@link DEFAULT_MAX_ATTEMPTS}, a
+ * negative request is treated as zero, and a finite request beyond the ladder's own length is
+ * clamped to it (the ladder escalates at attempt 4 regardless).
+ */
+function normaliseMaxAttempts(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) return DEFAULT_MAX_ATTEMPTS;
+  const whole = Math.floor(value);
+  if (whole < 0) return 0;
+  return Math.min(whole, DEFAULT_MAX_ATTEMPTS);
+}
+
+/**
  * Climb the escalation ladder durably, sleeping 15 minutes between rungs, and stop when the contact
  * escalates to the coordinator (or the attempt ceiling is reached).
  */
@@ -152,11 +180,11 @@ export class CallCampaignWorkflow extends WorkflowEntrypoint<CampaignEnv, CallCa
     let current = await step.do("first-contact", () => runEscalation(this.env, event.payload.contactId));
     let attempts = current === null ? 0 : current.attempt;
 
-    const limit = event.payload.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+    const limit = normaliseMaxAttempts(event.payload.maxAttempts);
     for (let index = 1; index <= limit; index += 1) {
       if (current === null || current.status === "escalated") break;
       const from = current.id;
-      await step.sleep("15 minutes");
+      await step.sleep(RETRY_SLEEP);
       current = await step.do(`escalation-${index}`, () => runEscalation(this.env, from));
       attempts = current?.attempt ?? attempts;
     }
