@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { fetchContacts, postPhoneReply } from "./api";
 import {
@@ -87,5 +89,56 @@ describe("phone api adapter (mock mode)", () => {
     expect(result.agent_reply_te.length).toBeGreaterThan(0);
     expect(result.agent_reply_en.length).toBeGreaterThan(0);
     expect((result.audio_base64 ?? "").startsWith("UklGR")).toBe(true);
+  });
+});
+
+describe("speech is user-initiated only", () => {
+  const root = join(__dirname, "..");
+
+  function sourceFiles(dir: string): string[] {
+    return readdirSync(dir).flatMap((name) => {
+      const path = join(dir, name);
+      if (statSync(path).isDirectory()) return sourceFiles(path);
+      return /\.(ts|tsx)$/.test(name) && !/\.test\./.test(name) ? [path] : [];
+    });
+  }
+
+  /**
+   * Regression guard for the bug where raising a request made the browser start
+   * talking. Nothing may call speechSynthesis.speak from an effect that runs on
+   * its own: every call site must sit in a handler the user triggered. This is
+   * checked at the source level because an effect firing on mount and a handler
+   * firing on click are indistinguishable from the outside until it is too late.
+   */
+  it("never calls speechSynthesis outside a user-triggered handler", () => {
+    const offenders: string[] = [];
+    for (const file of sourceFiles(root)) {
+      const text = readFileSync(file, "utf8");
+      if (!text.includes("speechSynthesis.speak")) continue;
+      // Strip comments so prose about the rule is not mistaken for a call.
+      const code = text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      for (const match of code.matchAll(/([\w.]*speechSynthesis\.speak)\s*\(/g)) {
+        const before = code.slice(0, match.index ?? 0);
+        // The call must be inside a function that is not an effect callback.
+        const enclosing = before.lastIndexOf("function ");
+        const effect = before.lastIndexOf("useEffect(");
+        const handler = before.lastIndexOf("function ") > -1;
+        if (!handler || effect > enclosing) {
+          offenders.push(`${file.slice(root.length + 1)}: ${match[1]}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("keeps the auto-speak effects out of the call surfaces", () => {
+    for (const relative of ["phone/AgentCall.tsx", "phone/SimulatedPhone.tsx"]) {
+      const text = readFileSync(join(root, relative), "utf8");
+      // A speak call inside a useEffect body means it can fire without a gesture.
+      const effectBodies = [...text.matchAll(/useEffect\(([\s\S]*?)\n  \}, \[/g)].map((m) => m[1] ?? "");
+      for (const body of effectBodies) {
+        expect(body.includes("speechSynthesis.speak"), `${relative} speaks from an effect`).toBe(false);
+      }
+    }
   });
 });

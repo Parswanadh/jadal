@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { demoReset } from "../api";
+import { contacts, demoReset } from "../api";
 import { api } from "./api";
 
 // Mock mode is the default (VITE_MOCK unset), so these run against the shared contract-validated mock.
@@ -105,5 +105,42 @@ describe("coordinator api adapter (mock mode)", () => {
     // The severity reaches the audit trail.
     const findings = (await api.audit()).findings;
     expect(findings.some((f) => /emergency level/i.test(f.text))).toBe(true);
+  });
+
+  it("reports what a decision dispatched for the farmer", async () => {
+    const pending = (await api.listRequests()).find((r) => !r.decision);
+    expect(pending).toBeDefined();
+    const res = await api.decideRequest(pending?.id ?? "", "approve", 90);
+    // The decision queues a call to the farmer, and the console says so.
+    expect(res.dispatched).toBe("voice");
+  });
+
+  it("offers the approved allocation: the granted volume and the farmer's turn window", async () => {
+    const pending = (await api.listRequests()).find((r) => !r.decision);
+    expect(pending).toBeDefined();
+    await api.decideRequest(pending?.id ?? "", "approve", 90);
+    const allocation = await api.allocationFor(pending?.farmerId ?? "");
+    expect(allocation).not.toBeNull();
+    // The volume is the one the coordinator approved, not the volume asked for.
+    expect(allocation?.volume_m3).toBe(90);
+    expect(Date.parse(allocation?.end ?? "")).toBeGreaterThan(Date.parse(allocation?.start ?? ""));
+  });
+
+  it("offers no allocation before anything is approved", async () => {
+    const approval = await api.allocationFor("f2");
+    expect(approval).toBeNull();
+  });
+
+  it("carries the allocation on the alert it sends", async () => {
+    const pending = (await api.listRequests()).find((r) => !r.decision);
+    await api.decideRequest(pending?.id ?? "", "approve", 90);
+    const allocation = await api.allocationFor(pending?.farmerId ?? "");
+    expect(allocation).not.toBeNull();
+    const res = await api.sendAlert(pending?.farmerId ?? "", "call", "info", undefined, allocation ?? undefined);
+    expect(res.simulated).toBe(true);
+    // The allocation reaches the call the farmer gets.
+    const queued = await contacts();
+    const call = queued.find((c) => c.farmer_id === pending?.farmerId && c.purpose === "request_update");
+    expect(call?.message_en).toContain("90 cubic metres");
   });
 });

@@ -236,7 +236,8 @@
     "askBody": "Ask the committee for extra water.",
     "askButton": "Ask for water",
     "noFarmerTitle": "No farmers to show yet",
-    "noFarmerBody": "Register a farmer first. The coordinator checks the registration before water is planned."
+    "noFarmerBody": "Register a farmer first. The coordinator checks the registration before water is planned.",
+    "checkAgain": "Check for approval again"
   },
   "register": {
     "title": "Register your land and crops",
@@ -304,7 +305,8 @@
     "errVolume": "Enter an amount of water more than 0.",
     "errReason": "Write a short reason.",
     "urgentCallNote": "An urgent request also asks the agent to call you.",
-    "callFailed": "The request was raised, but the agent call could not be queued."
+    "callFailed": "The request was raised, but the agent call could not be queued.",
+    "allocationLine": "You can use {m3} between {when}."
   },
   "pool": {
     "title": "Shared pool",
@@ -377,7 +379,12 @@
       "fromPool": "from the shared pool",
       "decidedTitle": "Already decided",
       "resultApproved": "Approved {m3}",
-      "resultRejected": "Said no"
+      "resultRejected": "Said no",
+      "decideFailed": "That decision could not be saved. Please try again.",
+      "dispatched": "The farmer was told by {channel}.",
+      "notDispatched": "Recorded. Nothing has been sent to the farmer yet. Use Alert this farmer to tell them.",
+      "refresh": "Check again",
+      "loading": "Checking for new requests…"
     },
     "ent": {
       "title": "Weekly water shares",
@@ -518,7 +525,17 @@
         "warning": "Warning",
         "urgent": "Urgent",
         "emergency": "Emergency"
-      }
+      },
+      "allocationLabel": "Tell them their allocation",
+      "allocationHelp": "The farmer hears how much water they have and when to use it. Both come from the approved request and their turn.",
+      "allocationVolume": "Water to use (m³)",
+      "allocationWindow": "Use it between",
+      "allocationNone": "No approved allocation for this farmer yet. Approve their request (or plan their turn) first.",
+      "allocationOn": "Include the allocation in this alert",
+      "allocationSummary": "{m3}, {when}",
+      "allocationUnavailable": "Loading the allocation…",
+      "allocationSend": "Send allocation",
+      "allocationSent": "Told {name} about {m3} to use {when}."
     }
   },
   "canal": {
