@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ROLE_HOME } from '../auth/RequireRole';
 import type { Role } from '../auth/session';
@@ -13,15 +13,18 @@ export default function LoginPage() {
   const { t } = useI18n();
   const { session, signIn } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [role, setRole] = useState<Role>('farmer');
   const [password, setPassword] = useState('');
   const [failed, setFailed] = useState(false);
 
-  // Already signed in: never show the form again.
-  if (session) return <Navigate to={ROLE_HOME[session.role]} replace />;
+  // Where the visitor was headed, when the guard sent them here.
+  const from = (location.state as { from?: string } | null)?.from ?? null;
+  const landing = (forRole: Role): string =>
+    from && from.startsWith(`/${forRole}`) ? from : ROLE_HOME[forRole];
 
-  const from = (location.state as { from?: string } | null)?.from;
+  // Already signed in: never show the form again. This also completes the
+  // sign-in below, so the intended screen (with its query) is not lost.
+  if (session) return <Navigate to={landing(session.role)} replace />;
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -31,8 +34,6 @@ export default function LoginPage() {
       return;
     }
     setFailed(false);
-    const intended = from && from.startsWith(`/${role}`) ? from : ROLE_HOME[role];
-    navigate(intended, { replace: true });
   }
 
   return (
