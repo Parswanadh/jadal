@@ -414,7 +414,8 @@ function stem(name) {
 
 function collectScopes(src) {
   const scopes = new Map();
-  const fnRe = /export\s+function\s+([A-Za-z0-9_]+)\s*\(/g;
+  // Non-exported builders (greetingTe, outletClauseTe, …) carry copy too, so `export` is optional.
+  const fnRe = /(?:export\s+)?function\s+([A-Za-z0-9_]+)\s*\(/g;
   let m;
   while ((m = fnRe.exec(src)) !== null) {
     const open = src.indexOf("{", m.index);
@@ -556,6 +557,35 @@ function voiceRows() {
 
   return rows;
 }
+
+/* ------------------------------------------------------------------ self-test */
+
+/** Prove the flag logic on synthetic inputs (no repo files read). */
+function selfTest() {
+  const cases = [
+    ["empty te", "", "Hello", false, ["empty_te"], []],
+    ["te == en", "Water", "Water", false, ["te_equals_en"], []],
+    ["latin not brand/unit", "Water point", "Water point", false, ["latin_not_brand_unit"], []],
+    ["brand/unit latin ok", "Jadal 180 m³", "Jadal 180 m³", false, [], ["latin_not_brand_unit"]],
+    ["i18n placeholder differ", "{a} water", "{b} water", false, ["placeholder_mismatch"], []],
+    ["i18n placeholders match", "{a} water", "{a} water", false, [], ["placeholder_mismatch"]],
+    ["voice slots match", "${a} నీరు", "${a} water", true, [], ["placeholder_mismatch"]],
+    ["voice slots differ", "${a} నీరు", "${a} ${b} water", true, ["placeholder_mismatch"], []],
+    ["clean telugu", "నీరు ఇక్కడ ఉంది", "Water is here", false, [], ["te_equals_en", "empty_te", "placeholder_mismatch"]],
+  ];
+  const has = (flag, name) => flag.split(";").some((f) => f === name || f.startsWith(`${name}(`));
+  let failed = 0;
+  for (const [label, te, en, isVoice, mustHave, mustNotHave] of cases) {
+    const got = autoFlag(te, en, isVoice);
+    const ok = mustHave.every((f) => has(got, f)) && mustNotHave.every((f) => !has(got, f));
+    if (!ok) failed++;
+    console.log(`${ok ? "PASS" : "FAIL"}  ${label}: auto_flag=${JSON.stringify(got)}`);
+  }
+  console.log(failed === 0 ? "self-test: all PASS" : `self-test: ${failed} FAIL`);
+  process.exit(failed === 0 ? 0 : 1);
+}
+
+if (process.argv.includes("--self-test")) selfTest();
 
 /* ------------------------------------------------------------------ main */
 
