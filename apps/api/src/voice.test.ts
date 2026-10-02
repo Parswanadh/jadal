@@ -44,21 +44,30 @@ import {
   rainTriggerMm,
 } from "./voice/openmeteo";
 import {
+  ALERT_SEVERITIES,
   CONTACT_PURPOSES,
   ackRecordedEn,
   ackRecordedTe,
+  alertEn,
+  alertTe,
   farmerGreeting,
   formatIstDate,
   formatIstTime,
   formatMillimetres,
   formatVolumeM3,
   isLikelyFemaleName,
+  nextTurnEn,
+  nextTurnTe,
   nightReleaseWarningEn,
   nightReleaseWarningTe,
   rainPostponedEn,
   rainPostponedTe,
   reminderEn,
   reminderTe,
+  requestApprovedEn,
+  requestApprovedTe,
+  requestRecordedEn,
+  requestRecordedTe,
   requestUpdateEn,
   requestUpdateTe,
   rosterChangeEn,
@@ -798,5 +807,86 @@ describe("templateForPurpose", () => {
     const pair = templateForPurpose("release_warning", FACTS);
     expect(pair.te).toBe(nightReleaseWarningTe(FACTS));
     expect(pair.en).toBe(nightReleaseWarningEn(FACTS));
+  });
+});
+
+describe("case study voice messages: en + te parity, placeholders, and seepage explanation", () => {
+  const TELUGU_FACTS: MessageFacts = {
+    farmerName: "రమణ",
+    windowStart: "2026-10-15T05:00:00Z",
+    windowEnd: "2026-10-15T07:30:00Z",
+    outletName: "ఔట్‌లెట్ 4",
+    chainageM: 3000,
+    allocatedM3: 180,
+    rainMm: 15,
+    leadHours: 12,
+    requestStatus: "approved",
+    requestVolumeM3: 120,
+    statusLabelTe: "ఆమోదించబడింది",
+  };
+
+  const ALL_BUILDERS: ReadonlyArray<readonly [string, (f: MessageFacts) => string, (f: MessageFacts) => string, boolean]> = [
+    ["rosterChange", rosterChangeTe, rosterChangeEn, true],
+    ["nightReleaseWarning", nightReleaseWarningTe, nightReleaseWarningEn, true],
+    ["rainPostponed", rainPostponedTe, rainPostponedEn, false],
+    ["requestUpdate", requestUpdateTe, requestUpdateEn, true],
+    ["reminder", reminderTe, reminderEn, true],
+    ["ackRecorded", ackRecordedTe, ackRecordedEn, false],
+    ["nextTurn", nextTurnTe, nextTurnEn, true],
+    ["requestApproved", requestApprovedTe, requestApprovedEn, true],
+    ["requestRecorded", requestRecordedTe, requestRecordedEn, false],
+    ...ALERT_SEVERITIES.map((s): [string, (f: MessageFacts) => string, (f: MessageFacts) => string, boolean] => [
+      `alert:${s}`,
+      (f) => alertTe(s, f),
+      (f) => alertEn(s, f),
+      true,
+    ]),
+  ];
+
+  it.each(ALL_BUILDERS)("%s produces non-empty en and te output with all placeholders substituted and no undefined or NaN", (_name, teFn, enFn) => {
+    for (const facts of [TELUGU_FACTS, {}]) {
+      const te = teFn(facts);
+      const en = enFn(facts);
+
+      expect(te.length).toBeGreaterThan(0);
+      expect(en.length).toBeGreaterThan(0);
+
+      expect(te).not.toContain("undefined");
+      expect(te).not.toContain("NaN");
+      expect(te).not.toContain("Invalid Date");
+
+      expect(en).not.toContain("undefined");
+      expect(en).not.toContain("NaN");
+      expect(en).not.toContain("Invalid Date");
+    }
+  });
+
+  it.each(ALL_BUILDERS)("%s Telugu output contains no Latin letters except allowed units and brand (m3, IST, Jadal)", (_name, teFn) => {
+    const te = teFn(TELUGU_FACTS);
+    // Strip allowed Latin units/brands: "m3", "m³", "IST", "Jadal"
+    const stripped = te.replace(/\b(m3|m³|IST|Jadal)\b/gi, "").replace(/IST/g, "").replace(/m3/g, "");
+    const latinMatch = stripped.match(/[A-Za-z]/);
+    expect(latinMatch).toBeNull();
+  });
+
+  it.each(ALL_BUILDERS.filter(([, , , supportsSeepage]) => supportsSeepage))("%s includes why longer turn sentence when isLongerTurn is true", (_name, teFn, enFn) => {
+    const factsWithLonger = { ...TELUGU_FACTS, isLongerTurn: true };
+    const te = teFn(factsWithLonger);
+    const en = enFn(factsWithLonger);
+
+    expect(te).toContain("దారిలో కొంత నీరు కాలువలో ఇంకిపోతుంది");
+    expect(te).toContain("చివరి పొలాలకు ఎక్కువ సమయం వంతు ఇస్తారు");
+
+    expect(en).toContain("Part of the water soaks into the canal on the way");
+    expect(en).toContain("tail farms get a longer turn");
+  });
+
+  it.each(ALL_BUILDERS.filter(([, , , supportsSeepage]))("%s omits why longer turn sentence when isLongerTurn is false or undefined", (_name, teFn, enFn) => {
+    const factsNormal = { ...TELUGU_FACTS, isLongerTurn: false };
+    const te = teFn(factsNormal);
+    const en = enFn(factsNormal);
+
+    expect(te).not.toContain("ఇంకిపోతుంది");
+    expect(en).not.toContain("soaks into the canal");
   });
 });
