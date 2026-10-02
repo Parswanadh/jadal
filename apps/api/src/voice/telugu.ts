@@ -474,6 +474,233 @@ export function farmerGreeting(name: string | undefined, lang: "te" | "en" = "te
     : `నమస్కారం ${addressed}, ఇది జడల్ కాలువ నుండి వచ్చిన కాల్.`;
 }
 
+/* ------------------------------------------------------------------ inbound call script */
+
+/**
+ * Opening line for a call the farmer *placed* to us.
+ *
+ * Distinct from {@link farmerGreeting}, which is the opening of a call the agent placed: that one says
+ * "this is a call from Jadal canal", which is wrong when the farmer dialled in. Here the agent is
+ * answering, so it names itself as the help desk and invites the problem.
+ */
+export function inboundGreetingTe(name?: string): string {
+  const addressed = vocative(name);
+  return addressed.length === 0
+    ? "నమస్కారం, ఇది జడల్ కాలువ సహాయ కేంద్రం. మీ నీటి సమస్యను చెప్పండి."
+    : `నమస్కారం ${addressed}, ఇది జడల్ కాలువ సహాయ కేంద్రం. మీ నీటి సమస్యను చెప్పండి.`;
+}
+
+export function inboundGreetingEn(name?: string): string {
+  const trimmed = name?.trim();
+  return trimmed === undefined || trimmed.length === 0
+    ? "Hello, this is the Jadal canal help desk. Tell us your water problem."
+    : `Hello ${trimmed}, this is the Jadal canal help desk. Tell us your water problem.`;
+}
+
+/**
+ * The keypad/voice prompt after the greeting: the two DTMF actions plus the invitation to speak.
+ *
+ * Extends `PROMPT_TE` in `../telephony/twiml` (which only offers the two keys) with the spoken option,
+ * because the inbound flow accepts a recorded reply as well as a keypress.
+ */
+export const INBOUND_PROMPT_TE =
+  "1 నొక్కండి మీ నీటి వంతు నిర్ధారించడానికి, 2 నొక్కండి అత్యవసర అభ్యర్థన కోసం. లేదా మాట్లాడి మీ సమస్యను చెప్పండి.";
+export const INBOUND_PROMPT_EN =
+  "Press 1 to confirm your water turn, press 2 for an urgent request. Or speak and tell us your problem.";
+
+/** Spoken immediately before `<Record>` so the farmer knows the beep starts the reply. */
+export const LISTEN_CUE_TE = "బీప్ శబ్దం తర్వాత మాట్లాడండి.";
+export const LISTEN_CUE_EN = "Please speak after the beep.";
+
+/** `15-10-2026 రోజు` / `on 15-10-2026`, or `""` without a parseable window start. */
+function dayClauseTe(facts: MessageFacts): string {
+  const date = formatIstDate(facts.windowStart);
+  return date.length === 0 ? "" : `${date} రోజు`;
+}
+
+function dayClauseEn(facts: MessageFacts): string {
+  const date = formatIstDate(facts.windowStart);
+  return date.length === 0 ? "" : `on ${date}`;
+}
+
+/**
+ * The farmer's next turn: **day**, **time window** and **volume in m³**, at the outlet.
+ *
+ * This is the message the agent must be able to speak on its own (task 2). The other templates carry
+ * the window and the volume but not the calendar day, which a farmer asking "when is my turn?" needs
+ * first; {@link formatIstDate} is the same day-first form the roster sheet and the WhatsApp thread use.
+ */
+export function nextTurnTe(facts: MessageFacts): string {
+  return join(
+    "జడల్: మీ తదుపరి నీటి వంతు వివరాలు.",
+    greetingTe(facts),
+    dayClauseTe(facts).length === 0 ? "" : `మీ విడుదల రోజు ${dayClauseTe(facts)}.`,
+    windowClauseTe(facts).length === 0 ? "" : `విడుదల సమయం ${windowClauseTe(facts)}.`,
+    outletClauseTe(facts),
+    volumeClauseTe(facts).length === 0 ? "" : `మీకు కేటాయించిన పరిమాణం ${volumeClauseTe(facts)}.`,
+    "దయచేసి సమయానికి సిద్ధంగా ఉండండి.",
+  );
+}
+
+export function nextTurnEn(facts: MessageFacts): string {
+  return join(
+    "Jadal: details of your next water turn.",
+    greetingEn(facts),
+    dayClauseEn(facts).length === 0 ? "" : `Your release day is ${dayClauseEn(facts)}.`,
+    windowClauseEn(facts).length === 0 ? "" : `The release window is ${windowClauseEn(facts)}.`,
+    outletClauseEn(facts),
+    volumeClauseEn(facts).length === 0 ? "" : `Your allocated volume is ${volumeClauseEn(facts)}.`,
+    "Please be ready on time.",
+  );
+}
+
+/**
+ * Confirmation that a raised urgent request has been **approved**, with the granted volume and, when
+ * known, the release day/window. Task 2's "confirmation of an approved urgent request".
+ */
+export function requestApprovedTe(facts: MessageFacts): string {
+  return join(
+    "జడల్: మీ అత్యవసర అభ్యర్థన ఆమోదించబడింది.",
+    greetingTe(facts),
+    facts.requestVolumeM3 === undefined ? "" : `మీకు ${formatVolumeM3(facts.requestVolumeM3)} ఘన మీటర్లు మంజూరు చేయబడ్డాయి.`,
+    dayClauseTe(facts).length === 0 ? "" : `విడుదల రోజు ${dayClauseTe(facts)}.`,
+    windowClauseTe(facts).length === 0 ? "" : `విడుదల సమయం ${windowClauseTe(facts)}.`,
+    outletClauseTe(facts),
+    "దయచేసి సమయానికి సిద్ధంగా ఉండండి.",
+  );
+}
+
+export function requestApprovedEn(facts: MessageFacts): string {
+  return join(
+    "Jadal: your urgent request has been approved.",
+    greetingEn(facts),
+    facts.requestVolumeM3 === undefined ? "" : `You have been granted ${formatVolumeM3(facts.requestVolumeM3)} cubic metres.`,
+    dayClauseEn(facts).length === 0 ? "" : `The release day is ${dayClauseEn(facts)}.`,
+    windowClauseEn(facts).length === 0 ? "" : `The release window is ${windowClauseEn(facts)}.`,
+    outletClauseEn(facts),
+    "Please be ready on time.",
+  );
+}
+
+/**
+ * Confirmation that an urgent request the farmer just raised (on this inbound call) is **recorded**.
+ *
+ * Deliberately weaker than {@link requestApprovedTe}: nothing has been decided yet, so it promises a
+ * callback rather than a release.
+ */
+export function requestRecordedTe(facts: MessageFacts): string {
+  return join(
+    "జడల్: మీ అత్యవసర అభ్యర్థన నమోదు చేయబడింది.",
+    greetingTe(facts),
+    facts.requestVolumeM3 === undefined ? "" : `మీరు అడిగిన పరిమాణం ${formatVolumeM3(facts.requestVolumeM3)} ఘన మీటర్లు.`,
+    outletClauseTe(facts),
+    "మా కాలువ కార్యాలయం త్వరలో మిమ్మల్ని సంప్రదిస్తుంది. ధన్యవాదాలు.",
+  );
+}
+
+export function requestRecordedEn(facts: MessageFacts): string {
+  return join(
+    "Jadal: your urgent request has been recorded.",
+    greetingEn(facts),
+    facts.requestVolumeM3 === undefined ? "" : `You asked for ${formatVolumeM3(facts.requestVolumeM3)} cubic metres.`,
+    outletClauseEn(facts),
+    "Our canal office will contact you shortly. Thank you.",
+  );
+}
+
+/* ------------------------------------------------------------------ severity alerts */
+
+/**
+ * Alert severity (task 2). Ordered least to most severe; the spoken prefix changes with it, so an
+ * "emergency" never sounds like an "info".
+ *
+ * `info` and `warning` close with "contact the canal office"; `urgent` and `emergency` close with the
+ * stronger "tell the canal office immediately", and `emergency` also opens with "this is an emergency".
+ */
+export type AlertSeverity = "info" | "warning" | "urgent" | "emergency";
+
+/** The severities, as a runtime array, in ascending severity. Used to validate and enumerate. */
+export const ALERT_SEVERITIES: readonly AlertSeverity[] = ["info", "warning", "urgent", "emergency"];
+
+/** Is this string one of {@link ALERT_SEVERITIES}? */
+export function isAlertSeverity(value: string): value is AlertSeverity {
+  return (ALERT_SEVERITIES as readonly string[]).includes(value);
+}
+
+const ALERT_LABEL_TE: Readonly<Record<AlertSeverity, string>> = {
+  info: "సమాచారం",
+  warning: "హెచ్చరిక",
+  urgent: "అత్యవసర హెచ్చరిక",
+  emergency: "అత్యవసరం",
+};
+
+const ALERT_LABEL_EN: Readonly<Record<AlertSeverity, string>> = {
+  info: "Information",
+  warning: "Warning",
+  urgent: "Urgent alert",
+  emergency: "Emergency",
+};
+
+/**
+ * A warning/alert message with a severity, carrying whatever facts are known.
+ *
+ * The severity is spoken, not just tagged, because a farmer on a bad line hears the label first and it
+ * is what tells them whether to walk to the field gate now.
+ */
+export function alertTe(severity: AlertSeverity, facts: MessageFacts): string {
+  const closing =
+    severity === "emergency"
+      ? "ఇది అత్యవసరం. వెంటనే మా కాలువ కార్యాలయానికి తెలియజేయండి."
+      : severity === "urgent"
+        ? "వెంటనే మా కాలువ కార్యాలయానికి తెలియజేయండి."
+        : "మా కాలువ కార్యాలయాన్ని సంప్రదించండి.";
+  return join(
+    `జడల్ ${ALERT_LABEL_TE[severity]}:`,
+    greetingTe(facts),
+    outletClauseTe(facts),
+    dayClauseTe(facts).length === 0 ? "" : `విడుదల రోజు ${dayClauseTe(facts)}.`,
+    windowClauseTe(facts).length === 0 ? "" : `విడుదల సమయం ${windowClauseTe(facts)}.`,
+    volumeClauseTe(facts).length === 0 ? "" : `మీకు ${volumeClauseTe(facts)} నీరు.`,
+    closing,
+  );
+}
+
+export function alertEn(severity: AlertSeverity, facts: MessageFacts): string {
+  const closing =
+    severity === "emergency"
+      ? "This is an emergency. Tell our canal office immediately."
+      : severity === "urgent"
+        ? "Tell our canal office immediately."
+        : "Contact our canal office.";
+  return join(
+    `Jadal ${ALERT_LABEL_EN[severity]}:`,
+    greetingEn(facts),
+    outletClauseEn(facts),
+    dayClauseEn(facts).length === 0 ? "" : `The release day is ${dayClauseEn(facts)}.`,
+    windowClauseEn(facts).length === 0 ? "" : `The release window is ${windowClauseEn(facts)}.`,
+    volumeClauseEn(facts).length === 0 ? "" : `${volumeClauseEn(facts)} of water for you.`,
+    closing,
+  );
+}
+
+/* ------------------------------------------------------------------ honest failures */
+
+/** Nothing transcribable arrived: say so rather than pretending the agent heard the farmer. */
+export const NOT_UNDERSTOOD_TE = "క్షమించండి, మీ మాటలు స్పష్టంగా వినిపించలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.";
+export const NOT_UNDERSTOOD_EN = "Sorry, we could not hear that clearly. Please try again.";
+
+/** The caller's number is not on the roster, so no request can be attributed to a farmer. */
+export const CALLER_UNKNOWN_TE = "క్షమించండి, ఈ ఫోన్ నంబర్ మా రికార్డులో లేదు. దయచేసి మా కాలువ కార్యాలయాన్ని సంప్రదించండి.";
+export const CALLER_UNKNOWN_EN = "Sorry, this phone number is not in our records. Please contact our canal office.";
+
+/** A release-time question with no turn facts to answer from: promise a callback, do not invent a time. */
+export const SCHEDULE_HOLD_TE = "జడల్: మీ విడుదల సమయం గురించి మా కార్యాలయం త్వరలో మిమ్మల్ని సంప్రదిస్తుంది.";
+export const SCHEDULE_HOLD_EN = "Jadal: our office will contact you shortly about your release time.";
+
+/** The request could not be written: say so, rather than confirming a request that was never raised. */
+export const REQUEST_FAILED_TE = "క్షమించండి, మీ అభ్యర్థనను నమోదు చేయలేకపోయాము. దయచేసి మళ్లీ ప్రయత్నించండి.";
+export const REQUEST_FAILED_EN = "Sorry, we could not record your request. Please try again.";
+
 /* ------------------------------------------------------------------ purpose dispatcher */
 
 /** `Contact["purpose"]` — imported from the contract so this dispatcher cannot drift from it. */
