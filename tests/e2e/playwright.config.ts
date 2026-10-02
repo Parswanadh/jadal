@@ -28,6 +28,21 @@ export const E2E_LIVE_BASE_URL = `http://127.0.0.1:${E2E_LIVE_PORT}`;
 export const E2E_LIVE_UI_PORT = 5178;
 export const E2E_LIVE_UI_BASE_URL = `http://127.0.0.1:${E2E_LIVE_UI_PORT}`;
 
+/**
+ * The Worker the `live-ui` project drives, on its own port.
+ *
+ * Deliberately *not* 8788. That port belongs to the `live` project and to every developer
+ * working in this worktree, and a second `wrangler dev` on it loses the bind and dies —
+ * which showed up here as a mid-suite `SIGTERM` and a 500 from `/api/requests`. Giving the
+ * UI suite its own Worker, with its own D1, makes it independent of whoever else restarts
+ * 8788, and the fix is a port plus a proxy target rather than a retry.
+ *
+ * The local D1 is still the shared one under apps/api/.wrangler/state, so this is a
+ * separate *server*, not a separate database: the suite's own `demo/reset` owns its rows.
+ */
+export const E2E_LIVE_UI_API_PORT = 8790;
+export const E2E_LIVE_UI_API_BASE_URL = `http://127.0.0.1:${E2E_LIVE_UI_API_PORT}`;
+
 const LIVE = process.env.E2E_LIVE === '1';
 
 const webServers = LIVE
@@ -46,11 +61,25 @@ const webServers = LIVE
         stderr: 'pipe' as const,
       },
       {
+        // The UI suite's own Worker, so a restart of 8788 by anyone else cannot kill a run.
+        // The flags mirror `api`'s `dev:live` script exactly, except for the port. `wrangler`
+        // is invoked directly rather than through that script because the script hardcodes
+        // `--port 8788` and a second `--port` is rejected — and apps/api is another lane's
+        // scope, so the script is not ours to change.
+        command: `pnpm --filter api exec wrangler dev --local --port ${E2E_LIVE_UI_API_PORT} --ip 127.0.0.1 --assets ./test/live-assets --compatibility-date 2026-07-29 --var DEMO_MODE:1 --var ENVIRONMENT:development --var SKIP_TWILIO_SIGNATURE:1`,
+        cwd: path.resolve(__dirname, '../..'),
+        url: `${E2E_LIVE_UI_API_BASE_URL}/api/health`,
+        reuseExistingServer: false,
+        timeout: 120_000,
+        stdout: 'pipe' as const,
+        stderr: 'pipe' as const,
+      },
+      {
         // The `live-ui` project drives the real coordinator console against the live Worker:
         // VITE_MOCK=0 with no VITE_API_BASE, so the app calls same-origin `/api/*` and Vite's
-        // dev proxy forwards to 8788. This is what proves the *UI* reaches the live API — the
-        // `live` project exercises the API with no browser at all.
-        command: `VITE_MOCK=0 pnpm --filter web dev --port ${E2E_LIVE_UI_PORT} --strictPort`,
+        // dev proxy forwards to the Worker above. This is what proves the *UI* reaches the live
+        // API — the `live` project exercises the API with no browser at all.
+        command: `VITE_MOCK=0 VITE_API_PROXY_TARGET=${E2E_LIVE_UI_API_BASE_URL} pnpm --filter web dev --port ${E2E_LIVE_UI_PORT} --strictPort`,
         cwd: path.resolve(__dirname, '../..'),
         url: E2E_LIVE_UI_BASE_URL,
         reuseExistingServer: !process.env.CI,
