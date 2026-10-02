@@ -144,7 +144,7 @@
       top: 154px;
       left: 72px;
       width: 1776px;
-      height: 400px;
+      height: 404px;
       padding: 20px 32px;
     }
 
@@ -229,13 +229,13 @@
 
     .canal-svg-container {
       width: 100%;
-      height: 270px;
+      height: 276px;
       position: relative;
     }
 
     /* Beat 2: Comparison Panel */
     #comparison-panel {
-      top: 576px;
+      top: 578px;
       left: 72px;
       width: 1776px;
       height: 440px;
@@ -515,7 +515,7 @@
         </div>
 
         <div style="font-family: var(--font-mono); font-size: 13px; color: var(--muted);">
-          Unlined Canal &middot; Gravity Flow
+          Unlined Earthen Canal &middot; Gravity Conveyance
         </div>
 
         <!-- Tail Callout -->
@@ -528,7 +528,7 @@
 
       <!-- SVG Canal Flow Schematic -->
       <div class="canal-svg-container">
-        <svg id="canal-svg" viewBox="0 0 1712 270" width="100%" height="270" preserveAspectRatio="none">
+        <svg id="canal-svg" viewBox="0 0 1712 276" width="100%" height="276" preserveAspectRatio="none">
           <defs>
             <linearGradient id="canalGradient" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stop-color="#4e7a96" />
@@ -540,21 +540,21 @@
             </pattern>
 
             <g id="drop-shape">
-              <path d="M 0 0 C -4 5, -4 9, 0 13 C 4 9, 4 5, 0 0 Z" />
+              <path d="M 0 0 C -4 6, -4 10, 0 14 C 4 10, 4 6, 0 0 Z" />
             </g>
           </defs>
 
           <!-- Soil Substratum Layer (Unlined Canal Bed) -->
-          <rect x="50" y="80" width="1612" height="130" fill="url(#soilPattern)" opacity="0.75" rx="8" />
-          <text x="60" y="195" font-family="IBM Plex Mono" font-size="12" fill="#73716a" font-weight="500">Unlined earthen bed &mdash; continuous seepage loss along 3 km</text>
+          <rect x="50" y="80" width="1612" height="145" fill="url(#soilPattern)" opacity="0.75" rx="8" />
+          <text x="60" y="210" font-family="IBM Plex Mono" font-size="12" fill="#73716a" font-weight="500">Unlined earthen bed &mdash; continuous seepage loss along 3 km</text>
 
           <!-- Ruler / Distance Guideline -->
-          <line x1="80" y1="175" x2="1632" y2="175" stroke="#d5d0c2" stroke-width="1.5" stroke-dasharray="4 4" />
-          <circle cx="80" cy="175" r="3" fill="#73716a" />
-          <circle cx="1632" cy="175" r="3" fill="#73716a" />
-          <text x="80" y="165" font-family="IBM Plex Mono" font-size="12" fill="#73716a">0 km (Head)</text>
-          <text x="856" y="165" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#73716a">3 km Unlined Reach</text>
-          <text x="1632" y="165" text-anchor="end" font-family="IBM Plex Mono" font-size="12" fill="#73716a">3 km (Tail)</text>
+          <line x1="80" y1="235" x2="1632" y2="235" stroke="#d5d0c2" stroke-width="1.5" stroke-dasharray="4 4" />
+          <circle cx="80" cy="235" r="3" fill="#73716a" />
+          <circle cx="1632" cy="235" r="3" fill="#73716a" />
+          <text x="80" y="250" font-family="IBM Plex Mono" font-size="12" fill="#73716a">0 km (Head)</text>
+          <text x="856" y="250" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#73716a">3 km Unlined Reach</text>
+          <text x="1632" y="250" text-anchor="end" font-family="IBM Plex Mono" font-size="12" fill="#73716a">3 km (Tail)</text>
 
           <!-- Canal Banks Outer Outline (Earthen Profile) -->
           <path id="canal-banks" d="
@@ -645,22 +645,23 @@
             </g>
           </g>
 
-          <!-- Seepage Droplets Leaking Out Along Canal Bed -->
+          <!-- Seepage Droplets Leaking Out Along Canal Bed into Soil -->
+          <!-- Using wrapped slot groups so GSAP animates inner drop relative to (x, y) -->
           <g id="seepage-droplets">
-            <g class="seepage-drop" id="drop-1" transform="translate(200, 110)"><use href="#drop-shape"/></g>
-            <g class="seepage-drop" id="drop-2" transform="translate(270, 108)"><use href="#drop-shape"/></g>
-            <g class="seepage-drop" id="drop-3" transform="translate(410, 106)"><use href="#drop-shape"/></g>
-            <g class="seepage-drop" id="drop-4" transform="translate(480, 104)"><use href="#drop-shape"/></g>
-            <g class="seepage-drop" id="drop-5" transform="translate(620, 102)"><use href="#drop-shape"/></g>
-            <g class="seepage-drop" id="drop-6" transform="translate(690, 100)"><use href="#drop-shape"/></g>
-            <g class="seepage-drop" id="drop-7" transform="translate(830, 98)"><use href="#drop-shape"/></g>
-            <g class="seepage-drop" id="drop-8" transform="translate(900, 96)"><use href="#drop-shape"/></g>
-            <g class="seepage-drop" id="drop-9" transform="translate(1040, 94)"><use href="#drop-shape"/></g>
-            <g class="seepage-drop" id="drop-10" transform="translate(1110, 92)"><use href="#drop-shape"/></g>
-            <g class="seepage-drop" id="drop-11" transform="translate(1250, 91)"><use href="#drop-shape"/></g>
-            <g class="seepage-drop" id="drop-12" transform="translate(1320, 90)"><use href="#drop-shape"/></g>
-            <g class="seepage-drop" id="drop-13" transform="translate(1470, 89)"><use href="#drop-shape"/></g>
-            <g class="seepage-drop" id="drop-14" transform="translate(1540, 89)"><use href="#drop-shape"/></g>
+            <g class="drop-slot" transform="translate(180, 114)"><g class="seepage-drop" id="drop-1"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(260, 112)"><g class="seepage-drop" id="drop-2"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(380, 110)"><g class="seepage-drop" id="drop-3"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(470, 108)"><g class="seepage-drop" id="drop-4"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(600, 107)"><g class="seepage-drop" id="drop-5"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(680, 105)"><g class="seepage-drop" id="drop-6"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(810, 104)"><g class="seepage-drop" id="drop-7"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(900, 103)"><g class="seepage-drop" id="drop-8"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(1030, 102)"><g class="seepage-drop" id="drop-9"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(1110, 101)"><g class="seepage-drop" id="drop-10"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(1240, 100)"><g class="seepage-drop" id="drop-11"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(1330, 99)"><g class="seepage-drop" id="drop-12"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(1460, 98)"><g class="seepage-drop" id="drop-13"><use href="#drop-shape"/></g></g>
+            <g class="drop-slot" transform="translate(1540, 97)"><g class="seepage-drop" id="drop-14"><use href="#drop-shape"/></g></g>
           </g>
         </svg>
       </div>
@@ -867,36 +868,36 @@
     // 2.4s - 3.2s: Head Metric Callout enters (0.145 m3/s, 3.5% loss)
     tl.fromTo("#head-callout",
       { opacity: 0, scale: 0.95 },
-      { opacity: 1, scale: 1, duration: 0.6, ease: "power2.out" },
+      { opacity: 1, scale: 1, duration: 0.6, ease: "power2.out" }, 
       2.4
     );
 
     // 3.2s - 4.0s: Tail Metric Callout enters (0.106 m3/s, 29.4% loss)
     tl.fromTo("#tail-callout",
       { opacity: 0, scale: 0.95 },
-      { opacity: 1, scale: 1, duration: 0.6, ease: "power2.out" },
+      { opacity: 1, scale: 1, duration: 0.6, ease: "power2.out" }, 
       3.2
     );
 
-    // 3.8s - 7.2s: Seepage droplets leaking out through unlined bed (repeating deterministically)
+    // 3.8s - 7.2s: Seepage droplets leaking out into soil stratum beneath unlined bed
     const drops = document.querySelectorAll(".seepage-drop");
     drops.forEach((drop, index) => {
-      const startTime = 3.8 + (index % 5) * 0.35 + Math.floor(index / 5) * 0.15;
-      // Cycle 1
+      const startTime = 3.6 + (index % 5) * 0.35 + Math.floor(index / 5) * 0.15;
+      // Cycle 1: leak down from bed into soil
       tl.fromTo(drop,
-        { opacity: 0, y: 0, scale: 0.5 },
-        { opacity: 0.9, y: 22, scale: 1.1, duration: 0.8, ease: "power1.in" },
+        { opacity: 0, y: 0, scale: 0.6 },
+        { opacity: 0.85, y: 32, scale: 1.1, duration: 0.9, ease: "power1.in" },
         startTime
       );
-      tl.to(drop, { opacity: 0, y: 38, duration: 0.4, ease: "power1.out" }, startTime + 0.8);
+      tl.to(drop, { opacity: 0, y: 52, duration: 0.35, ease: "power1.out" }, startTime + 0.9);
 
-      // Cycle 2
+      // Cycle 2: second droplet
       tl.fromTo(drop,
-        { opacity: 0, y: 0, scale: 0.5 },
-        { opacity: 0.9, y: 22, scale: 1.1, duration: 0.8, ease: "power1.in" },
-        startTime + 1.3
+        { opacity: 0, y: 0, scale: 0.6 },
+        { opacity: 0.85, y: 32, scale: 1.1, duration: 0.9, ease: "power1.in" },
+        startTime + 1.35
       );
-      tl.to(drop, { opacity: 0, y: 38, duration: 0.4, ease: "power1.out" }, startTime + 2.1);
+      tl.to(drop, { opacity: 0, y: 52, duration: 0.35, ease: "power1.out" }, startTime + 2.25);
     });
 
     // Beat 2: Comparison between Equal Hours and Equal Volume (7.5s - 14.0s)
@@ -909,7 +910,7 @@
     turnBars.forEach((barId, i) => {
       tl.fromTo(barId,
         { height: 0 },
-        { height: 50, duration: 0.6, ease: "power2.out" },
+        { height: 48, duration: 0.6, ease: "power2.out" },
         7.5 + (i * 0.08)
       );
     });
@@ -938,8 +939,8 @@
 
     // 10.5s - 12.8s: Equal Volume transformation
     // Turn durations adapt: Outlet 1 remains base turn, Outlets 2 to 8 lengthen progressively
-    // Outlet 8 reaches 120px (longer tail bar)
-    const volumeHeights = [45, 50, 56, 64, 74, 86, 102, 122];
+    // Outlet 8 reaches 125px (tail turn bar significantly longer)
+    const volumeHeights = [44, 49, 55, 63, 73, 86, 102, 125];
     turnBars.forEach((barId, i) => {
       tl.to(barId, {
         height: volumeHeights[i],
