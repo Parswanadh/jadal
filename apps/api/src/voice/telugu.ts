@@ -55,6 +55,10 @@ export interface MessageFacts {
   readonly requestVolumeM3?: number;
   /** Free-text status shown to the farmer, e.g. `rejected` in their language. */
   readonly statusLabelTe?: string;
+  /** True when this turn is sized longer than equal hours to compensate for seepage losses down the canal. */
+  readonly isLongerTurn?: boolean;
+  /** Alias for isLongerTurn. */
+  readonly isLongerThanBaseline?: boolean;
 }
 
 /** A message in both languages. Matches the `message_te` / `message_en` pair on `Contact`. */
