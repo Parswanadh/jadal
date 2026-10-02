@@ -184,9 +184,12 @@ describe("demo script end-to-end acceptance", () => {
     );
     expect(rosterApproved).toEqual({ ok: true, contacts_queued: 8 });
 
-    const queuedContacts = routes.contacts.response.parse(
-      expectOk(await call(api, "GET", routes.contacts.path, { env })),
-    );
+    const queuedContacts = routes.contacts.response
+      .parse(expectOk(await call(api, "GET", routes.contacts.path, { env })))
+      // Task B: an approved request now also phones the farmer their allocation, and that call is
+      // audited as a `request_update` contact. It is not a roster contact, so it is filtered out
+      // here rather than counted — see the dedicated assertions right after.
+      .filter((contact) => contact.purpose === "roster_change");
     expect(queuedContacts.length).toBe(rosterApproved.contacts_queued);
     for (const contact of queuedContacts) {
       expect(contact.purpose).toBe("roster_change");
@@ -205,10 +208,19 @@ describe("demo script end-to-end acceptance", () => {
       expect(reply.agent_reply_en.length).toBeGreaterThan(0);
     }
 
-    const acknowledged = routes.contacts.response.parse(
-      expectOk(await call(api, "GET", routes.contacts.path, { env })),
-    );
+    const acknowledged = routes.contacts.response
+      .parse(expectOk(await call(api, "GET", routes.contacts.path, { env })))
+      .filter((contact) => contact.purpose === "roster_change");
     for (const contact of acknowledged) expect(contact.status).toBe("acknowledged");
+
+    // The allocation call for f1's approved urgent request was dispatched through the same offline
+    // path: no Twilio env means `{ simulated: true }`, so no real call and nothing fetched.
+    const allocationCalls = routes.contacts.response
+      .parse(expectOk(await call(api, "GET", routes.contacts.path, { env })))
+      .filter((contact) => contact.purpose === "request_update");
+    expect(allocationCalls.length).toBe(1);
+    expect(allocationCalls[0]?.farmer_id).toBe("f1");
+    expect(allocationCalls[0]?.message_en).toContain(`${URGENT_M3} cubic metres`);
 
     /* ------------------------------------------ step 4: advance to one hour before rw2 (19:00 IST) */
 
