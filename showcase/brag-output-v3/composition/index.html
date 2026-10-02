@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Jadal — Canal water shared by volume, not by hours</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      :root {
+        --bg: #faf9f5;
+        --surface: #ffffff;
+        --surface-alt: #f3f1ea;
+        --ink: #1f1e1d;
+        --muted: #5c5850;
+        --rule: #dedad0;
+        --rule-strong: #c8c3b7;
+        --clay: #c96442;
+        --clay-subtle: #fbeee9;
+        --water: #245373;
+        --water-tint: #e4eef5;
+        --ok: #235817;
+        --ok-tint: #eaf3e6;
+        --font-serif: "Source Serif 4", Georgia, serif;
+        --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        --font-te: "Noto Sans Telugu", "IBM Plex Sans", sans-serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+      }
+      html, body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+      }
+      #root {
+        width: 1920px;
+        height: 1080px;
+        position: relative;
+        overflow: hidden;
+        background: var(--bg);
+      }
+
+      /* Base Scene Setup */
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        padding: 60px 90px 180px 90px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* Badges & Pills (Min 28px) */
+      .badge-row {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-family: var(--font-mono);
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--clay);
+        background: var(--clay-subtle);
+        border: 2px solid #d47b5f;
+        padding: 10px 24px;
+        border-radius: 999px;
+      }
+      .badge-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--clay);
+      }
+      .badge-water {
+        color: var(--water);
+        background: var(--water-tint);
+        border-color: #89b3d0;
+      }
+      .badge-water .badge-dot {
+        background: var(--water);
+      }
+      .badge-ok {
+        color: var(--ok);
+        background: var(--ok-tint);
+        border-color: #72ab63;
+      }
+      .badge-ok .badge-dot {
+        background: var(--ok);
+      }
+
+      /* Large Video Headlines (Min 64px) */
+      .headline {
+        font-family: var(--font-serif);
+        font-size: 72px;
+        font-weight: 700;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+        color: var(--ink);
+      }
+      .headline-accent {
+        color: var(--clay);
+      }
+      .headline-water {
+        color: var(--water);
+      }
+
+      /* Body Text & Subtitles (Min 36px) */
+      .body-sub {
+        font-size: 38px;
+        line-height: 1.35;
+        color: var(--muted);
+        font-weight: 500;
+      }
+
+      /* Cards & Frames */
+      .card {
+        background: var(--surface);
+        border: 2px solid var(--rule);
+        border-radius: 24px;
+        padding: 36px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
+      }
+
+      /* Burned-in High-Contrast Captions (Min 36px) */
+      #caption-container {
+        position: absolute;
+        bottom: 30px;
+        left: 80px;
+        right: 80px;
+        z-index: 1000;
+        background: rgba(22, 24, 28, 0.94);
+        border: 2px solid rgba(255, 255, 255, 0.25);
+        border-radius: 24px;
+        padding: 20px 40px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(12px);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        text-align: center;
+      }
+      #caption-en {
+        font-family: var(--font-sans);
+        font-size: 38px;
+        font-weight: 600;
+        line-height: 1.25;
+        color: #ffffff;
+      }
+      #caption-te {
+        font-family: var(--font-te);
+        font-size: 32px;
+        font-weight: 500;
+        line-height: 1.3;
+        color: #f7d6a5;
+      }
+
+      /* Scene 1: Hook */
+      .hero-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 50px;
+        align-items: center;
+        margin-top: 20px;
+      }
+      .hero-img-wrap {
+        border-radius: 20px;
+        overflow: hidden;
+        border: 3px solid var(--rule-strong);
+        box-shadow: 0 20px 50px rgba(0,0,0,0.12);
+        background: #fff;
+        height: 480px;
+        position: relative;
+      }
+      .hero-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top;
+      }
+
+      /* Scene 2: Seepage */
+      .seepage-layout {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 40px;
+        align-items: center;
+        margin-top: 15px;
+      }
+      .video-crop-card {
+        height: 470px;
+        border-radius: 24px;
+        overflow: hidden;
+        border: 2px solid var(--rule);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        background: #ffffff;
+        position: relative;
+      }
+      /* Crop strictly to the top ribbon to forbid lower need-met bars */
+      .cropped-canal-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: 50% 12%;
+        transform: scale(1.02);
+      }
+      .flow-metrics-col {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .metric-box {
+        background: var(--surface);
+        border: 2px solid var(--rule);
+        border-radius: 20px;
+        padding: 24px 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .metric-box-head {
+        border-left: 8px solid var(--water);
+      }
+      .metric-box-tail {
+        border-left: 8px solid var(--clay);
+        background: #fdfaf8;
+      }
+      .metric-title {
+        font-family: var(--font-mono);
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .metric-val {
+        font-family: var(--font-mono);
+        font-size: 54px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .metric-val-tail {
+        color: var(--clay);
+      }
+      .metric-loss {
+        font-size: 32px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .metric-loss-tail {
+        color: var(--clay);
+      }
+
+      /* Scene 3: Equal Hours vs Equal Volume */
+      .comparison-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-top: 20px;
+      }
+      .compare-card {
+        background: #ffffff;
+        border: 2px solid var(--rule);
+        border-radius: 24px;
+        padding: 36px;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+      .compare-card-active {
+        border-color: var(--water);
+        box-shadow: 0 12px 40px rgba(36, 83, 115, 0.12);
+      }
+      .compare-header {
+        font-family: var(--font-serif);
+        font-size: 46px;
+        font-weight: 700;
+      }
+      .turn-row {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .turn-row-label {
+        font-family: var(--font-mono);
+        font-size: 30px;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .turn-track {
+        height: 60px;
+        background: var(--surface-alt);
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+        border: 2px solid var(--rule);
+      }
+      .turn-fill {
+        height: 100%;
+        background: var(--water);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 20px;
+        color: #fff;
+        font-family: var(--font-mono);
+        font-size: 28px;
+        font-weight: 600;
+      }
+      .turn-fill-tail-equal {
+        width: 50%;
+        background: var(--clay);
+      }
+      .turn-fill-tail-volume {
+        width: 50%;
+        background: var(--water);
+      }
+      .formula-badge {
+        font-family: var(--font-mono);
+        font-size: 32px;
+        font-weight: 600;
+        color: var(--water);
+        background: var(--water-tint);
+        padding: 16px 24px;
+        border-radius: 16px;
+        text-align: center;
+        border: 1px solid #89b3d0;
+      }
+
+      /* Scene 4: Real Footage & Triad */
+      .triad-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        align-items: center;
+        margin-top: 15px;
+      }
+      .footage-frame {
+        border-radius: 24px;
+        overflow: hidden;
+        border: 3px solid var(--rule-strong);
+        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.1);
+        height: 480px;
+        background: #fff;
+        position: relative;
+      }
+      .footage-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top;
+      }
+      .triad-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .triad-card {
+        background: var(--surface);
+        border: 2px solid var(--rule);
+        border-radius: 20px;
+        padding: 24px 30px;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+      .triad-num {
+        font-family: var(--font-mono);
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--clay);
+        background: var(--clay-subtle);
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .triad-text h3 {
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .triad-text p {
+        font-size: 30px;
+        color: var(--muted);
+      }
+
+      /* Scene 5: Voice & Ledger */
+      .voice-ledger-layout {
+        display: grid;
+        grid-template-columns: 0.8fr 1.2fr;
+        gap: 40px;
+        align-items: center;
+        margin-top: 15px;
+      }
+      .phone-frame {
+        height: 480px;
+        border-radius: 24px;
+        overflow: hidden;
+        border: 3px solid var(--rule-strong);
+        box-shadow: 0 14px 40px rgba(0,0,0,0.1);
+        background: #fff;
+      }
+      .phone-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top center;
+      }
+      .ledger-card {
+        background: #ffffff;
+        border: 2px solid var(--rule);
+        border-radius: 24px;
+        padding: 36px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+      }
+      .ledger-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .ledger-title {
+        font-family: var(--font-serif);
+        font-size: 42px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .ledger-balance-pill {
+        font-family: var(--font-mono);
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--ok);
+        background: var(--ok-tint);
+        padding: 8px 20px;
+        border-radius: 999px;
+        border: 1px solid #72ab63;
+      }
+      .ledger-statement {
+        background: var(--surface-alt);
+        border-radius: 18px;
+        padding: 24px 30px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        border: 2px solid var(--rule);
+      }
+      .ledger-col {
+        text-align: center;
+      }
+      .ledger-col-label {
+        font-family: var(--font-mono);
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .ledger-col-val {
+        font-size: 44px;
+        font-weight: 700;
+        color: var(--ink);
+        margin-top: 4px;
+      }
+      .ledger-equal-sign {
+        font-size: 54px;
+        font-weight: 700;
+        color: var(--ok);
+      }
+      .ledger-bullets {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .ledger-bullet {
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--ink);
+        background: #fdfdfc;
+        border: 1px solid var(--rule);
+        padding: 12px 20px;
+        border-radius: 14px;
+        flex: 1;
+        text-align: center;
+      }
+
+      /* Scene 6: Outro */
+      .outro-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        height: 100%;
+        gap: 36px;
+        margin-top: 40px;
+      }
+      .brand-title {
+        font-family: var(--font-serif);
+        font-size: 110px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.03em;
+        color: var(--ink);
+      }
+      .brand-subtitle {
+        font-size: 46px;
+        color: var(--muted);
+        font-weight: 500;
+        max-width: 1400px;
+      }
+      .outro-badges {
+        display: flex;
+        gap: 24px;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-width="1920" data-height="1080">
+      
+      <!-- Scene 1: The Hook (0.0s – 8.0s) -->
+      <section id="scene-1" class="scene">
+        <div class="badge-row">
+          <div class="badge">
+            <span class="badge-dot"></span>
+            Kondaveedu Minor &middot; 3 km Reach
+          </div>
+          <div class="badge badge-water">
+            <span class="badge-dot"></span>
+            Unlined Earthen Canal
+          </div>
+        </div>
+
+        <div class="hero-layout">
+          <div>
+            <h1 class="headline" style="margin-bottom: 24px;">
+              Everyone got their hours.<br />
+              <span class="headline-accent">The tail still lost the crop.</span>
+            </h1>
+            <p class="body-sub">
+              Hours are not water. Open channels lose flow continuously to seepage before water reaches the tail.
+            </p>
+          </div>
+          <div class="hero-img-wrap" id="hero-img-box">
+            <img src="assets/images/home.png" alt="Jadal Interface" class="hero-img" id="hero-img" />
+          </div>
+        </div>
+
+        <div><!-- Spacer --></div>
+      </section>
+
+      <!-- Scene 2: Canal Seepage Physics (8.0s – 18.0s) -->
+      <section id="scene-2" class="scene">
+        <div class="badge-row">
+          <div class="badge badge-water">
+            <span class="badge-dot"></span>
+            Deterministic Hydraulics
+          </div>
+          <div class="badge">
+            <span class="badge-dot"></span>
+            Continuous Seepage Loss
+          </div>
+        </div>
+
+        <div>
+          <h2 class="headline" style="font-size: 64px; margin-bottom: 12px;">
+            Canal Seepage: Flow Tapers Over 3 km
+          </h2>
+          <p class="body-sub">
+            Manning open-channel conveyance loses physical discharge from head to tail.
+          </p>
+        </div>
+
+        <div class="seepage-layout">
+          <!-- Real app footage: canal ribbon video cropped to top ribbon card only -->
+          <div class="video-crop-card" id="video-card">
+            <video
+              id="canal-video"
+              src="assets/video/canal-seepage.webm"
+              class="cropped-canal-video"
+              data-start="8.0"
+              data-duration="10.0"
+              autoplay
+              loop
+              muted
+              playsinline
+            ></video>
+          </div>
+
+          <!-- Allowed flow metrics from facts.md rows 8, 9, 11, 12 -->
+          <div class="flow-metrics-col" id="metrics-col">
+            <div class="metric-box metric-box-head">
+              <div>
+                <div class="metric-title">HEAD &middot; OUTLET 1 (300 m)</div>
+                <div class="metric-val">0.145 m&sup3;/s</div>
+              </div>
+              <div class="metric-loss">3.5% Loss</div>
+            </div>
+
+            <div class="metric-box metric-box-tail">
+              <div>
+                <div class="metric-title">TAIL &middot; OUTLET 8 (2900 m)</div>
+                <div class="metric-val metric-val-tail">0.106 m&sup3;/s</div>
+              </div>
+              <div class="metric-loss-tail metric-loss">29.4% Loss</div>
+            </div>
+
+            <div class="formula-badge">
+              Manning Velocity: v = (1/n) R^(2/3) S^(1/2) &middot; Q(x) = Q₀ e^(-kx)
+            </div>
+          </div>
+        </div>
+
+        <div><!-- Spacer --></div>
+      </section>
+
+      <!-- Scene 3: Equal Hours vs Equal Volume (18.0s – 28.0s) -->
+      <section id="scene-3" class="scene">
+        <div class="badge-row">
+          <div class="badge badge-water">
+            <span class="badge-dot"></span>
+            Equal Volume Allocation
+          </div>
+          <div class="badge">
+            <span class="badge-dot"></span>
+            Roster Formulation
+          </div>
+        </div>
+
+        <div>
+          <h2 class="headline" style="font-size: 64px; margin-bottom: 12px;">
+            Equal Hours vs Equal Volume
+          </h2>
+          <p class="body-sub">
+            Equal time delivers unequal water. Equal volume requires the tail turn to run longer.
+          </p>
+        </div>
+
+        <div class="comparison-grid">
+          <!-- Model 1: Equal Hours -->
+          <div class="compare-card" id="card-equal-hours">
+            <div class="compare-header" style="color: var(--clay);">Equal Hours Model</div>
+            <div class="turn-row">
+              <div class="turn-row-label">Head Outlet 1 Turn Duration</div>
+              <div class="turn-track">
+                <div class="turn-fill" style="width: 50%;">same time</div>
+              </div>
+            </div>
+            <div class="turn-row">
+              <div class="turn-row-label">Tail Outlet 8 Turn Duration</div>
+              <div class="turn-track">
+                <div class="turn-fill turn-fill-tail-equal">same time</div>
+              </div>
+            </div>
+            <p style="font-size: 32px; color: var(--clay); font-weight: 600;">
+              Result: Tail crop is starved by 29.4% seepage loss.
+            </p>
+          </div>
+
+          <!-- Model 2: Equal Volume -->
+          <div class="compare-card compare-card-active" id="card-equal-volume">
+            <div class="compare-header" style="color: var(--water);">Equal Volume (Jadal)</div>
+            <div class="turn-row">
+              <div class="turn-row-label">Head Outlet 1 Turn Duration</div>
+              <div class="turn-track">
+                <div class="turn-fill" style="width: 50%;">standard turn</div>
+              </div>
+            </div>
+            <div class="turn-row">
+              <div class="turn-row-label">Tail Outlet 8 Turn Duration</div>
+              <div class="turn-track">
+                <div class="turn-fill turn-fill-tail-volume" id="turn-bar-tail">tail turn runs longer</div>
+              </div>
+            </div>
+            <div class="formula-badge">
+              Governing Law: Tᵢ = Vᵢ / Q(xᵢ)
+            </div>
+          </div>
+        </div>
+
+        <div><!-- Spacer --></div>
+      </section>
+
+      <!-- Scene 4: Real Footage & The Triad (28.0s – 38.0s) -->
+      <section id="scene-4" class="scene">
+        <div class="badge-row">
+          <div class="badge badge-water">
+            <span class="badge-dot"></span>
+            System Architecture
+          </div>
+          <div class="badge badge-ok">
+            <span class="badge-dot"></span>
+            Human-in-the-Loop Gating
+          </div>
+        </div>
+
+        <div>
+          <h2 class="headline" style="font-size: 64px; margin-bottom: 12px;">
+            LLMs Propose &middot; Core Computes &middot; Coordinator Approves
+          </h2>
+          <p class="body-sub">
+            Nothing reaches a farmer until the human coordinator clicks Approve.
+          </p>
+        </div>
+
+        <div class="triad-layout">
+          <!-- Real Footage: Coordinator approval view -->
+          <div class="footage-frame" id="coord-frame">
+            <img src="assets/images/coordinator.png" alt="Coordinator Interface" class="footage-img" id="coord-img" />
+          </div>
+
+          <div class="triad-cards">
+            <div class="triad-card" id="triad-1">
+              <div class="triad-num">01</div>
+              <div class="triad-text">
+                <h3>LLM Agents Propose</h3>
+                <p>Synthesize farmer intake and draft roster schedules</p>
+              </div>
+            </div>
+
+            <div class="triad-card" id="triad-2">
+              <div class="triad-num" style="color: var(--water); background: var(--water-tint);">02</div>
+              <div class="triad-text">
+                <h3>Deterministic Core Computes</h3>
+                <p>Pure open-channel hydraulics: zero I/O, zero LLM calls</p>
+              </div>
+            </div>
+
+            <div class="triad-card" id="triad-3" style="border-color: var(--ok); background: var(--ok-tint);">
+              <div class="triad-num" style="color: var(--ok); background: #ffffff;">03</div>
+              <div class="triad-text">
+                <h3 style="color: var(--ok);">Coordinator Approves</h3>
+                <p>"Nothing reaches a farmer until you do"</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div><!-- Spacer --></div>
+      </section>
+
+      <!-- Scene 5: Voice & Double-Entry Ledger (38.0s – 48.0s) -->
+      <section id="scene-5" class="scene">
+        <div class="badge-row">
+          <div class="badge badge-water">
+            <span class="badge-dot"></span>
+            Telugu Telephony
+          </div>
+          <div class="badge badge-ok">
+            <span class="badge-dot"></span>
+            Double-Entry Conservation
+          </div>
+        </div>
+
+        <div>
+          <h2 class="headline" style="font-size: 64px; margin-bottom: 12px;">
+            Spoken Telugu Alerts &middot; Conservation Ledger
+          </h2>
+          <p class="body-sub">
+            Accessible farmer phone calls verified by mathematical double-entry conservation.
+          </p>
+        </div>
+
+        <div class="voice-ledger-layout">
+          <!-- Real phone footage -->
+          <div class="phone-frame" id="phone-frame">
+            <img src="assets/images/phone.png" alt="Farmer Phone UI" class="phone-img" id="phone-img" />
+          </div>
+
+          <!-- Qualitative Double-Entry Ledger (Zero invented numbers!) -->
+          <div class="ledger-card" id="ledger-box">
+            <div class="ledger-header">
+              <div class="ledger-title">Water Conservation Ledger</div>
+              <div class="ledger-balance-pill">&check; Conservation Verified</div>
+            </div>
+
+            <div class="ledger-statement">
+              <div class="ledger-col">
+                <div class="ledger-col-label">DEBITS</div>
+                <div class="ledger-col-val">&sum; Inflows</div>
+              </div>
+              <div class="ledger-equal-sign">=</div>
+              <div class="ledger-col">
+                <div class="ledger-col-label">CREDITS</div>
+                <div class="ledger-col-val">&sum; Allocations + Losses</div>
+              </div>
+            </div>
+
+            <div class="ledger-bullets">
+              <div class="ledger-bullet">&check; Zero Unaccounted Water</div>
+              <div class="ledger-bullet">&check; Rate Limit: 3 calls / 60 s</div>
+              <div class="ledger-bullet">&check; Bilingual Telugu &amp; English</div>
+            </div>
+          </div>
+        </div>
+
+        <div><!-- Spacer --></div>
+      </section>
+
+      <!-- Scene 6: Outro (48.0s – 54.0s) -->
+      <section id="scene-6" class="scene">
+        <div class="outro-center">
+          <div class="badge badge-water" style="font-size: 32px; padding: 14px 32px;">
+            <span class="badge-dot" style="width: 16px; height: 16px;"></span>
+            CIVIC WATER INFRASTRUCTURE
+          </div>
+
+          <h1 class="brand-title">
+            JADAL &middot; <span style="font-family: var(--font-te);">జదల్</span>
+          </h1>
+
+          <p class="brand-subtitle">
+            Canal water shared by volume, not by hours.
+          </p>
+
+          <div class="outro-badges">
+            <div class="badge">Open-Channel Hydraulics</div>
+            <div class="badge badge-water">Deterministic Core</div>
+            <div class="badge badge-ok">Coordinator Approved</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Burned-in Captions (English & Telugu) -->
+      <div id="caption-container">
+        <div id="caption-en">Everyone got their hours. The tail still lost the crop. Hours are not water.</div>
+        <div id="caption-te">అందరికీ గంటలు అందాయి. అయినా చివర రైతు పంట ఎండిపోయింది. గంటలు అంటే నీరు కాదు.</div>
+      </div>
+
+      <!-- Audio Elements -->
+      <audio
+        id="music-bed"
+        data-start="0.0"
+        data-duration="54.0"
+        data-track-index="10"
+        data-volume="0.45"
+        src="assets/audio/ambient-bed.ogg"
+      ></audio>
+
+      <!-- SFX Elements -->
+      <audio
+        id="sfx-tick-1"
+        data-start="9.5"
+        data-duration="0.05"
+        data-track-index="11"
+        data-volume="0.6"
+        src="assets/audio/tick.wav"
+      ></audio>
+      <audio
+        id="sfx-tick-2"
+        data-start="12.0"
+        data-duration="0.05"
+        data-track-index="11"
+        data-volume="0.6"
+        src="assets/audio/tick.wav"
+      ></audio>
+      <audio
+        id="sfx-tick-3"
+        data-start="14.5"
+        data-duration="0.05"
+        data-track-index="11"
+        data-volume="0.6"
+        src="assets/audio/tick.wav"
+      ></audio>
+      <audio
+        id="sfx-swell"
+        data-start="18.5"
+        data-duration="3.0"
+        data-track-index="12"
+        data-volume="0.8"
+        src="assets/audio/swell.wav"
+      ></audio>
+      <audio
+        id="sfx-chime-1"
+        data-start="23.5"
+        data-duration="1.2"
+        data-track-index="13"
+        data-volume="0.75"
+        src="assets/audio/chime.wav"
+      ></audio>
+      <audio
+        id="sfx-tick-4"
+        data-start="30.5"
+        data-duration="0.05"
+        data-track-index="11"
+        data-volume="0.6"
+        src="assets/audio/tick.wav"
+      ></audio>
+      <audio
+        id="sfx-dtmf"
+        data-start="41.0"
+        data-duration="0.15"
+        data-track-index="14"
+        data-volume="0.7"
+        src="assets/audio/dtmf_ack.wav"
+      ></audio>
+      <audio
+        id="sfx-chime-2"
+        data-start="44.5"
+        data-duration="1.2"
+        data-track-index="13"
+        data-volume="0.75"
+        src="assets/audio/chime.wav"
+      ></audio>
+
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+
+      // Initial state: hide all scenes
+      tl.set("#scene-1", { opacity: 0, pointerEvents: "none" }, 0);
+      tl.set("#scene-2", { opacity: 0, pointerEvents: "none" }, 0);
+      tl.set("#scene-3", { opacity: 0, pointerEvents: "none" }, 0);
+      tl.set("#scene-4", { opacity: 0, pointerEvents: "none" }, 0);
+      tl.set("#scene-5", { opacity: 0, pointerEvents: "none" }, 0);
+      tl.set("#scene-6", { opacity: 0, pointerEvents: "none" }, 0);
+      tl.set("#video-card", { scale: 1.0, opacity: 1.0 }, 0);
+
+      // --- Scene 1: 0.0s – 8.0s (Hook) ---
+      tl.to("#scene-1", { opacity: 1, duration: 0.6, ease: "power2.out" }, 0.0);
+      tl.fromTo("#hero-img", { scale: 1.0, y: 0 }, { scale: 1.08, y: -15, duration: 7.5, ease: "sine.inOut" }, 0.2);
+      tl.set("#caption-en", { textContent: "Everyone got their hours. The tail still lost the crop. Hours are not water." }, 0.0);
+      tl.set("#caption-te", { textContent: "అందరికీ గంటలు అందాయి. అయినా చివర రైతు పంట ఎండిపోయింది. గంటలు అంటే నీరు కాదు." }, 0.0);
+      tl.to("#scene-1", { opacity: 0, duration: 0.4, ease: "power2.in" }, 7.6);
+
+      // --- Scene 2: 8.0s – 18.0s (Seepage) ---
+      tl.to("#scene-2", { opacity: 1, duration: 0.5, ease: "power2.out" }, 8.0);
+      tl.set("#caption-en", { textContent: "Outlet 1 receives 0.145 m³/s (3.5% loss). Outlet 8 receives 0.106 m³/s (29.4% loss)." }, 8.0);
+      tl.set("#caption-te", { textContent: "తల వద్ద 0.145 m³/s (3.5% నష్టం) · తోక వద్ద 0.106 m³/s (29.4% నష్టం)." }, 8.0);
+      tl.fromTo("#video-card", { scale: 0.96, opacity: 0.8 }, { scale: 1.0, opacity: 1.0, duration: 1.0, ease: "power2.out", immediateRender: false }, 8.2);
+      tl.fromTo("#metrics-col", { x: 30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.8, ease: "power2.out" }, 8.4);
+      tl.to("#video-card", { scale: 1.04, duration: 8.0, ease: "sine.inOut" }, 9.5);
+      tl.to("#scene-2", { opacity: 0, duration: 0.4, ease: "power2.in" }, 17.6);
+
+      // --- Scene 3: 18.0s – 28.0s (Equal Volume) ---
+      tl.to("#scene-3", { opacity: 1, duration: 0.5, ease: "power2.out" }, 18.0);
+      tl.set("#caption-en", { textContent: "Equal Volume: Tᵢ = Vᵢ / Q(xᵢ). Tail turn runs longer to deliver equal water." }, 18.0);
+      tl.set("#caption-te", { textContent: "సమాన పరిమాణ కేటాయింపు: Tᵢ = Vᵢ / Q(xᵢ). తోక మలుపు ఎక్కువ సమయం నడుస్తుంది." }, 18.0);
+      tl.fromTo("#card-equal-hours", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 18.2);
+      tl.fromTo("#card-equal-volume", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 18.5);
+      // Smooth tail bar extension: tail turn runs longer!
+      tl.fromTo("#turn-bar-tail", { width: "50%" }, { width: "88%", duration: 2.0, ease: "power2.inOut" }, 20.0);
+      tl.to("#scene-3", { opacity: 0, duration: 0.4, ease: "power2.in" }, 27.6);
+
+      // --- Scene 4: 28.0s – 38.0s (The Triad) ---
+      tl.to("#scene-4", { opacity: 1, duration: 0.5, ease: "power2.out" }, 28.0);
+      tl.set("#caption-en", { textContent: "Deterministic core computes hydraulics. Nothing reaches a farmer without approval." }, 28.0);
+      tl.set("#caption-te", { textContent: "భౌతిక శాస్త్రాన్ని కోర్ లెక్కిస్తుంది. కోఆర్డినేటర్ ఆమోదం లేకుండా ఏదీ పంపబడదు." }, 28.0);
+      tl.fromTo("#coord-img", { scale: 1.0, y: 0 }, { scale: 1.08, y: -20, duration: 9.0, ease: "sine.inOut" }, 28.2);
+      tl.fromTo(".triad-card", { x: 30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, stagger: 0.2, ease: "power2.out" }, 28.5);
+      tl.to("#scene-4", { opacity: 0, duration: 0.4, ease: "power2.in" }, 37.6);
+
+      // --- Scene 5: 38.0s – 48.0s (Voice & Ledger) ---
+      tl.to("#scene-5", { opacity: 1, duration: 0.5, ease: "power2.out" }, 38.0);
+      tl.set("#caption-en", { textContent: "Spoken Telugu voice alerts. Double-entry ledger: Debits equal Credits." }, 38.0);
+      tl.set("#caption-te", { textContent: "స్పష్టమైన తెలుగు వాయిస్ కాల్స్. డబుల్ ఎంట్రీ లెడ్జర్: పరిరక్షణ నిరూపితం." }, 38.0);
+      tl.fromTo("#phone-img", { scale: 1.0, y: 0 }, { scale: 1.06, y: -10, duration: 9.0, ease: "sine.inOut" }, 38.2);
+      tl.fromTo("#ledger-box", { scale: 0.96, opacity: 0 }, { scale: 1.0, opacity: 1, duration: 0.6, ease: "power2.out" }, 38.5);
+      tl.to("#scene-5", { opacity: 0, duration: 0.4, ease: "power2.in" }, 47.6);
+
+      // --- Scene 6: 48.0s – 54.0s (Outro) ---
+      tl.to("#scene-6", { opacity: 1, duration: 0.6, ease: "power2.out" }, 48.0);
+      tl.set("#caption-en", { textContent: "Jadal: Real physics. Deterministic core. Fair water for the tail end." }, 48.0);
+      tl.set("#caption-te", { textContent: "జదల్: నిజమైన భౌతికశాస్త్రం. నిరూపితమైన కోర్. తోక రైతుకు సమాన న్యాయం." }, 48.0);
+      tl.fromTo(".outro-center", { scale: 0.95, opacity: 0 }, { scale: 1.0, opacity: 1, duration: 0.8, ease: "power2.out" }, 48.3);
+      tl.to("#scene-6", { opacity: 0, duration: 0.6, ease: "power2.in" }, 53.4);
+
+      tl.seek(0);
+    </script>
+  </body>
+</html>

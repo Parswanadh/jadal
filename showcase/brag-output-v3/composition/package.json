@@ -1,0 +1,9 @@
+{
+  "name": "jadal-launch-video-v3",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Jadal Launch Video v3 (Hyperframes 54s landscape 1080p)",
+  "dependencies": {
+    "gsap": "^3.12.5"
+  }
+}
