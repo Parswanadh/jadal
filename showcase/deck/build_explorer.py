@@ -1232,7 +1232,7 @@ def build_explorer_html(dataset, output_html_path):
     <header>
       <a href="index.html" class="back-nav">← Back to Presentation Deck</a>
       <h1>FAO-56 Crop Parameter Explorer</h1>
-      <div class="deck-subhead">System-1 Ground Truth &amp; Model Constant Provenance Audit</div>
+      <div class="deck-subhead">Crop coefficient data and where each shipped constant comes from</div>
     </header>
 
     <section class="coverage-card" aria-labelledby="coverage-heading">
