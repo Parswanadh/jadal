@@ -201,26 +201,23 @@ async function recordDemoVideo(browser) {
   await page.goto(`${BASE_URL}/demo`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(1500); // Initial view of demo walkthrough
 
-  // Click start walkthrough / step 1 button
-  const startBtn = page.locator('button.btn-primary', { hasText: /Start walkthrough|నడక ప్రారంభించండి/i });
+  console.log('[capture] Clicking Start demo button');
+  const startBtn = page.locator('button', { hasText: /Start demo|డెమో ప్రారంభించండి/i });
   if (await startBtn.isVisible()) {
-    console.log('[capture] Clicking Start walkthrough button');
     await startBtn.click();
     await page.waitForTimeout(1500);
   }
 
-  // Run Step 1 if visible
-  const step1Btn = page.locator('button', { hasText: /Run step 1|దశ 1 అమలు/i });
+  console.log('[capture] Running Step 1: Share water fairly');
+  const step1Btn = page.locator('button', { hasText: /Run this step|ఈ దశను అమలు చేయండి/i });
   if (await step1Btn.isVisible()) {
-    console.log('[capture] Running demo step 1');
     await step1Btn.click();
     await page.waitForTimeout(2500);
   }
 
-  // Advance clock +6h or run step 2
-  const clockBtn = page.locator('button', { hasText: /\+6h|\+6 గంటలు/i });
+  console.log('[capture] Advancing simulation clock +6 hours');
+  const clockBtn = page.locator('button', { hasText: /\+6 hours|\+6 గంటలు/i });
   if (await clockBtn.isVisible()) {
-    console.log('[capture] Advancing simulation clock +6h');
     await clockBtn.click();
     await page.waitForTimeout(2000);
   }
