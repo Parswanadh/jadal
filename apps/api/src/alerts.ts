@@ -109,7 +109,10 @@ export function describeAlertOutcome(
     return `${channel} alert not dispatched: ${outcome.skipped}`;
   }
   if (channel !== "call") {
-    return `${channel} alert queued for the coordinator's contact list; no ${channel} transport is wired, so nothing was sent`;
+    // Deliberately blunt: this app has no messaging transport at all, so the only
+    // true account is that nothing left the building. The contact is audited as
+    // `queued` for the coordinator's list, but "queued" must never read as "sent".
+    return `${channel} alert NOT SENT: no ${channel} transport exists in this app; the alert is recorded as a queued contact only, and nothing reached the farmer`;
   }
   return outcome.simulated
     ? `call simulated (no real call placed)${

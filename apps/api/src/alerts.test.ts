@@ -194,12 +194,55 @@ describe("POST /api/alerts — the coordinator alerts a farmer directly", () => 
       if (channel === "call") continue;
       // No messaging transport is dispatched: audited as queued, reported simulated, and nothing dialled.
       expect(response.simulated).toBe(true);
-      expect(response.detail).toContain("nothing was sent");
+      expect(response.detail.toLowerCase()).toContain("not sent");
+      expect(response.detail).toContain(`no ${channel} transport`);
       expect(twilioCalls(env).length).toBe(0);
       expect((await listContacts(env))[0]?.status).toBe("queued");
       // The queued message still carries the allocation, so the coordinator's list shows what was meant.
       expect((await listContacts(env))[0]?.message_te).toContain("10 ఘన మీటర్లు");
     }
+  });
+
+  it("never describes an sms or whatsapp alert as sent, placed or delivered", async () => {
+    for (const channel of ["sms", "whatsapp"] as const) {
+      // Twilio env is fully configured and a Twilio route is available: if this
+      // endpoint ever grew a transport by accident, the test would see the call.
+      const env = await seededEnv({ "api.twilio.com": TWILIO_ACCEPTED }, { ...TWILIO_ENV });
+      const response = expectOk(
+        await postAlert(env, {
+          farmer_id: "f1",
+          channel,
+          severity: "urgent",
+          allocation: { volume_m3: 20, start: "2026-09-15T00:30:00Z" },
+        }),
+      );
+
+      expect(response.simulated).toBe(true);
+      // The two existing response fields carry the whole truth, unambiguously.
+      expect(response.detail).toContain("NOT SENT");
+      expect(response.detail).toContain(`no ${channel} transport exists in this app`);
+      expect(response.detail).toContain("nothing reached the farmer");
+      // It must not claim any dispatch verb for the channel.
+      expect(response.detail).not.toMatch(/placed|delivered|sent to/i);
+      // And structurally: no outbound fetch at all, and the audit row is queued.
+      expect(twilioCalls(env).length).toBe(0);
+      expect((await listContacts(env))[0]?.status).toBe("queued");
+    }
+  });
+
+  it("keeps a real call's detail free of the not-sent wording", async () => {
+    const env = await seededEnv({ "api.twilio.com": TWILIO_ACCEPTED }, { ...TWILIO_ENV });
+    const response = expectOk(
+      await postAlert(env, {
+        farmer_id: "f1",
+        channel: "call",
+        severity: "urgent",
+        allocation: { volume_m3: 20, start: "2026-09-15T00:30:00Z" },
+      }),
+    );
+    expect(response.simulated).toBe(false);
+    expect(response.detail).not.toContain("NOT SENT");
+    expect(response.detail).toContain("call placed to");
   });
 
   it("is simulated:true with no fetch at all when Twilio env is absent", async () => {
