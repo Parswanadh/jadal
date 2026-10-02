@@ -38,7 +38,7 @@ The ratio and the 1.37 are arithmetic on the two modelled flows. They are shown 
 
 1. **Estimate need.** Each farm's weekly volume Vᵢ comes from a crop-water model (FAO-56 style) with weather and rain.
 2. **Solve for time.** The deterministic core turns each volume into a turn length, **Tᵢ = Vᵢ ÷ Q(xᵢ)**, using the flow that reaches the outlet after seepage. The tail's turn runs longer.
-3. **Approve.** A coordinator approves; nothing reaches a farmer until a human decides.
+3. **Approve.** A coordinator approves the roster before it is released. Other paths also place calls (coordinator alerts, the escalation ladder); every one of them goes through a single rate-limited call function (READ + RAN: `apps/api/src/placecall-guard.test.ts`). We have not verified that every path is approval-gated, and who may approve is not yet enforced by the server.
 4. **Tell the farmer.** A caller agent phones farmers in Telugu. A double-entry ledger records every cubic metre and is checked for conservation.
 
 **The governing principle, enforced in code:** LLMs propose, the deterministic core computes, the coordinator approves.
@@ -64,24 +64,28 @@ Caveat: the 862 figure was measured on the merged branch before one later web di
 
 ## 6. Talk track (6 to 8 minutes)
 
-Full speaker script with stage cues: `docs/SPEAKER-SCRIPT.md`. Full talk 8:00; 7:20 if you skip slide 9 and trim slide 13.
+Full speaker script with stage cues: `docs/SPEAKER-SCRIPT.md`; second-screen reader: http://127.0.0.1:5190/deck/speaker-script.html. The table below is **generated** from `showcase/deck/script.json` by `showcase/deck/build.py`, so the slide numbers and times cannot drift from the deck. Times are computed from word counts, not rehearsed.
 
-| Slide | Beat | Time |
-|---|---|---|
-| 1 Title | One question; everything numeric is labelled | 0:30 |
-| 2 The place | 3 km, 8 outlets, unlined; demo data, not gauges | 0:25 |
-| 3 Warabandi | Wara and bandi; equal hours; the register records time | 0:35 |
-| 4 Hours are not water | 0.145 vs 0.106 m³/s; 3.5% vs 29.4%; about 0.73 | 0:40 |
-| 5 The toggle | Click **Equal volume**: the tail's turn stretches about 1.37× | 0:45 |
-| 6 Our answer | Tᵢ = Vᵢ ÷ Q(xᵢ) | 0:30 |
-| 7 Who decides | Propose, compute, approve; code evidence | 0:40 |
-| 8 The product | Coordinator console; demo data | 0:35 |
-| 9 Voice and ledger | Optional; caveats stated up front | 0:25 |
-| 10 Launch film | Play about 54 s; say nothing over it | 1:00 |
-| 11 What we measured | 862 tests; 3 per 60 s; one route; 605 keys | 0:30 |
-| 12 What we caught | Our own claims that failed | 0:40 |
-| 13 Still open | The honest edge | 0:30 |
-| 14 Close | The water has reached the tail | 0:15 |
+The deck is 13 slides. Two former slides, *What we caught in our own work* and *What is still simulated or open*, and the closing slide were removed from the deck. Their substance is still spoken: it is in the notes of slide 13 and in the speaker script's *If asked* section, and the section 5 and 9 tables of this document hold the evidence.
+
+<!-- TALK-TRACK:START -->
+| Slide | Beat | Standard | Architect |
+|---|---|---|---|
+| 1 Title | One question; everything numeric is labelled | 0:31 | 0:24 |
+| 2 The place | 3 km, 8 outlets, unlined; demo data, not gauges | 0:23 | skipped |
+| 3 Warabandi | Wara and bandi; equal hours; the register records time | 0:29 | 0:15 |
+| 4 Hours are not water | 0.145 vs 0.106 m³/s; 3.5% vs 29.4%; about 0.73 | 0:32 | 0:22 |
+| 5 Hours or water | Click Equal volume: the tail's turn stretches about 1.37× | 0:33 | skipped |
+| 6 Our answer | Tᵢ = Vᵢ ÷ Q(xᵢ) | 0:30 | 0:18 |
+| 7 Who decides | Propose, compute, approve; code evidence; sign-in gap named | 0:33 | 0:32 |
+| 8 How it stays trustworthy | Trust boundaries, controls, and the 'not built yet' strip | 0:33 | 2:02 |
+| 9 The product | Coordinator console and farmer view; demo data | 0:22 | skipped |
+| 10 Voice and ledger | Optional; caveats stated first | skip when short | skipped |
+| 11 Launch film | Play about 54 s; say nothing over it | 1:06 | skipped |
+| 12 What we measured | 862 tests; 3 per 60 s; one route; 605 keys | 0:33 | 0:12 |
+| 13 Path to field telemetry | Roadmap, not built; closing line; open items and what we caught are spoken, not shown | 0:27 | 2:04 |
+| **Total** | computed at 145 wpm, plus fixed seconds and pauses; not rehearsed | **6:32** | **6:09** |
+<!-- TALK-TRACK:END -->
 
 Short versions (30 s and 2 min) are in the script file.
 
@@ -91,7 +95,7 @@ Short versions (30 s and 2 min) are in the script file.
 
 **Why not just lengthen the tail's time by a fixed factor?** The right factor depends on where the outlet sits, how much has seeped by then, and what each farm needs. The core solves it per outlet from the flow that reaches it.
 
-**Can the language model change a number?** No. A gated tool only returns a proposal, and the water arithmetic is outside the model, in `packages/core`. Everything the model proposes passes through a coordinator.
+**Can the language model change a number?** It cannot apply an action. A gated tool only returns a proposal, and the water arithmetic is outside the model, in `packages/core`. We have not red-teamed prompt injection, so we do not claim resistance beyond that.
 
 **What if the coordinator disagrees?** They can reject a request or edit a turn time. The handoff records both as verified: the turn-time editor saves, a backwards interval is refused with a 400, and the reject path is covered by the live e2e (handoff §4).
 

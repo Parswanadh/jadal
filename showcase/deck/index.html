@@ -6,114 +6,124 @@
 <title>Jadal — water shared by volume</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400..700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --deep:#0E2A3A; --deep-2:#16405A; --foam:#EAF2EF; --silt:#CDB98A; --laterite:#B5472A; --flow:#5FD0DB;
-  --ink:#0E2A3A; --mute-d:#A9C2CC; --mute-l:#4B6672;
-  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
-  --body:"Public Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --bg:#FAF9F5; --white:#FFFFFF; --ink:#1F1E1D; --grey:#73726C; --hair:#E8E6DC;
+  --orange:#D97757; --deep:#C15F3C; --tint:#FBEFE9; --drop:#E8967A;
+  --display:"Source Serif 4","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:#071A25;overflow:hidden;font-family:var(--body)}
+html,body{height:100%;background:#ECE9DF;overflow:hidden;font-family:var(--body);color:var(--ink)}
 #viewport{position:fixed;inset:0;display:grid;place-items:center}
-#stage{position:relative;width:1920px;height:1080px;flex:none;transform-origin:center center;background:var(--deep);overflow:hidden}
+#stage{position:relative;width:1920px;height:1080px;flex:none;transform-origin:center center;background:var(--bg);overflow:hidden}
 
 /* ---------- slides ---------- */
-.slide{position:absolute;inset:0 0 120px 0;padding:88px 120px 40px;display:none;overflow:hidden}
+.slide{position:absolute;inset:0 0 120px 0;padding:56px 120px 40px;display:none;overflow:hidden;color:var(--ink)}
 .slide.active{display:block}
-.slide.tight{padding-top:52px}
-.slide.dark{background:var(--deep);color:var(--foam)}
-.slide.light{background:var(--foam);color:var(--ink)}
-h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:-.02em;line-height:1}
-h1{font-size:164px;font-weight:800;letter-spacing:-.035em;line-height:.92}
-h2{font-size:92px;max-width:1500px;line-height:1.02}
-h3{font-size:46px;letter-spacing:-.01em;line-height:1.1}
-p,li{font-size:40px;line-height:1.38;max-width:34em}
+.slide.dark{background:var(--bg)}
+.slide.light{background:var(--white)}
+h1,h2,h3{font-family:var(--display);font-weight:600;letter-spacing:-.015em;line-height:1.04}
+h1{font-size:176px;font-weight:600;letter-spacing:-.025em;line-height:.95}
+h2{font-size:88px;max-width:1500px;line-height:1.05}
+h3{font-size:46px;letter-spacing:-.005em;line-height:1.12}
+p,li{font-size:40px;line-height:1.42;max-width:34em}
 .small{font-size:30px;line-height:1.4}
-.dark .mute{color:var(--mute-d)} .light .mute{color:var(--mute-l)}
-.src{font-size:28px;line-height:1.4;max-width:46em}
-.dark .src{color:var(--mute-d)} .light .src{color:var(--mute-l)}
-.tail{color:var(--laterite)} .dark .tail{color:#E2805F}
-.flow{color:var(--flow)}
-.silt{color:var(--silt)}
-.tag{display:inline-block;font-size:28px;font-weight:600;padding:6px 18px;border-radius:999px;border:2px solid currentColor;vertical-align:middle}
-.dark .tag{color:var(--silt)} .light .tag{color:var(--laterite)}
+.mute{color:var(--grey)}
+.src{font-size:28px;line-height:1.4;max-width:46em;color:var(--grey)}
+.foot{position:absolute;left:120px;right:120px;bottom:40px;font-size:28px;line-height:1.3;color:var(--grey);white-space:nowrap;margin:0;max-width:none}
+.tail{color:var(--deep)}
+.flow{color:var(--ink)}
+.tag{display:inline-block;font-size:28px;font-weight:600;padding:6px 18px;border-radius:999px;border:2px solid var(--deep);color:var(--deep);vertical-align:middle}
 .stack>*+*{margin-top:28px}
 
 /* ---------- canal strip (the one bold element) ---------- */
-#bed{position:absolute;left:0;right:0;bottom:0;height:120px;background:var(--deep);border-top:2px solid rgba(95,208,219,.25)}
+#bed{position:absolute;left:0;right:0;bottom:0;height:120px;background:var(--white);border-top:2px solid var(--hair)}
 #bed svg{position:absolute;left:0;top:0;width:1920px;height:120px}
-#count{position:absolute;right:40px;top:28px;z-index:5;font-size:28px;color:var(--foam);background:rgba(14,42,58,.88);padding:4px 18px;border-radius:999px;font-variant-numeric:tabular-nums}
+#count{position:absolute;right:40px;top:28px;z-index:5;width:150px;text-align:center;font-size:28px;color:var(--ink);background:var(--white);border:2px solid var(--hair);padding:2px 0;border-radius:999px;font-variant-numeric:tabular-nums}
 .drop{animation:fall 3.4s ease-in infinite;opacity:0}
-@keyframes fall{0%{transform:translateY(0);opacity:0}15%{opacity:.9}100%{transform:translateY(34px);opacity:0}}
+@keyframes fall{0%{transform:translateY(0);opacity:0}15%{opacity:.95}100%{transform:translateY(34px);opacity:0}}
 .dash{animation:dash 1.6s linear infinite}
 @keyframes dash{to{stroke-dashoffset:-48}}
 
 /* ---------- notes ---------- */
-#notes{position:absolute;left:0;right:0;bottom:120px;padding:28px 120px 32px;background:rgba(7,26,37,.96);color:var(--foam);font-size:30px;line-height:1.45;display:none;border-top:2px solid var(--silt)}
+#notes{position:absolute;left:0;right:0;bottom:120px;max-height:560px;overflow:auto;padding:28px 120px 32px;background:var(--ink);color:var(--bg);font-size:30px;line-height:1.45;display:none;border-top:4px solid var(--orange)}
 #notes.on{display:block}
-#notes b{color:var(--silt);font-weight:600}
-#hint{position:absolute;left:56px;top:34px;font-size:28px;color:var(--mute-d)}
+#notes b{color:#EBA283;font-weight:600}
+#hint{position:absolute;left:56px;top:34px;font-size:28px;color:var(--grey)}
 
 /* ---------- slide-specific ---------- */
-.title-wrap{display:grid;grid-template-rows:1fr auto;height:100%}
-.title-wrap h1{margin-top:150px}
+.title-wrap{height:100%;padding-top:150px}
+.title-wrap h1{margin-top:0}
+.title-wrap .sub{font-family:var(--display);font-size:56px;line-height:1.2;max-width:13em;margin-top:44px;color:var(--deep);font-weight:500}
 .hero-canal{position:absolute;right:60px;top:330px;width:820px;height:auto}
-.title-wrap .sub{font-size:52px;line-height:1.25;max-width:13em;margin-top:44px;color:var(--silt);font-family:var(--display);font-weight:500}
-.cols{display:grid;grid-template-columns:1fr 1fr;gap:96px;align-items:center;height:560px;margin-top:32px}
-.cols.wide-l{grid-template-columns:1.1fr .9fr}
-.facts{list-style:none}
-.facts li{padding:16px 0;border-bottom:2px solid rgba(234,242,239,.18);display:flex;gap:28px;align-items:baseline}
-.facts li b{font-family:var(--display);font-size:64px;font-weight:700;min-width:5.2ch;color:var(--flow);letter-spacing:-.02em}
-.roster{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin:48px 0 20px}
-.roster div{height:150px;background:var(--deep);color:var(--foam);border-radius:6px;display:flex;align-items:flex-end;padding:14px;font-size:28px;font-weight:600}
-.roster-cap{display:flex;justify-content:space-between;font-size:30px;color:var(--mute-l)}
-.read{font-family:var(--display);font-size:112px;font-weight:700;letter-spacing:-.04em;line-height:.9}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:96px;align-items:center;height:560px;margin-top:32px}
+.cols.wide-l{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)}
+.cols.top{align-items:start;height:auto;margin-top:56px}
+.facts{list-style:none;display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:0;grid-auto-rows:minmax(150px,auto);align-items:baseline;border-top:2px solid var(--hair)}
+.facts li{display:contents}
+.facts li>*{padding:22px 0 22px;border-bottom:2px solid var(--hair);align-self:stretch;display:flex;align-items:baseline}
+.facts li b{font-family:var(--display);font-size:64px;font-weight:600;color:var(--deep);letter-spacing:-.01em;line-height:1.1;white-space:nowrap}
+.facts li span{font-size:40px;line-height:1.35;padding-left:48px}
+.roster{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin:48px 0 20px}
+.roster div{height:150px;background:var(--tint);border:2px solid var(--hair);color:var(--ink);border-radius:14px;display:flex;align-items:flex-end;padding:14px;font-size:28px;font-weight:600}
+.roster-cap{display:flex;justify-content:space-between;font-size:30px;color:var(--grey)}
+.read{font-family:var(--display);font-size:104px;font-weight:600;letter-spacing:-.025em;line-height:1}
 .read small{font-family:var(--body);font-size:36px;font-weight:500;letter-spacing:0;margin-left:14px}
 .big-canal{width:100%;height:auto}
-.mode{display:inline-flex;border:3px solid var(--deep);border-radius:999px;overflow:hidden;margin:28px 0 24px}
-.mode button{font:600 38px var(--body);padding:16px 44px;background:transparent;color:var(--deep);border:0;cursor:pointer}
-.mode button[aria-pressed="true"]{background:var(--deep);color:var(--foam)}
-.mode button:focus-visible{outline:4px solid var(--laterite);outline-offset:-6px}
-.lanes .row{display:grid;grid-template-columns:260px 1fr;gap:28px;padding:14px 0;border-top:2px solid rgba(14,42,58,.18)}
-.lanes .who{font-family:var(--display);font-size:44px;font-weight:700;line-height:1.1}
-.lanes .who span{display:block;font:500 28px var(--body);color:var(--mute-l);margin-top:6px}
-.lane{display:grid;grid-template-columns:230px 1fr;align-items:center;gap:20px;margin:8px 0;font-size:30px;color:var(--mute-l)}
-.track{height:34px;background:rgba(14,42,58,.1);border-radius:6px;overflow:hidden}
-.track i{display:block;height:100%;background:var(--deep);width:0;transition:width .9s cubic-bezier(.2,.8,.2,1),background-color .4s}
-.track i.short{background:var(--laterite)}
-.verdict{font-family:var(--display);font-size:50px;font-weight:600;line-height:1.15;margin-top:22px;min-height:116px;max-width:25em}
-.eq{font-family:var(--display);font-size:150px;font-weight:600;letter-spacing:-.02em;line-height:1;margin:56px 0 28px}
+.mode{display:inline-flex;border:2px solid var(--ink);border-radius:999px;overflow:hidden;margin:28px 0 24px;background:var(--white)}
+.mode button{font:600 38px var(--body);padding:16px 44px;background:transparent;color:var(--ink);border:0;cursor:pointer}
+.mode button[aria-pressed="true"]{background:var(--deep);color:#FFFFFF}
+.mode button:focus-visible{outline:4px solid var(--ink);outline-offset:-6px}
+.lanes .row{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:28px;padding:14px 0;border-top:2px solid var(--hair)}
+.lanes .who{font-family:var(--display);font-size:44px;font-weight:600;line-height:1.1;min-width:6.6em}
+.lanes .who span{display:block;font:500 28px var(--body);color:var(--grey);margin-top:6px}
+.lane{display:grid;grid-template-columns:max-content minmax(0,1fr);align-items:center;gap:20px;margin:8px 0;font-size:30px;color:var(--grey)}
+.lane>span{min-width:8.4em}
+.track{height:34px;background:var(--hair);border-radius:8px;overflow:hidden}
+.track i{display:block;height:100%;width:0;transition:width .9s cubic-bezier(.2,.8,.2,1),background-color .4s}
+#t1,#t8{background:var(--grey)} #d1,#d8{background:var(--orange)} #d8.short{background:var(--deep)}
+.verdict{font-family:var(--display);font-size:52px;font-weight:500;line-height:1.15;margin-top:22px;min-height:120px;max-width:25em}
+.eq{font-family:var(--display);font-size:150px;font-weight:500;letter-spacing:-.01em;line-height:1;margin:56px 0 28px}
 .eq sub{font-size:.55em}
 .defs{display:grid;grid-template-columns:auto 1fr;gap:18px 40px;margin-top:40px;font-size:38px;line-height:1.35;max-width:1500px}
-.defs dt{font-family:var(--display);font-weight:700;color:var(--flow)}
-.pipeline{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin-top:56px}
-.pipeline>div{padding:0 48px 0 0;border-right:3px solid var(--ink);margin-right:48px;position:relative}
+.defs dt{font-family:var(--display);font-weight:600;color:var(--deep)}
+.pipeline{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:56px}
+.pipeline>div{padding:0 48px 0 0;border-right:2px solid var(--hair);margin-right:48px}
 .pipeline>div:last-child{border-right:0;margin-right:0}
 .pipeline h3{margin-bottom:22px}
-.pipeline .big{font-family:var(--display);font-size:58px;font-weight:700;letter-spacing:-.02em;line-height:1.05;margin-bottom:22px}
-.pipeline p{font-size:34px;line-height:1.35}
-code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:.78em;background:rgba(14,42,58,.1);padding:2px 9px;border-radius:5px}
-.dark code{background:rgba(234,242,239,.12)}
+.pipeline .big{font-family:var(--display);font-size:58px;font-weight:600;letter-spacing:-.015em;line-height:1.05;margin-bottom:22px}
+.pipeline p{font-size:34px;line-height:1.38;overflow-wrap:anywhere}
+code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:.86em;background:#F1EFE7;padding:2px 9px;border-radius:6px}
 .shots{display:grid;grid-template-columns:880px 760px;gap:40px;margin-top:30px;align-items:start}
-.shot{background:#fff;border-radius:14px;overflow:hidden;position:relative;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+.shot{background:var(--white);border:1px solid var(--hair);border-radius:16px;overflow:hidden;position:relative}
 .shot img{display:block;width:100%;height:auto}
-.shot figcaption{position:absolute;left:14px;bottom:14px;background:rgba(14,42,58,.92);color:var(--foam);font-size:28px;font-weight:600;padding:6px 16px;border-radius:999px}
-.vid{width:1280px;height:720px;background:#000;border-radius:10px;display:block;margin:16px auto 0;box-shadow:0 22px 70px rgba(0,0,0,.5)}
-.meas{display:grid;grid-template-columns:auto 1fr;gap:0 48px;margin-top:18px;align-items:baseline}
-.meas dt{font-family:var(--display);font-size:72px;font-weight:700;letter-spacing:-.03em;line-height:1.05}
-.meas dd{font-size:34px;line-height:1.3;max-width:34em;padding-bottom:12px;margin-bottom:6px;border-bottom:2px solid rgba(14,42,58,.15)}
-.meas dd small{display:block;font-size:28px;color:var(--mute-l);margin-top:4px}
-.caught li{list-style:none;padding:20px 0 20px 0;border-bottom:2px solid rgba(234,242,239,.18);font-size:36px;line-height:1.32;max-width:none}
-.caught li b{color:var(--silt);font-weight:600}
-.open li{list-style:none;font-size:36px;line-height:1.3;padding:15px 0 15px 44px;border-bottom:2px solid rgba(14,42,58,.15);position:relative;max-width:none}
-.open li::before{content:"";position:absolute;left:0;top:34px;width:20px;height:20px;border:3px solid var(--laterite);border-radius:50%}
-.open li b{font-weight:600}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:0 80px}
-.close-h{font-size:150px;font-weight:800;letter-spacing:-.035em;line-height:.95;margin-top:120px}
-.close-s{font-family:var(--display);font-size:56px;color:var(--silt);margin-top:48px;line-height:1.25;font-weight:500}
-
+.shot figcaption{position:absolute;left:14px;bottom:14px;background:var(--white);color:var(--ink);border:1px solid var(--hair);font-size:28px;font-weight:600;padding:6px 16px;border-radius:999px}
+.vid{width:1200px;height:675px;background:#000;border:1px solid var(--hair);border-radius:12px;display:block;margin:16px auto 0}
+.meas{display:grid;grid-template-columns:auto 1fr;gap:0 48px;margin-top:36px;align-items:baseline}
+.meas dt{font-family:var(--display);font-size:72px;font-weight:600;letter-spacing:-.02em;line-height:1.05;color:var(--deep)}
+.meas dd{font-size:34px;line-height:1.3;max-width:34em;padding-bottom:12px;margin-bottom:6px;border-bottom:2px solid var(--hair)}
+.meas dd small{display:block;font-size:28px;color:var(--grey);margin-top:4px}
+.trust{display:grid;grid-template-columns:minmax(0,1fr) 64px minmax(0,1fr) 64px minmax(0,1fr);align-items:stretch;margin-top:20px}
+.zone{background:var(--white);border:2px solid var(--hair);border-radius:16px;padding:22px 26px}
+.zone h3{font-size:44px;margin-bottom:10px}
+.zone p{font-size:36px;line-height:1.3}
+.zone.core{border-color:var(--orange);background:var(--tint)}
+.gate{position:relative;display:flex;align-items:center;justify-content:center}
+.gate::before{content:"";position:absolute;top:-8px;bottom:-8px;left:50%;width:6px;margin-left:-3px;background:var(--orange);border-radius:3px}
+.gate span{position:relative;background:var(--bg);color:var(--deep);font:600 28px var(--body);padding:8px 2px;writing-mode:vertical-rl;transform:rotate(180deg)}
+.ctl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 56px;margin-top:18px;list-style:none}
+.ctl li{font-size:34px;line-height:1.26;max-width:none;padding:9px 0;border-bottom:2px solid var(--hair)}
+.ctl li b{font-weight:600;color:var(--deep)}
+.notyet{margin-top:18px;border:2px solid var(--deep);background:var(--white);border-radius:16px;padding:14px 26px;font-size:34px;line-height:1.3;max-width:none}
+.notyet b{color:var(--deep);font-weight:600}
+.flowline{display:grid;grid-template-columns:minmax(0,1fr) 40px minmax(0,1fr) 40px minmax(0,1fr) 40px minmax(0,1fr) 40px minmax(0,1fr);align-items:stretch;margin-top:30px}
+.node{background:var(--white);border:3px dashed var(--deep);border-radius:16px;padding:20px 18px;font-size:34px;line-height:1.25;font-family:var(--display);font-weight:600;display:flex;align-items:center;text-align:center;justify-content:center;min-height:170px;color:var(--ink)}
+.node.built{border-style:solid;border-color:var(--orange);background:var(--tint)}
+.arrow{align-self:center;text-align:center;font-size:40px;color:var(--deep)}
+.rm{display:inline-block;font:600 34px var(--body);padding:8px 26px;border:3px dashed var(--deep);color:var(--deep);border-radius:999px;margin-top:6px}
+.closer{font-family:var(--display);font-size:60px;font-weight:600;letter-spacing:-.015em;line-height:1.08;margin-top:26px;max-width:none;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){.drop,.dash{animation:none}.track i{transition:none}}
 </style>
 </head>
@@ -123,37 +133,34 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
 
 <!-- 1 · title -->
 <section class="slide dark" data-title="Title">
-  <svg viewBox="0 0 700 440" class="hero-canal" aria-hidden="true"><defs><linearGradient id="cg1" x1="0" x2="1"><stop offset="0" stop-color="#5FD0DB"/><stop offset="1" stop-color="#3A7F90"/></linearGradient></defs><polygon points="20,150 680,185 680,250 20,290" fill="url(#cg1)"/><g id="s1-drops"></g></svg>
+  <svg viewBox="0 0 700 440" class="hero-canal" aria-hidden="true"><defs><linearGradient id="cg1" x1="0" x2="1"><stop offset="0" stop-color="#D97757"/><stop offset="1" stop-color="#C15F3C"/></linearGradient></defs><polygon points="20,150 680,185 680,250 20,290" fill="url(#cg1)"/><g id="s1-drops"></g></svg>
   <div class="title-wrap"><div>
     <h1>Jadal</h1>
     <p class="sub">Canal water, shared by volume instead of hours.</p>
   </div>
-  <p class="src">A case study in fairness at the tail of the canal. The scenario is modelled on Kondaveedu Minor, Andhra Pradesh. All figures are from the demo scenario, not field gauges.</p></div>
-  <aside hidden>Cue: Slide is up before you speak. The strip along the bottom is empty; the water will fill it as you go. — Good morning. This is Jadal. It starts with one question about a canal: when everyone gets the same number of hours, does everyone get the same water? On a modelled three-kilometre canal in Andhra Pradesh, they do not. I will show you why, and what we built to fix it. Everything numeric in this talk is labelled modelled, computed or measured, and the last two slides list what is still simulated.</aside>
+  <p class="foot">Modelled on Kondaveedu Minor, Andhra Pradesh. Figures are from the demo scenario, not field gauges.</p></div>
+  <aside hidden>Cue: Slide is up before you speak. The strip along the bottom is empty; the water will fill it as you go. — Good morning. This is Jadal. It starts with one question about a canal: when everyone gets the same number of hours, does everyone get the same water? On a modelled three-kilometre canal in Andhra Pradesh, they do not. I will show you why, and what we built to fix it. Everything numeric in this talk is labelled modelled, computed or measured, and I will say plainly what is still simulated or not built. — ARCHITECT CUT: If you have irrigated from a tail-end outlet, you know this problem: your hours arrive and the water is thin. This is Jadal. We have not farmed this canal; we modelled it. I will spend most of the time on how the system stays trustworthy, and on what is modelled, what is built and what is not.</aside>
 </section>
 
 <!-- 2 · the place -->
 <section class="slide dark" data-title="The place">
   <h2>A three-kilometre earthen canal with eight farm outlets.</h2>
-  <div class="cols wide-l">
+  <div class="cols wide-l top">
     <ul class="facts">
-      <li><b>3 km</b><span style="font-size:40px">Reach of the minor canal, head to tail.</span></li>
-      <li><b>8</b><span style="font-size:40px">Outlets, each feeding farms downstream of it.</span></li>
-      <li><b>Unlined</b><span style="font-size:40px">Bare earth. Water seeps out all along the way.</span></li>
+      <li><b>3 km</b><span>Reach of the minor canal, head to tail.</span></li>
+      <li><b>8</b><span>Outlets, each feeding farms downstream.</span></li>
+      <li><b>Unlined</b><span>Bare earth. Water seeps out all along the way.</span></li>
     </ul>
-    <svg viewBox="0 0 760 420" class="big-canal" role="img" aria-label="Canal schematic with eight outlets from head to tail">
-      <defs><linearGradient id="cg" x1="0" x2="1"><stop offset="0" stop-color="#5FD0DB"/><stop offset="1" stop-color="#3C8FA0"/></linearGradient></defs>
-      <polygon points="30,120 730,150 730,222 30,250" fill="url(#cg)" opacity=".92"/>
-      <g stroke="#EAF2EF" stroke-width="3" fill="#0E2A3A">
-        <script>/* outlets drawn below */</script>
-      </g>
+    <svg viewBox="0 56 760 346" class="big-canal" role="img" aria-label="Canal schematic with eight outlets from head to tail, distances in kilometres">
+      <defs><linearGradient id="cg" x1="0" x2="1"><stop offset="0" stop-color="#D97757"/><stop offset="1" stop-color="#C15F3C"/></linearGradient></defs>
+      <polygon points="30,120 730,150 730,222 30,250" fill="url(#cg)"/>
       <g id="s2-outlets"></g>
-      <text x="30" y="96" fill="#EAF2EF" font-size="28" font-family="Public Sans, system-ui" font-weight="600">Head</text>
-      <text x="730" y="124" fill="#EAF2EF" font-size="28" font-family="Public Sans, system-ui" font-weight="600" text-anchor="end">Tail</text>
+      <text x="30" y="92" fill="#1F1E1D" font-size="30" font-family="Inter, system-ui, sans-serif" font-weight="600">Head</text>
+      <text x="730" y="122" fill="#1F1E1D" font-size="30" font-family="Inter, system-ui, sans-serif" font-weight="600" text-anchor="end">Tail</text>
     </svg>
   </div>
-  <p class="src" style="position:absolute;bottom:34px">Source: demo-scenario.json (3 km, 8 outlets, unlined). Outlet distances are on the canal map in the app.</p>
-  <aside hidden>Cue: Point at the schematic from head to tail. — The setting is a minor canal, modelled on Kondaveedu Minor in Andhra Pradesh: three kilometres long, eight farm outlets from head to tail, and unlined, which means bare earth. Hold one fact in mind. Water leaves this canal all along its length, not only at the outlets. These are demo-scenario values, not field gauge readings.</aside>
+  <p class="foot">Source: demo-scenario.json (3 km, 8 outlets, unlined). Distances are on the app's canal map.</p>
+  <aside hidden>Cue: Point at the schematic from head to tail. — The setting is a minor canal, modelled on Kondaveedu Minor in Andhra Pradesh: three kilometres long, eight farm outlets from head to tail, and unlined, which means bare earth. Hold one fact in mind. Water leaves this canal all along its length, not only at the outlets. These are demo-scenario values, not field gauge readings. — ARCHITECT CUT: (skipped in this cut)</aside>
 </section>
 
 <!-- 3 · warabandi -->
@@ -167,7 +174,7 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
   </div>
   <div class="roster-cap"><span>Head of the canal</span><span>Eight equal turns on the weekly roster</span><span>Tail</span></div>
   <p style="margin-top:44px;font-family:var(--display);font-weight:600;font-size:52px;line-height:1.2;max-width:24em">The register records time, so it calls every turn fair.</p>
-  <aside hidden>Cue: Point at the eight equal blocks. — The system that shares this water is called warabandi. Wara means turn. Bandi means fixing. Each farm gets the outlet for a fixed slot on a weekly roster. On this canal the slots are equal: eight farms, equal hours. It is simple and easy to audit, and that is why it lasts. But look at what the register records. It records time. So it calls every turn fair.</aside>
+  <aside hidden>Cue: Point at the eight equal blocks. — The system that shares this water is called warabandi. Wara means turn. Bandi means fixing. Each farm gets the outlet for a fixed slot on a weekly roster. On this canal the slots are equal: eight farms, equal hours. It is simple and easy to audit, and that is why it lasts. But look at what the register records. It records time. So it calls every turn fair. — ARCHITECT CUT: The system that shares the water is warabandi. Wara is turn, bandi is fixing: every farm gets an equal slot on a weekly roster. It is simple and auditable, and it records time, not water.</aside>
 </section>
 
 <!-- 4 · hours are not water -->
@@ -175,18 +182,18 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
   <h2>An hour at the tail is not an hour at the head.</h2>
   <div class="cols wide-l" style="margin-top:20px">
     <div class="stack">
-      <div><div class="read flow">0.145<small>m³/s at outlet 1</small></div><p class="mute small" style="margin-top:6px">3.5% of the flow already lost to seepage</p></div>
-      <div><div class="read tail">0.106<small>m³/s at outlet 8</small></div><p class="mute small" style="margin-top:6px">29.4% of the flow lost to seepage</p></div>
+      <div><div class="read flow">0.145<small>m³/s at outlet 1</small></div><p class="mute small" style="margin-top:24px">3.5% of the flow already lost to seepage</p></div>
+      <div><div class="read tail">0.106<small>m³/s at outlet 8</small></div><p class="mute small" style="margin-top:24px">29.4% of the flow lost to seepage</p></div>
       <p style="font-size:38px;max-width:22em">Same hour of turn, about three-quarters of the water: 0.106 ÷ 0.145 ≈ 0.73.</p>
     </div>
     <svg viewBox="0 0 700 440" class="big-canal" role="img" aria-label="Canal narrowing from head to tail with seepage droplets">
-      <defs><linearGradient id="cg2" x1="0" x2="1"><stop offset="0" stop-color="#5FD0DB"/><stop offset="1" stop-color="#3A7F90"/></linearGradient></defs>
+      <defs><linearGradient id="cg2" x1="0" x2="1"><stop offset="0" stop-color="#D97757"/><stop offset="1" stop-color="#C15F3C"/></linearGradient></defs>
       <polygon points="20,150 680,185 680,250 20,290" fill="url(#cg2)"/>
       <g id="s4-drops"></g>
     </svg>
   </div>
-  <p class="src" style="position:absolute;bottom:34px"><span class="tag" style="font-size:24px;padding:2px 14px">Modelled</span>&nbsp; Q(x) = Q₀·e^(−kx), Q₀ = 0.15 m³/s, k = 0.00012 per metre, from the seed scenario. Model output, not gauge readings.</p>
-  <aside hidden>Cue: Read the two big numbers, then the ratio. Pause after the ratio. — Here is what the register misses. Using the scenario's seepage model, the flow at outlet one is 0.145 cubic metres per second, and 3.5 percent has already been lost. By outlet eight it is 0.106, and 29.4 percent has been lost. Divide the second by the first, 0.106 over 0.145, and you get about 0.73. The same hour of turn, about three-quarters of the water. These are modelled values from the seed scenario, not gauge readings.</aside>
+  <p class="foot"><span class="tag" style="padding:0 14px">Modelled</span>&nbsp; Q(x) = Q₀·e^(−kx), Q₀ = 0.15 m³/s, k = 0.00012 per m, from the seed. Not gauge readings.</p>
+  <aside hidden>Cue: Read the two big numbers, then the ratio. Pause after the ratio. — Here is what the register misses. Using the scenario's seepage model, the flow at outlet one is 0.145 cubic metres per second, and 3.5 percent has already been lost. By outlet eight it is 0.106, and 29.4 percent has been lost. Divide the second by the first, 0.106 over 0.145, and you get about 0.73. The same hour of turn, about three-quarters of the water. These are modelled values from the seed scenario, not gauge readings. — ARCHITECT CUT: In the scenario's seepage model, the flow is 0.145 cubic metres per second at the first outlet and 0.106 at the last, with 3.5 and 29.4 percent lost. Divide them and you get about 0.73: the same hour gives the tail about three-quarters of the water. These are modelled values, not gauge readings.</aside>
 </section>
 
 <!-- 5 · toggle -->
@@ -203,8 +210,8 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
       <div><div class="lane"><span>Turn length</span><div class="track"><i id="t8"></i></div></div><div class="lane"><span>Water delivered</span><div class="track"><i id="d8"></i></div></div></div></div>
   </div>
   <p class="verdict" id="verdict" aria-live="polite"></p>
-  <p class="src" style="position:absolute;bottom:34px">Illustration from the two modelled flows (0.1447 and 0.1059 m³/s). Real turns are computed in packages/core.</p>
-  <aside hidden>Cue: Equal hours is selected. Point at the two delivered-water bars. Then CLICK "Equal volume" now. — Under equal hours the turn bars match, and the water delivered at the tail falls to about 73 percent of the head's. Now watch. [Click Equal volume now.] The tail's turn stretches by about 1.37 times, that is 0.145 over 0.106, and both farms receive the same water. This is an illustration built from those two flows. The real calculation lives in the core package.</aside>
+  <p class="foot">From the two modelled flows, 0.1447 and 0.1059 m³/s. Real turns are computed in packages/core.</p>
+  <aside hidden>Cue: Equal hours is selected. Point at the two delivered-water bars. Then CLICK "Equal volume" now. — Under equal hours the turn bars match, and the water delivered at the tail falls to about 73 percent of the head's. Now watch. [Click Equal volume now.] The tail's turn stretches by about 1.37 times, that is 0.145 over 0.106, and both farms receive the same water. This is an illustration built from those two flows. The real calculation lives in the core package. — ARCHITECT CUT: (skipped in this cut)</aside>
 </section>
 
 <!-- 6 · our answer -->
@@ -216,19 +223,41 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
     <dt>V<sub>i</sub></dt><dd>The volume farm i needs this week, from the crop-water model.</dd>
     <dt>Q(x<sub>i</sub>)</dt><dd>The flow that actually reaches its outlet after seepage. The tail's turn runs longer.</dd>
   </dl>
-  <p class="src" style="position:absolute;bottom:34px">Computed in packages/core (roster, hydraulics, crop need, ledger). No water arithmetic exists anywhere else in the codebase.</p>
-  <aside hidden>Cue: Point at the equation, then at each term as you name it. — That is the idea in one line. T sub i equals V sub i divided by Q of x sub i. V is the volume farm i needs this week, from the crop-water model. Q of x is the flow that actually reaches its outlet after seepage. Time is the answer, not the input. And this arithmetic lives in one package. There is no water arithmetic anywhere else in the codebase.</aside>
+  <p class="foot">Computed in packages/core. No water arithmetic exists anywhere else in the codebase.</p>
+  <aside hidden>Cue: Point at the equation, then at each term as you name it. — That is the idea in one line. T sub i equals V sub i divided by Q of x sub i. V is the volume farm i needs this week, from the crop-water model. Q of x is the flow that actually reaches its outlet after seepage. Time is the answer, not the input. And this arithmetic lives in one package. There is no water arithmetic anywhere else in the codebase. — ARCHITECT CUT: So we share by volume and solve for time. T sub i equals V sub i over Q of x sub i: the volume a farm needs, divided by the flow that reaches its outlet. All of that arithmetic lives in one package.</aside>
 </section>
 
 <!-- 7 · who decides -->
 <section class="slide light" data-title="Who decides">
-  <h2>Models suggest. Code calculates. A person approves.</h2>
+  <h2>Models suggest. Code calculates. An approval step decides.</h2>
   <div class="pipeline">
     <div><div class="big">LLMs propose</div><p>Agents read farmer requests and draft options. A tool marked <code>gated: true</code> returns a proposal and never applies it.</p><p class="src" style="margin-top:18px">packages/contracts/src/agents.ts</p></div>
     <div><div class="big">The core computes</div><p>Pure TypeScript: crop need, hydraulics, roster, ledger. No network, no I/O, no model calls.</p><p class="src" style="margin-top:18px">packages/core</p></div>
-    <div><div class="big">The coordinator approves</div><p>Nothing reaches a farmer until a human decides. The agent loop records the proposal and commits nothing itself.</p><p class="src" style="margin-top:18px">apps/api/src/agents/loop.ts</p></div>
+    <div><div class="big">An approval step decides</div><p>A roster is released through an approval step. Every outbound call, from any path, passes one rate-limited function. Who may approve is not yet enforced by the server.</p><p class="src" style="margin-top:18px">apps/api/src/agents/loop.ts</p></div>
   </div>
-  <aside hidden>Cue: Left to right across the three columns. Do not rush the third. — Who decides? Models suggest, code calculates, and a person approves. Language models read farmer requests and draft options, but a tool marked gated only returns a proposal. The deterministic core does the calculation, with no network and no model calls. And nothing reaches a farmer until the coordinator decides. That is enforced in code, in the agent loop, not just written in a policy.</aside>
+  <aside hidden>Cue: Left to right across the three columns. Say the last sentence plainly; the next slide returns to it. — Who decides? Models suggest, code calculates, and an approval step decides. Language models read farmer requests and draft options, but a tool marked gated only returns a proposal. The deterministic core does the calculation, with no network and no model calls. A roster is released through an approval step, and every outbound call, from any path, passes one rate-limited function. Who is allowed to approve is not yet enforced by the server, and I will come back to that. — ARCHITECT CUT: Models suggest, code calculates, and an approval step decides. Language models draft options, and a gated tool only returns a proposal. The deterministic core does every water calculation. A roster is released through an approval step, and every outbound call passes one rate-limited function. I am not claiming that nothing can reach a farmer without approval: coordinator alerts and the escalation ladder also place calls, and I have verified the single call function, not every path's gating.</aside>
+</section>
+
+<!-- 7b · trust -->
+<section class="slide dark" data-title="How it stays trustworthy">
+  <h2>How it stays trustworthy.</h2>
+  <div class="trust" role="img" aria-label="Trust boundaries: model output, a gate, the deterministic core, an approval gate, then effects">
+    <div class="zone"><h3>Model output</h3><p>Untrusted. Only ever a proposal.</p></div>
+    <div class="gate"><span>gated</span></div>
+    <div class="zone core"><h3>Deterministic core</h3><p>No network, no I/O. Every water number.</p></div>
+    <div class="gate"><span>approve</span></div>
+    <div class="zone"><h3>Effects</h3><p>Calls, events, ledger.</p></div>
+  </div>
+  <ul class="ctl">
+    <li><b>One route can dial.</b> A test scans the source and fails on any other.</li>
+    <li><b>3 calls per 60 s per handset.</b> Sliding window, one atomic statement.</li>
+    <li><b>REAL_TELEPHONY off</b> stops all dialling, with no deploy.</li>
+    <li><b>Every result carries its source</b> and a simulated flag. A fallback is never a model.</li>
+    <li><b>Events are append-only.</b> The ledger is double-entry.</li>
+    <li><b>Webhooks fail closed.</b> A bad signature or missing config returns 403.</li>
+  </ul>
+  <p class="notyet"><b>Not built yet:</b> server-side sign-in (the role gate is client-side) · a tamper-evident log (append-only by convention) · masking of stored phone numbers.</p>
+  <aside hidden>Cue: Left to right across the diagram. Then read the bottom strip aloud. Do not skip the strip. — How does it stay trustworthy? Three boundaries. A model's output is only ever a proposal. The core calculates, with no network access. And a call can only be placed through one function, behind a rate limit and a kill switch. Every result says whether it came from a model or a fallback, and whether a call was real or simulated. What it does not yet have is server-side sign-in, a tamper-evident log, or protection for stored phone numbers. — ARCHITECT CUT: How does it stay trustworthy? Three boundaries, each enforced in code you can read. One: a model's output is a proposal. Tools marked gated return a proposal and never apply it; that is in the contracts file and the agent loop. Two: the core is pure. It has no network access, and a search of its source finds no fetch or environment reads. Three: a call can only be placed through one function. A static test scans the source and fails on any other route, and we watched it fail on a planted bypass. Behind it, the limit is three calls per sixty seconds per handset, a sliding window consumed in one atomic statement, and setting REAL_TELEPHONY to false stops all dialling without a deploy. Telephony webhooks fail closed: missing configuration or a bad signature returns 403. Every result carries its source and a simulated flag, so a fallback is never reported as a model call. Now the gaps. There is no server-side authentication: the role gate is client-side, and the approve route records a fixed coordinator identity. The event log is append-only by convention, with no hash chain. Phone numbers are stored in plain text. — PAUSE here for the evaluator's questions on trust boundaries (about 40 s). Point at the code if asked: packages/contracts/src/agents.ts, apps/api/src/agents/loop.ts, apps/api/src/placecall-guard.test.ts, apps/api/src/noloop.ts.</aside>
 </section>
 
 <!-- 8 · product -->
@@ -238,7 +267,7 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
     <figure class="shot"><img src="assets/coordinator.png" alt="Coordinator console with an urgent water request and an Approve button"><figcaption>Coordinator console · Demo data</figcaption></figure>
     <figure class="shot"><img src="assets/farmer.png" alt="Farmer screen showing the next turn and weekly share"><figcaption>Farmer view · Demo data</figcaption></figure>
   </div>
-  <aside hidden>Cue: Point at the Approve button on the coordinator console. — This is the app in mock mode, so everything you see is demo data. On the left, the coordinator console: an urgent request, Jadal's suggested partial grant, and an Approve button. The farmer view shows the next turn and the weekly share. The phone screen is a simulator, not a real call.</aside>
+  <aside hidden>Cue: Point at the Approve button on the coordinator console. — This is the app in mock mode, so everything you see is demo data. On the left, the coordinator console: an urgent request, Jadal's suggested partial grant, and an Approve button. The farmer view shows the next turn and the weekly share. The phone screen is a simulator, not a real call. — ARCHITECT CUT: (skipped in this cut)</aside>
 </section>
 
 <!-- 9 · voice + ledger -->
@@ -246,21 +275,21 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
   <h2>A call in Telugu, and a ledger that has to balance.</h2>
   <div class="cols wide-l">
     <div class="stack">
-      <p>Farmers without smartphones get a spoken call about their next turn.</p>
+      <p>The caller agent is built to phone farmers who have no smartphone, in Telugu. Live calls are not demo-reliable.</p>
       <p>Every cubic metre is recorded double-entry, and the ledger is checked for conservation: debits equal credits.</p>
       <p class="small mute">The Telugu copy is machine-written and still needs a native speaker's review. SMS and WhatsApp are simulated only. Nothing is sent over those channels.</p>
     </div>
     <figure class="shot"><img src="assets/phone.png" alt="Simulated phone call screen"><figcaption>Simulated call · Demo data</figcaption></figure>
   </div>
-  <aside hidden>Cue: Optional. Skip this slide if you are short of time. — Farmers without smartphones get a spoken call about their next turn. Two caveats up front. The Telugu copy is machine-written and still needs a native speaker's review. And SMS and WhatsApp are simulated only; nothing is sent. Every cubic metre is recorded double-entry, and the ledger is checked for conservation: debits equal credits.</aside>
+  <aside hidden>Cue: Optional. Skip this slide if you are short of time. If you show it, say the caveats before anything else. — The caller agent is built to phone farmers who have no smartphone, in Telugu. Live calls are not demo-reliable, SMS and WhatsApp are simulated only, and the Telugu copy is machine-written and awaiting a native speaker's review. Every cubic metre is recorded double-entry, and the ledger is checked for conservation: debits equal credits. — ARCHITECT CUT: (skipped in this cut)</aside>
 </section>
 
 <!-- 10 · video -->
-<section class="slide dark tight" data-title="Launch film">
-  <h2 style="font-size:64px">Fifty-four seconds.</h2>
+<section class="slide dark" data-title="Launch film">
+  <h2>Fifty-four seconds.</h2>
   <video class="vid" controls preload="metadata" poster="assets/brag-v3.jpg" src="assets/brag-v3.mp4"></video>
-  <p class="src" style="text-align:center;margin:8px auto 0;max-width:none">Launch film, version 3. Footage from the app in mock mode. Telugu captions are machine-written.</p>
-  <aside hidden>Cue: PLAY THE VIDEO. It runs about 54 seconds. Say nothing over it. — Here is the launch film, about fifty-four seconds. [Play. Stay silent.] That is footage from the app in mock mode. The Telugu captions are machine-written and unreviewed.</aside>
+  <p class="foot">Launch film, version 3. Footage from the app in mock mode. Telugu captions are machine-written.</p>
+  <aside hidden>Cue: Not played in this cut. Offer it afterwards. — Here is the launch film, about fifty-four seconds. [Play. Stay silent.] That is footage from the app in mock mode. The Telugu captions are machine-written and unreviewed. — ARCHITECT CUT: (skipped in this cut)</aside>
 </section>
 
 <!-- 11 · verified -->
@@ -272,43 +301,28 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
     <dt>1</dt><dd>route is allowed to place a call<small>a static test fails on any bypass, shown failing on a planted one</small></dd>
     <dt>605</dt><dd>interface strings in English and Telugu, key for key<small>parity checked on the current build</small></dd>
   </dl>
-  <p class="src" style="position:absolute;bottom:34px">Measured on the merged swarm branch (pnpm -r typecheck, pnpm -r test). One later web display change passed its own typecheck and tests. Nothing here has been merged into the live branch yet.</p>
-  <aside hidden>Cue: Read the four figures down the left. — What we measured. 862 tests pass across three packages, and typecheck is clean, on the merged build. The call limiter allows at most three calls per sixty seconds to a handset. It is a sliding window, and it stays atomic when twelve requests arrive at once. A test fails if any code path dials outside the one allowed function. And 605 interface strings in English and Telugu are in parity, key for key. That is parity, not translation quality.</aside>
+  <p class="foot">Run on the merged swarm branch, before one later web change that passed its own gate. Not in live.</p>
+  <aside hidden>Cue: Read the four figures down the left. — What we measured. 862 tests pass across three packages, and typecheck is clean, on the merged build. The call limiter allows at most three calls per sixty seconds to a handset. It is a sliding window, and it stays atomic when twelve requests arrive at once. A test fails if any code path dials outside the one allowed function. And 605 interface strings in English and Telugu are in parity, key for key. That is parity, not translation quality. — ARCHITECT CUT: What we measured: 862 tests pass and typecheck is clean on the merged build. The rate limiter stays at three calls per sixty seconds under twelve simultaneous requests.</aside>
 </section>
 
-<!-- 12 · caught -->
-<section class="slide dark" data-title="What we caught">
-  <h2>We checked our own claims. Some failed.</h2>
-  <ul class="caught" style="margin-top:28px">
-    <li><b>“The tail meets about 42% of need.”</b> Core says otherwise. On the seed, planned need-met is 280.8% at the head and 205.5% at the tail: over-allocation, Gini 0.059. The 42% came from an illustrative mock.</li>
-    <li><b>The fairness comparison read zero.</b> In the live path need-met was capped at 100%, hiding the head–tail gap. Fixed by separating planned from delivered.</li>
-    <li><b>The urgency score was a constant 0.15.</b> It now reports “unscored” when nothing matches.</li>
-    <li><b>A model's QA passed a video with invented ledger figures.</b> A 40-line script caught them. The numbers were removed.</li>
+<!-- 13b · telemetry roadmap -->
+<section class="slide dark" data-title="Path to field telemetry">
+  <h2>Path to field telemetry.</h2>
+  <span class="rm">Roadmap · not built</span>
+  <div class="flowline">
+    <div class="node built">Today: flow modelled from the seed</div><div class="arrow">→</div>
+    <div class="node">Flow gauge at each outlet</div><div class="arrow">→</div>
+    <div class="node">Reading signed on the device</div><div class="arrow">→</div>
+    <div class="node">Edge buffer for patchy links</div><div class="arrow">→</div>
+    <div class="node">Compare with the model, flag drift</div>
+  </div>
+  <ul class="ctl" style="grid-template-columns:1fr;margin-top:30px">
+    <li><b>Core change needed:</b> a measured-flow input beside the modelled one. Today it derives Q(x) from the model constants.</li>
+    <li><b>After a pilot:</b> device fleet management and over-the-air updates.</li>
+    <li><b>A pilot must answer:</b> gauge accuracy, spoofing and tamper resistance, connectivity, and who maintains the devices.</li>
   </ul>
-  <aside hidden>Cue: This is the credibility slide. Slow down. — We also checked our own claims, and some failed. The original handoff said the tail meets about 42 percent of its need. Core says otherwise. On the seed, planned need-met is 280.8 percent at the head and 205.5 at the tail, which is over-allocation. The 42 came from an illustrative mock, so we do not claim it. The fairness comparison read zero because need-met was capped, and that is fixed. The urgency score was a constant, and it now says unscored. And a model's QA passed a video with invented ledger numbers. A forty-line script caught them. For numbers, mechanical checks beat model checks.</aside>
-</section>
-
-<!-- 13 · open -->
-<section class="slide light" data-title="Still open">
-  <h2>What is still simulated or open.</h2>
-  <ul class="open two" style="margin-top:22px">
-    <li><b>SMS and WhatsApp</b> are simulated. Nothing is sent.</li>
-    <li><b>Live calls</b> are not demo-reliable. The Twilio account is a trial with a $0 balance.</li>
-    <li><b>Telugu copy</b> is machine-written and awaiting native review.</li>
-    <li><b>Groundnut example:</b> the doc says 462.12 m³, the shipped table gives 417.69. An owner must choose.</li>
-    <li><b>Equal volume on the raw season seed</b> starves the tail. Per-week or per-season entitlement is a product decision.</li>
-    <li><b>Contract changes</b> (climate inputs, place_call gating) are written up and wait on a contracts-ok label.</li>
-    <li><b>Triage display:</b> an unscored request still shows a low-urgency pill.</li>
-    <li><b>Workflow audit:</b> “alert the coordinator” does not yet alert.</li>
-  </ul>
-  <aside hidden>Cue: Read the first four. Then say the rest are on the slide. — What is still simulated or open. SMS and WhatsApp are simulated. Live calls are not demo-reliable, because the Twilio account is a trial with a zero balance. The Telugu copy awaits a native speaker. The groundnut worked example disagrees with the shipped table, and an owner has to choose. Equal volume on the raw season seed starves the tail, which is a product decision about weekly versus seasonal entitlement. Two contract changes are written up and waiting for approval.</aside>
-</section>
-
-<!-- 14 · close -->
-<section class="slide dark" data-title="Close">
-  <h2 class="close-h">Fair water, verified.</h2>
-  <p class="close-s">LLMs propose. The core computes. The coordinator approves.</p>
-  <aside hidden>Cue: Let the strip finish. The water has reached the tail. — Fair water, verified. Models propose, the core computes, the coordinator approves. The water on the strip below has reached the tail, and that is the point of the project. I am happy to take questions, and to open the app on localhost.</aside>
+  <p class="closer">Next step: measure the water, not only model it.</p>
+  <aside hidden>Cue: Say 'roadmap, not built' before you read anything. The slide ends on a closing line; say it and stop. — This is a roadmap, not something built. Today the flows are modelled from the seed, not read from gauges. The next step would be flow gauges at the outlets, readings signed at the device, buffered at the edge for patchy rural connectivity, and compared with the model so drift is visible. None of that exists yet. Fair water starts with measuring it. Thank you. — ARCHITECT CUT: This is a roadmap, and none of it is built. Today the flow at each outlet is modelled from the seed with a fixed decay constant. The core would need a measured-flow input beside the modelled one. A pilot would put a flow gauge at each outlet, sign the reading on the device, and buffer it at the edge, because rural connectivity is patchy. The system would compare each reading with the model, flag drift, and alert the coordinator when they diverge, which is also the first defence against a faulty or spoofed sensor. Device fleet management and over-the-air updates come after a pilot, not before. What a pilot has to answer is gauge accuracy, tamper resistance, connectivity, and who owns and maintains the devices. Before questions, the open items in one breath: SMS and WhatsApp are simulated, live calls are not demo-reliable, the Telugu copy is not natively reviewed, sign-in is client-side, and two product decisions wait on an owner. Models propose, the core computes, an approval step decides, and I have said where each is not yet enforced. I would like to hear what you would harden first. — OPEN THE FLOOR. Ask the closing questions in docs/EVALUATOR-BRIEF.md if the floor stays quiet. Pause for about 45 s. — Closing remark (say it, then stop): Fair water starts with measuring it. Thank you. — IF ASKED — If asked: what did you catch in your own work? (was a slide): We checked our own claims, and some failed. The handoff said the tail meets about 42 percent of its need. Core says otherwise: on the seed, planned need-met is 280.8 percent at the head and 205.5 at the tail, which is over-allocation, Gini 0.059, so we do not claim the 42. The fairness comparison read zero in the live path because need-met was capped at 100, and that is fixed. The urgency score was a constant 0.15 and now reports unscored. And a model's QA pass approved a video with invented ledger figures; a forty-line script found them, so for numbers we trust mechanical checks over model checks. — IF ASKED — If asked: what is still simulated or open? (was a slide): SMS and WhatsApp are simulated and nothing is sent. Live calls are not demo-reliable: the Twilio account is a trial with a zero balance. The Telugu copy is machine-written and not natively reviewed. The groundnut worked example says 462.12 cubic metres while the shipped table gives 417.69, and an owner has to choose. Equal volume on the raw season-scaled seed starves the tail, which is a product decision about weekly versus seasonal entitlement. Two contract changes, climate inputs and place_call gating, are written up and wait on a contracts-ok label. Sign-in is client-side, so the server does not check who approves, and the demo reset routes are unauthenticated. The event log is append-only by convention, and phone numbers are stored in plain text.</aside>
 </section>
 
 <!-- ============ chrome ============ -->
@@ -316,14 +330,15 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
 <div id="bed" aria-hidden="true">
   <svg viewBox="0 0 1920 120" preserveAspectRatio="none">
     <defs>
+      <linearGradient id="stripg" x1="0" x2="1"><stop offset="0" stop-color="#D97757"/><stop offset="1" stop-color="#C15F3C"/></linearGradient>
       <clipPath id="fillclip"><rect id="fillrect" x="80" y="0" width="0" height="120"/></clipPath>
     </defs>
-    <polygon points="80,38 1840,48 1840,92 80,102" fill="rgba(234,242,239,.10)"/>
+    <polygon points="80,38 1840,48 1840,92 80,102" fill="#E8E6DC"/>
     <g clip-path="url(#fillclip)">
-      <polygon points="80,38 1840,48 1840,92 80,102" fill="#5FD0DB" opacity=".9"/>
-      <polygon points="80,38 1840,48 1840,92 80,102" fill="none" stroke="#EAF2EF" stroke-opacity=".55" stroke-width="3" stroke-dasharray="14 34" class="dash"/>
+      <polygon points="80,38 1840,48 1840,92 80,102" fill="url(#stripg)"/>
+      <polygon points="80,38 1840,48 1840,92 80,102" fill="none" stroke="#FFFFFF" stroke-opacity=".7" stroke-width="3" stroke-dasharray="14 34" class="dash"/>
     </g>
-    <g id="ticks" fill="#EAF2EF" font-family="Public Sans, system-ui" font-size="22"></g>
+    <g id="ticks" fill="#1F1E1D" font-family="Public Sans, system-ui" font-size="22"></g>
     <g id="drops"></g>
   </svg>
 </div>
@@ -347,25 +362,26 @@ code{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-size:
   const ticks=document.getElementById('ticks'), drops=document.getElementById('drops');
   ch.forEach((c,i)=>{
     const x=80+c/3000*1760, y0=38+ (c/3000)*10 + 0, yb=102-(c/3000)*10;
-    const t=document.createElementNS(NS,'rect');t.setAttribute('x',x-2);t.setAttribute('y',y0-8);t.setAttribute('width',4);t.setAttribute('height',10);t.setAttribute('fill','#EAF2EF');ticks.appendChild(t);
-    if(i%2===0){const d=document.createElementNS(NS,'circle');d.setAttribute('cx',x+28);d.setAttribute('cy',yb+4);d.setAttribute('r',4+ (i*0.4));d.setAttribute('fill','#E2805F');d.setAttribute('class','drop');d.style.animationDelay=(i*0.37)+'s';drops.appendChild(d);}
+    const t=document.createElementNS(NS,'rect');t.setAttribute('x',x-2);t.setAttribute('y',y0-8);t.setAttribute('width',4);t.setAttribute('height',10);t.setAttribute('fill','#1F1E1D');ticks.appendChild(t);
+    if(i%2===0){const d=document.createElementNS(NS,'circle');d.setAttribute('cx',x+28);d.setAttribute('cy',yb+4);d.setAttribute('r',4+ (i*0.4));d.setAttribute('fill','#E8967A');d.setAttribute('class','drop');d.style.animationDelay=(i*0.37)+'s';drops.appendChild(d);}
   });
   if(reduce)drops.innerHTML='';
 
   /* slide 2 outlets and slide 4 droplets */
-  const o2=document.getElementById('s2-outlets');
-  const km=['0.3','0.7','1.0','1.4','1.8','2.2','2.5','2.9'];
+  const o2=document.getElementById('s2-outlets'), km=['0.3','0.7','1.0','1.4','1.8','2.2','2.5','2.9'];
+  const TICK=150, LABEL_Y=334, INK='#1F1E1D', GREY='#73726C';
+  function svgEl(n,a){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;}
   ch.forEach((c,i)=>{
-    const x=30+c/3000*700, top=120+(c/3000)*30;
-    const l=document.createElementNS(NS,'line');l.setAttribute('x1',x);l.setAttribute('x2',x);l.setAttribute('y1',top-6);l.setAttribute('y2',top+ (i%2?118:92));l.setAttribute('stroke','#EAF2EF');l.setAttribute('stroke-width',3);o2.appendChild(l);
-    const t=document.createElementNS(NS,'text');t.setAttribute('x',x);t.setAttribute('y',top+ (i%2?160:130));t.setAttribute('fill','#EAF2EF');t.setAttribute('font-size',26);t.setAttribute('font-family','Public Sans, system-ui');t.setAttribute('text-anchor','middle');t.textContent=km[i];o2.appendChild(t);
+    const x=30+c/3000*700, top=120+((x-30)/700)*30;
+    o2.appendChild(svgEl('line',{x1:x,x2:x,y1:top-10,y2:top-10+TICK,stroke:INK,'stroke-width':3}));
+    const t=svgEl('text',{x:x,y:LABEL_Y,fill:INK,'font-size':30,'font-family':'Inter, system-ui, sans-serif','text-anchor':'middle'});t.textContent=km[i];o2.appendChild(t);
   });
-  const lab=document.createElementNS(NS,'text');lab.setAttribute('x',380);lab.setAttribute('y',398);lab.setAttribute('fill','#A9C2CC');lab.setAttribute('font-size',26);lab.setAttribute('font-family','Public Sans, system-ui');lab.setAttribute('text-anchor','middle');lab.textContent='Distance from the head, km';o2.appendChild(lab);
+  const cap=svgEl('text',{x:380,y:390,fill:GREY,'font-size':30,'font-family':'Inter, system-ui, sans-serif','text-anchor':'middle'});cap.textContent='Distance from the head, km';o2.appendChild(cap);
   function makeDrops(id){
     const g=document.getElementById(id); if(!g)return;
     for(let i=0;i<14;i++){
       const x=60+i*45, bot=290-(x-20)/660*40;
-      const c=document.createElementNS(NS,'circle');c.setAttribute('cx',x);c.setAttribute('cy',bot+(reduce?12+i:10));c.setAttribute('r',5+Math.min(7,i*0.45));c.setAttribute('fill','#E2805F');
+      const c=document.createElementNS(NS,'circle');c.setAttribute('cx',x);c.setAttribute('cy',bot+(reduce?12+i:10));c.setAttribute('r',5+Math.min(7,i*0.45));c.setAttribute('fill','#E8967A');
       if(!reduce){c.setAttribute('class','drop');c.style.animationDelay=(i*0.23)+'s';c.style.animationDuration=(2.6+(i%3)*.4)+'s';}
       g.appendChild(c);
     }
