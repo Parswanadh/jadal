@@ -100,6 +100,74 @@ describe("classifyByRules", () => {
   });
 });
 
+describe("unscored marker", () => {
+  it("marks a message that matches no term as unscored instead of returning the 0.15 floor", () => {
+    const result = classifyByRules("hello there, how are you today");
+
+    expect(isUnscored(result)).toBe(true);
+    expect(result.intent).toBe("other");
+    expect(result.intent_confidence).toBe(0);
+    expect(result.urgency).toBe(0);
+    expect(result.mentions_crop_stress).toBe(false);
+    // The numeric field stays schema-valid for `triage_score`; it is 0, never URGENCY_BASE.
+    expect(result.urgency).not.toBe(0.15);
+  });
+
+  it("treats blank input as unscored", () => {
+    expect(isUnscored(classifyByRules("   "))).toBe(true);
+  });
+
+  it("does not mark a matched message as unscored, even when urgency is low", () => {
+    const result = classifyByRules("ధన్యవాదాలు");
+    expect(result.intent).toBe("acknowledge");
+    expect(isUnscored(result)).toBe(false);
+  });
+
+  it("never marks a model-sourced result as unscored, even if the numbers match", () => {
+    const modelResult = System1Result.parse({
+      intent: "other",
+      intent_confidence: 0,
+      urgency: 0,
+      mentions_crop_stress: false,
+      source: "laya",
+    });
+    expect(isUnscored(modelResult)).toBe(false);
+  });
+});
+
+describe("English demo reasons", () => {
+  it("classifies each reason the demo seeds with the expected intent", () => {
+    expect(classifyByRules("My maize is tasseling and the leaves are rolling in the heat.").intent).toBe(
+      "urgent_request",
+    );
+    expect(classifyByRules("My field at the tail end got a short turn.").intent).toBe("buffer_request");
+    expect(classifyByRules("Water needed for my crop.").intent).toBe("urgent_request");
+    expect(classifyByRules("I need water urgently, my paddy is flowering.").intent).toBe("urgent_request");
+  });
+
+  it("scores every seeded English reason above the old constant floor", () => {
+    const reasons = [
+      "My maize is tasseling and the leaves are rolling in the heat.",
+      "My field at the tail end got a short turn.",
+      "Water needed for my crop.",
+      "I need water urgently, my paddy is flowering.",
+    ];
+
+    for (const reason of reasons) {
+      const result = classifyByRules(reason);
+      expect(isUnscored(result)).toBe(false);
+      expect(result.urgency).toBeGreaterThan(0.15);
+    }
+  });
+
+  it("reads the seeded maize reason as crop stress and the plain ask as a request only", () => {
+    expect(classifyByRules("My maize is tasseling and the leaves are rolling in the heat.").mentions_crop_stress).toBe(
+      true,
+    );
+    expect(classifyByRules("Water needed for my crop.").mentions_crop_stress).toBe(false);
+  });
+});
+
 describe("slot extraction", () => {
   it("reads an explicit m³ volume written with Telugu combining marks", () => {
     expect(extractVolumeM3("100 క్యూబిక్ మీటర్లు పంపండి")).toBe(100);
