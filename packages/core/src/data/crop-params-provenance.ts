@@ -134,6 +134,11 @@ export function provenanceRows(record: CropParamsJsonRow): FieldProvenance[] {
     const rawStatus = tags[field];
     const status = asStatus(rawStatus);
     const clause = clauseForField(record, field);
+    // When no labelled clause documents the field (e.g. the UNSOURCED redgram row, whose whole
+    // `source` is one explanation rather than KC/STAGE_*/DEPLETION_P clauses), fall back to the
+    // row-level source string so the table still shows the evidence that was actually written.
+    const rowSource = typeof record.source === 'string' ? record.source.trim() : '';
+    const sourceClause = clause ? clause.text : rowSource !== '' ? rowSource : null;
     const pages = clause ? pagesIn(clause.text) : [];
     const base = {
       crop: record.crop,
@@ -141,7 +146,7 @@ export function provenanceRows(record: CropParamsJsonRow): FieldProvenance[] {
       field,
       value: record[field],
       status: rawStatus,
-      sourceClause: clause ? clause.text : null,
+      sourceClause,
       pages,
     };
 
