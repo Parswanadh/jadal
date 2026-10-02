@@ -64,11 +64,17 @@ describe('cropEngine (Task A2)', () => {
   });
 
   describe('weeklyNeed - FAO-56 section 5 worked examples', () => {
-    it('reproduces Groundnut worked example (§5.2) within 0.5 m3', () => {
+    it('DOC-ONLY inputs: the §5.2 adjusted Kc_mid (1.1325) reproduces the documented 462.12 m3', () => {
       // Exact inputs from fao56-model.md §5.1 and §5.2:
       // Area = 1.0 ha, Furrow Ea = 0.65, sandy_loam (theta_FC - theta_WP = 0.13)
       // Mid-season week: ET0 = 5.0 mm/day, Day 3 rain = 15.0 mm (others 0)
       // Groundnut: Zr = 0.80 m, p_base = 0.50, Kc_mid = 1.1325
+      //
+      // These params are HAND-TYPED from the prose worked example. `kc_mid: 1.1325` and
+      // `root_depth_m.max: 0.8` appear in NO data file — the shipped crop-params.json says
+      // 1.05 / 1.0. This test documents what the doc's arithmetic produces; it is NOT a test of
+      // the production parameter path. The shipped path is pinned by the next test.
+      // See docs/decisions/ADR-groundnut-worked-example.md (status: NEEDS-OWNER-DECISION).
       const plot: Plot = {
         id: 'plot-gn',
         farmer_id: 'farmer-1',
@@ -152,6 +158,72 @@ describe('cropEngine (Task A2)', () => {
         // Event cap: 10 * (104.0 / 0.65) * 1.0 = 1600.00 m3
         expect(Math.abs(need.bounds.event_cap_m3 - 1600.0)).toBeLessThan(1.0);
       }
+    });
+
+    it('SHIPPED crop-params.json groundnut gives 417.69 m3, NOT the documented 462.12 m3', async () => {
+      // This is the production path. It loads the groundnut row the code actually reads, rather
+      // than a hand-typed fixture, and pins the resulting volume so the divergence from the
+      // documented 462.12 m3 cannot be masked again. See
+      // docs/decisions/ADR-groundnut-worked-example.md (status: NEEDS-OWNER-DECISION).
+      const cropParamsList = (await import('./data/crop-params.json')).default as CropParams[];
+      const shipped = cropParamsList.find((p) => p.crop === 'groundnut' && !p.variant);
+      expect(shipped, 'groundnut row missing from crop-params.json').toBeDefined();
+
+      // Pin the two inputs that cause the 10.6% gap, so a silent table edit is caught here.
+      expect(shipped!.kc_mid).toBe(1.05);
+      expect(shipped!.root_depth_m.max).toBe(1.0);
+
+      const plot: Plot = {
+        id: 'plot-gn-shipped',
+        farmer_id: 'farmer-1',
+        outlet_id: 'outlet-1',
+        area_ha: 1.0,
+        soil: 'sandy_loam',
+        lat: 16.5,
+        lon: 80.5,
+      };
+
+      const plan: CropPlan = {
+        id: 'plan-gn-shipped',
+        plot_id: 'plot-gn-shipped',
+        crop: 'groundnut',
+        sowing_date: '2026-05-01',
+        area_fraction: 1.0,
+        application_efficiency: 0.65,
+        status: 'verified',
+      };
+
+      // Same §5.2 week: t = 70..76 after sowing, mid-season, ET0 5.0 mm/day, 15 mm on day 3.
+      const weather: WeatherDay[] = [
+        { date: '2026-07-10', et0_mm: 5.0, rain_mm: 0 },
+        { date: '2026-07-11', et0_mm: 5.0, rain_mm: 0 },
+        { date: '2026-07-12', et0_mm: 5.0, rain_mm: 15.0 },
+        { date: '2026-07-13', et0_mm: 5.0, rain_mm: 0 },
+        { date: '2026-07-14', et0_mm: 5.0, rain_mm: 0 },
+        { date: '2026-07-15', et0_mm: 5.0, rain_mm: 0 },
+        { date: '2026-07-16', et0_mm: 5.0, rain_mm: 0 },
+      ];
+
+      const need = cropEngine.weeklyNeed({
+        plan,
+        plot,
+        params: shipped!,
+        weather,
+        weekStart: '2026-07-10',
+      });
+
+      expect(need.stage).toBe('mid');
+      // ETc = 7 * 5.0 * 1.05 = 36.75 mm ; Peff = 0.8*(15-3) = 9.60 mm
+      expect(need.kc).toBeCloseTo(1.05, 4);
+      expect(need.etc_mm).toBeCloseTo(36.75, 2);
+      // Inet = 36.75 - 9.60 = 27.15 mm ; Igross = 27.15 / 0.65 = 41.769 mm
+      expect(need.net_irrigation_mm).toBeCloseTo(27.15, 2);
+      expect(need.gross_irrigation_mm).toBeCloseTo(41.769, 3);
+      // V = 10 * 41.769 * 1.0 = 417.69 m3
+      expect(need.volume_m3).toBeCloseTo(417.69, 2);
+
+      // ...and explicitly NOT the documented figure.
+      expect(Math.abs(need.volume_m3 - 462.12)).toBeGreaterThan(1);
     });
 
     it('reproduces Rice worked example (§5.3) within 0.5 m3', () => {

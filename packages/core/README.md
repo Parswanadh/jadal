@@ -8,6 +8,14 @@ Pure TypeScript implementation of the deterministic irrigation engineering core 
 2. **Contract-driven:** Directly implements the interfaces defined in `@jadal/contracts` using `satisfies` checks.
 3. **Engineering Rigor:** Every agronomic and hydraulic equation is cited from authoritative references (FAO-56 2025 Rev. 1, FAO-56 1998, Manning open-channel hydraulics). All project-specific empirical assumptions are marked `ASSUMED`.
 
+> **Warning — the groundnut worked example does not match the shipped table.**
+> `docs/research/fao56-model.md` §5.2 works groundnut at **462.12 m³** using a climate-adjusted
+> `kc_mid = 1.1325` and `Zr = 0.80 m`; the shipped `src/data/crop-params.json` carries
+> `kc_mid = 1.05` and `Zr = 0.50–1.00 m`, which give **417.69 m³**. No `kc`/`Zr` value has been
+> changed. The gap and both options are recorded in
+> `docs/decisions/ADR-groundnut-worked-example.md` (status: **NEEDS-OWNER-DECISION**) and pinned by
+> tests in `src/crop.test.ts`.
+
 ---
 
 ## Governing Equations & Reference Citations
