@@ -30,3 +30,7 @@ playwright-report/
 # Local secrets (wrangler dev)
 .dev.vars
 **/.dev.vars
+
+# Third-party music bundled with the brag skill - not ours to redistribute.
+# Re-render with your own track (see showcase/brag-output/composition/hyperframes.json).
+showcase/brag-output/composition/assets/music/*.mp3
