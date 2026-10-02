@@ -143,11 +143,18 @@ describe("twiml", () => {
     expect(escapeXml(`a&b<c>"d'`)).toBe("a&amp;b&lt;c&gt;&quot;d&apos;");
   });
 
-  it("accepts POST as well, and 404s unknown contacts", async () => {
+  it("accepts POST as well, and answers an unknown contact with a spoken message", async () => {
     const ok = setup();
     expect((await ok.app.fetch(await signed("/api/telephony/twiml/c1", { CallSid: "CA1" }))).status).toBe(200);
+    // An unknown contact must NOT be a 404: a `demo/reset` can clear the store while the call it
+    // started is still live, and Twilio turns a 404 into "we could not reach your server" — an error
+    // about our storage, played to a farmer who is on the line. Answer with something true instead.
     const missing = setup({ contact: null });
-    expect((await missing.app.fetch(await signed("/api/telephony/twiml/zzz", {}, "GET"))).status).toBe(404);
+    const res = await missing.app.fetch(await signed("/api/telephony/twiml/zzz", {}, "GET"));
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toContain("no longer available");
+    expect(body).toContain("<Hangup/>");
   });
 
   it("falls back to <Say> without a Sarvam key", async () => {

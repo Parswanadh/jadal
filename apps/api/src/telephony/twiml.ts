@@ -98,6 +98,24 @@ export function hangupTwiml(): string {
   return wrap("<Hangup/>");
 }
 
+/**
+ * TwiML for a call whose contact no longer exists.
+ *
+ * `POST /api/demo/reset` clears the store while a call it started may still be live, so Twilio can
+ * ask for TwiML the app no longer has. Answering 404 made Twilio play *"we could not reach your
+ * server"* to a farmer who is on the line — an error about our storage, told to someone who only
+ * wanted to know about their water. This says something true and ends the call cleanly.
+ *
+ * Telugu first (the farmer's language), then English for anyone else listening.
+ */
+export function expiredTwiml(): string {
+  return wrap(
+    '<Say language="te-IN">జడల్: ఈ కాల్ వివరాలు ఇప్పుడు అందుబాటులో లేవు. దయచేసి మా కాలువ కార్యాలయానికి కాల్ చేయండి.</Say>' +
+      '<Say language="en-IN">This call is no longer available. Please contact the canal office.</Say>' +
+      "<Hangup/>",
+  );
+}
+
 export function emptyTwiml(): string {
   return wrap("");
 }

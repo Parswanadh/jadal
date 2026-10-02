@@ -8,6 +8,7 @@ import {
   callTwiml,
   callUrls,
   emptyTwiml,
+  expiredTwiml,
   hangupTwiml,
   recordTwiml,
   replayTwiml,
@@ -68,7 +69,12 @@ export function createTelephonyRoutes(deps: TelephonyDeps): Hono {
     const g = await guardTwilioRequest(deps, c);
     if (g instanceof Response) return g;
     const contactId = c.req.param("contactId");
-    if (!(await deps.getContact(contactId))) return twimlResponse(hangupTwiml(), { status: 404 });
+    // A contact can be gone while its call is still up: `POST /api/demo/reset` clears the store, and
+    // Twilio still holds the TwiML URL it was handed when the call started. Answering 404 there made
+    // Twilio play "we could not reach your server" to a farmer who is on the line — an error about
+    // our storage, told to someone who only wanted to know about their water. The call is answered
+    // with a spoken message and a clean hangup instead, which is true and useful.
+    if (!(await deps.getContact(contactId))) return twimlResponse(expiredTwiml(), { status: 200 });
     const replay = c.req.query("replay") === "1";
     const urls = urlsFor(contactId);
     const message = await deps.getMessage(contactId);
@@ -166,7 +172,9 @@ export function createTelephonyRoutes(deps: TelephonyDeps): Hono {
     if (g instanceof Response) return g;
     const contactId = c.req.param("contactId");
     const contact = await deps.getContact(contactId);
-    if (!contact) return twimlResponse(hangupTwiml(), { status: 404 });
+    // Same reasoning as `/twiml`: a reset can remove the contact while the call is live, and a 404
+    // makes Twilio tell the caller our server is unreachable. Say something true instead.
+    if (!contact) return twimlResponse(expiredTwiml(), { status: 200 });
 
     const recordingUrl = g.get("RecordingUrl");
     if (!recordingUrl || !isTwilioHost(recordingUrl)) return twimlResponse(thankYouTwiml());
