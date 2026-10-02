@@ -13,7 +13,7 @@ import type { z } from "zod";
 import scenarioJson from "@jadal/contracts/fixtures/demo-scenario.json";
 import { ApiClientError } from "./errors";
 import { alertBodySchema, alertResponseSchema, updateTurnResponseSchema } from "./extra";
-import type { AlertBody, AlertChannel, AlertResponse, AlertSeverity, UpdateTurnBody, UpdateTurnResponse } from "./extra";
+import type { AlertBody, AlertChannel, AlertResponse, AlertSeverity, Allocation, UpdateTurnBody, UpdateTurnResponse } from "./extra";
 import { formatDateTime, formatRange } from "../lib/format";
 
 // ASSUMED: illustrative mock values only, used until @jadal/core (Task A) and the intake agent (Task B) supply real numbers.
@@ -81,8 +81,21 @@ interface MockState {
   turnEdits: Map<string, { start: string; end: string }>;
   /** Manual alerts and request-triggered calls, newest last. */
   alerts: MockAlert[];
+  /** Calls queued by a coordinator's decision on a request, newest last. */
+  decisionContacts: MockDecisionContact[];
   clockHours: number;
   nextId: number;
+}
+
+/** The call a coordinator's decision queues to tell the farmer the outcome. */
+export interface MockDecisionContact {
+  contact_id: string;
+  farmer_id: string;
+  request_id: string;
+  status: "approved" | "rejected";
+  decision: "approve" | "reject";
+  volume_m3: number;
+  at: string;
 }
 
 /** One dispatched alert, as the mock remembers it for the phone and the audit. */
@@ -92,6 +105,8 @@ export interface MockAlert {
   channel: AlertChannel;
   severity: AlertSeverity;
   message?: string;
+  /** The water and window the alert carries, when it is about an allocation. */
+  allocation?: Allocation;
   at: string;
 }
 
@@ -106,6 +121,7 @@ function freshState(): MockState {
     approvedRosters: new Set(),
     turnEdits: new Map(),
     alerts: [],
+    decisionContacts: [],
     clockHours: 0,
     nextId: 1,
   };
@@ -371,6 +387,7 @@ export async function mockSendAlert(body: AlertBody): Promise<AlertResponse> {
     channel: input.channel,
     severity: input.severity,
     message: input.message,
+    allocation: input.allocation,
     at: mockNow(),
   });
   return alertResponseSchema.parse({
@@ -455,7 +472,29 @@ export function mockDecideRequest(id: string, body: z.input<typeof routes.decide
   const status = input.decision === "approve" ? ("approved" as const) : ("rejected" as const);
   const decision = { decision: input.decision, volume_m3: input.volume_m3, note: input.note, at: mockNow() };
   state.decided.set(id, { ...decision, status });
+  // Recording a decision queues the call that tells the farmer. Like every
+  // other mock dispatch this build reports it as simulated.
+  recordDecisionContact(base.farmer_id, id, status, input.decision, input.volume_m3);
   return routes.decideRequest.response.parse({ ...base, status, coordinator_decision: decision });
+}
+
+/** The contact a decision queues for the farmer, remembered for the phone screen. */
+function recordDecisionContact(
+  farmerId: string,
+  requestId: string,
+  status: "approved" | "rejected",
+  decision: "approve" | "reject",
+  volumeM3: number,
+): void {
+  state.decisionContacts.push({
+    contact_id: `ct-decision-${state.decisionContacts.length + 1}`,
+    farmer_id: farmerId,
+    request_id: requestId,
+    status,
+    decision,
+    volume_m3: volumeM3,
+    at: mockNow(),
+  });
 }
 
 export function mockBalances() {
@@ -603,10 +642,30 @@ function farmerNameOf(farmerId: string): string {
   );
 }
 
+/**
+ * The allocation half of what the agent says on a call, in both languages, when
+ * the alert carries one. The volume and the window are read from the alert as
+ * the coordinator sent them; nothing is derived here.
+ */
+function allocationSentences(allocation: Allocation): { en: string; te: string } {
+  const m3 = Math.round(allocation.volume_m3);
+  return {
+    en: `You have been given ${m3} cubic metres. Use it between ${formatRange(allocation.start, allocation.end, "en")}.`,
+    te: `మీకు ${m3} ఘన మీటర్లు మంజూరు అయ్యాయి. ${formatRange(allocation.start, allocation.end, "te")} మధ్య వాడుకోండి.`,
+  };
+}
+
 /** What the agent says on an alert call, in both languages, by severity. */
 function alertSentences(alert: MockAlert): { en: string; te: string } {
   const name = farmerNameOf(alert.farmer_id);
-  switch (alert.severity) {
+  const base = severitySentence(name, alert.severity);
+  if (!alert.allocation) return base;
+  const alloc = allocationSentences(alert.allocation);
+  return { en: `${base.en} ${alloc.en}`, te: `${base.te} ${alloc.te}` };
+}
+
+function severitySentence(name: string, severity: AlertSeverity): { en: string; te: string } {
+  switch (severity) {
     case "emergency":
       return {
         en: `${name}, this is Jadal. This is an emergency. Follow the canal office instructions right away.`,
@@ -670,7 +729,38 @@ export function mockContacts() {
       at: alert.at,
     };
   });
-  return routes.contacts.response.parse([...alertContacts, ...list]);
+  // A decision on a request queues its own call to the farmer.
+  const decisionCalls = state.decisionContacts.map((entry) => {
+    const said = decisionSentences(entry);
+    return {
+      id: entry.contact_id,
+      farmer_id: entry.farmer_id,
+      channel: "voice" as const,
+      purpose: "request_update" as const,
+      status: "queued" as const,
+      attempt: 1,
+      message_te: said.te,
+      message_en: said.en,
+      at: entry.at,
+    };
+  });
+  return routes.contacts.response.parse([...alertContacts, ...decisionCalls, ...list]);
+}
+
+/** What the agent says when a decision is called through to the farmer. */
+function decisionSentences(entry: MockDecisionContact): { en: string; te: string } {
+  const name = farmerNameOf(entry.farmer_id);
+  const m3 = Math.round(entry.volume_m3);
+  if (entry.decision === "approve") {
+    return {
+      en: `${name}, this is Jadal. The committee approved ${m3} cubic metres for you.`,
+      te: `${name} గారు, జాదల్ నుండి మాట్లాడుతున్నాను. కమిటీ మీకు ${m3} ఘన మీటర్లు ఆమోదించింది.`,
+    };
+  }
+  return {
+    en: `${name}, this is Jadal. The committee could not approve extra water this time.`,
+    te: `${name} గారు, జాదల్ నుండి మాట్లాడుతున్నాను. ఈసారి అదనపు నీరు ఆమోదించలేకపోయింది.`,
+  };
 }
 
 function mockContactById(contactId: string) {
