@@ -12,7 +12,32 @@ import { routes } from "@jadal/contracts";
 
 import { call, createEnv, type TestEnv } from "../test/harness";
 import { createApp } from "./app";
-import { isDemo, isRealTelephony } from "./env";
+import { isDemo, isRealTelephony, layaEndpoint } from "./env";
+
+describe("layaEndpoint", () => {
+  it("returns undefined when unset or blank, so Laya is skipped rather than attempted", () => {
+    expect(layaEndpoint({})).toBeUndefined();
+    expect(layaEndpoint({ LAYA_ENDPOINT: "" })).toBeUndefined();
+    expect(layaEndpoint({ LAYA_ENDPOINT: "   " })).toBeUndefined();
+  });
+
+  it("accepts the documented sidecar URL verbatim", () => {
+    expect(layaEndpoint({ LAYA_ENDPOINT: "http://127.0.0.1:8099/decide" })).toBe("http://127.0.0.1:8099/decide");
+    expect(layaEndpoint({ LAYA_ENDPOINT: "  http://127.0.0.1:8099/decide  " })).toBe("http://127.0.0.1:8099/decide");
+    expect(layaEndpoint({ LAYA_ENDPOINT: "https://laya.internal/decide" })).toBe("https://laya.internal/decide");
+  });
+
+  it("trims a trailing slash so one URL cannot produce two request paths", () => {
+    expect(layaEndpoint({ LAYA_ENDPOINT: "http://127.0.0.1:8099/decide/" })).toBe("http://127.0.0.1:8099/decide");
+    expect(layaEndpoint({ LAYA_ENDPOINT: "http://127.0.0.1:8099/" })).toBe("http://127.0.0.1:8099");
+  });
+
+  it("rejects a non-http(s) or unparseable value instead of fetching it", () => {
+    expect(layaEndpoint({ LAYA_ENDPOINT: "127.0.0.1:8099/decide" })).toBeUndefined();
+    expect(layaEndpoint({ LAYA_ENDPOINT: "ftp://127.0.0.1/decide" })).toBeUndefined();
+    expect(layaEndpoint({ LAYA_ENDPOINT: "file:///etc/passwd" })).toBeUndefined();
+  });
+});
 
 describe("isDemo", () => {
   it("defaults to demo mode when DEMO_MODE is unset", () => {
