@@ -133,3 +133,10 @@ The swarm harness auto-created two `chore(cropparams-provenance): checkpoint` co
 ran: `8b5f3c8` (the three `src/data` files) and `f4c16d1` (script, package.json, generated doc). The
 base was `27a3b7e` (`docs: engineering handoff`). This file is committed separately with a
 conventional message.
+
+Two conventional follow-ups sit on top: `455ac7a` (this record) and `09c7aa6` (the generated table's
+source column now falls back to the row-level `source` explanation for the UNSOURCED redgram row,
+whose source is one prose statement rather than `KC`/`STAGE_*`/`DEPLETION_P` clauses). After both,
+`pnpm --filter @jadal/core exec vitest run --maxWorkers=1` still reports **162 passed** and the
+working tree is clean.
+
