@@ -897,4 +897,4 @@ export async function classify(env: ProviderEnv, text: string, opts: ClassifyOpt
   return (await classifyDetailed(env, text, opts)).result;
 }
 
-export { classifyByRules, extractVolumeM3, extractRequestedHours, normalizeText } from "./system1.rules";
+export { classifyByRules, extractVolumeM3, extractRequestedHours, isUnscored, normalizeText } from "./system1.rules";

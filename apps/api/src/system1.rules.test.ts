@@ -7,9 +7,10 @@
  * classified as `other` and raised no request.
  */
 
+import { System1Result } from "@jadal/contracts";
 import { describe, expect, it } from "vitest";
 
-import { classifyByRules, extractRequestedHours, extractVolumeM3, normalizeText } from "./system1.rules";
+import { classifyByRules, extractRequestedHours, extractVolumeM3, isUnscored, normalizeText } from "./system1.rules";
 
 describe("normalizeText", () => {
   it("keeps Telugu combining marks (Mn/Mc) instead of treating them as punctuation", () => {
