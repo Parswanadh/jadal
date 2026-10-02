@@ -30,6 +30,11 @@ const registerBody: z.input<typeof routes.register.body> = {
 
 // One invocation per routes entry. Each thunk calls the same-named client
 // function, so this table also pins "one function per route".
+//
+// `setTurnTime` is the one entry whose client name differs from its route key:
+// the client exports it as `updateTurn` (src/api/client.ts), the same PATCH
+// `/api/rosters/:id/turns/:turnId` the contract declares. It is deliberately not
+// part of the `api` object, which api/client.test.ts pins to the route keys.
 const calls: Record<RouteKey, () => Promise<unknown>> = {
   health: () => client.health(),
   canal: () => client.canal(),
@@ -41,6 +46,14 @@ const calls: Record<RouteKey, () => Promise<unknown>> = {
   releaseWindows: () => client.releaseWindows(),
   proposeRoster: () => client.proposeRoster({ release_window_id: "rw1", mode: "equal_water" }),
   approveRoster: () => client.approveRoster("r-rw1-equal_water"),
+  setTurnTime: async () => {
+    // The mock validates the interval the way the server does, so the times come
+    // from the proposal itself rather than a hardcoded pair that could drift.
+    const proposal = client.proposeRoster({ release_window_id: "rw1", mode: "equal_water" });
+    const turn = (await proposal).roster.turns[0];
+    if (!turn) throw new Error("the mock proposal has no turns");
+    return client.updateTurn("r-rw1-equal_water", turn.id, { start: turn.start, end: turn.end });
+  },
   raiseRequest: () =>
     client.raiseRequest({ farmer_id: "f1", type: "urgent", volume_m3: 200, reason: "test", channel: "voice" }),
   listRequests: () => client.listRequests(),

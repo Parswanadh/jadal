@@ -24,6 +24,10 @@ export const E2E_VIEWPORT = { width: 1440, height: 900 } as const;
 export const E2E_LIVE_PORT = 8788;
 export const E2E_LIVE_BASE_URL = `http://127.0.0.1:${E2E_LIVE_PORT}`;
 
+/** The web dev server the `live-ui` project drives: real API, no mock. */
+export const E2E_LIVE_UI_PORT = 5178;
+export const E2E_LIVE_UI_BASE_URL = `http://127.0.0.1:${E2E_LIVE_UI_PORT}`;
+
 const LIVE = process.env.E2E_LIVE === '1';
 
 const webServers = LIVE
@@ -36,6 +40,19 @@ const webServers = LIVE
         command: 'pnpm --filter api dev:live',
         cwd: path.resolve(__dirname, '../..'),
         url: `${E2E_LIVE_BASE_URL}/api/health`,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+        stdout: 'pipe' as const,
+        stderr: 'pipe' as const,
+      },
+      {
+        // The `live-ui` project drives the real coordinator console against the live Worker:
+        // VITE_MOCK=0 with no VITE_API_BASE, so the app calls same-origin `/api/*` and Vite's
+        // dev proxy forwards to 8788. This is what proves the *UI* reaches the live API — the
+        // `live` project exercises the API with no browser at all.
+        command: `VITE_MOCK=0 pnpm --filter web dev --port ${E2E_LIVE_UI_PORT} --strictPort`,
+        cwd: path.resolve(__dirname, '../..'),
+        url: E2E_LIVE_UI_BASE_URL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
         stdout: 'pipe' as const,
@@ -72,8 +89,9 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      // `live/**` belongs to the other project; without this it would be collected here too.
-      testIgnore: 'live/**',
+      // `live/**` and `live-ui/**` belong to the live projects; without this they
+      // would be collected here too and run against the wrong server.
+      testIgnore: ['live/**', 'live-ui/**'],
       use: { ...devices['Desktop Chrome'], viewport: E2E_VIEWPORT },
     },
     // Declared only under `E2E_LIVE=1`, so a plain `pnpm e2e` runs the UI suite and nothing else —
@@ -85,6 +103,14 @@ export default defineConfig({
             name: 'live',
             testMatch: 'live/**/*.spec.ts',
             use: { baseURL: E2E_LIVE_BASE_URL },
+          },
+          {
+            // The real console in a real browser against the live Worker. Serial: every test
+            // shares one live D1, and each one resets and reseeds the request it acts on.
+            name: 'live-ui',
+            testMatch: 'live-ui/**/*.spec.ts',
+            fullyParallel: false,
+            use: { ...devices['Desktop Chrome'], baseURL: E2E_LIVE_UI_BASE_URL, viewport: E2E_VIEWPORT },
           },
         ]
       : []),

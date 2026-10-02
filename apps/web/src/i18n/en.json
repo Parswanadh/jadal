@@ -73,7 +73,13 @@
     "no": "No",
     "backHome": "Back to home",
     "notFoundTitle": "Page not found",
-    "notFoundBody": "This page does not exist. Use the menu above to continue."
+    "notFoundBody": "This page does not exist. Use the menu above to continue.",
+    "connect": {
+      "confirmStep": "{action}: step {step} of 2",
+      "confirmArmed": "1",
+      "confirmConfirm": "Step 2 of 2: choose an option below to finish.",
+      "confirmAsking": "Please confirm: {question}"
+    }
   },
   "fixture": {
     "reasonMaizeTasseling": "My maize is tasseling and the leaves are rolling in the heat.",
@@ -370,9 +376,11 @@
       },
       "grantLabel": "Water to give (m³)",
       "approve": "Approve {m3}",
+      "approveAction": "Approve",
       "approveQuestion": "Give {name} {m3}? It will be taken {source}.",
       "approveYes": "Yes, approve",
       "reject": "Say no",
+      "rejectAction": "Reject",
       "rejectQuestion": "Say no to {name}?",
       "rejectYes": "Yes, say no",
       "fromQuota": "out of their later turns",
@@ -384,7 +392,8 @@
       "dispatched": "The farmer was told by {channel}.",
       "notDispatched": "Recorded. Nothing has been sent to the farmer yet. Use Alert this farmer to tell them.",
       "refresh": "Check again",
-      "loading": "Checking for new requests…"
+      "loading": "Checking for new requests…",
+      "decideError": "That decision was not saved: {reason}"
     },
     "ent": {
       "title": "Weekly water shares",
@@ -535,7 +544,9 @@
       "allocationSummary": "{m3}, {when}",
       "allocationUnavailable": "Loading the allocation…",
       "allocationSend": "Send allocation",
-      "allocationSent": "Told {name} about {m3} to use {when}."
+      "allocationSent": "Told {name} about {m3} to use {when}.",
+      "dialled": "The call went to {number}.",
+      "dialledNone": "No call was placed, so no number was rung."
     }
   },
   "canal": {

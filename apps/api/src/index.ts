@@ -47,6 +47,16 @@ export * from "./env";
 const NIGHTLY_CRON = "30 0 * * *";
 
 /**
+ * How many times the outbound queue may redeliver one message before the message is dropped.
+ *
+ * Deliberately small. Every redelivery of a voice rung is a real telephone call to a real person, so
+ * an unbounded retry is a loop that harasses the recipient and burns credit. One retry covers a
+ * transient store failure; anything beyond that is a bug that belongs in the logs, not on someone's
+ * phone.
+ */
+const MAX_QUEUE_ATTEMPTS = 2;
+
+/**
  * Nightly rain re-plan: once per canal, defer upcoming turns when the forecast hits the trigger.
  */
 async function replanAllCanals(env: Env): Promise<void> {
@@ -85,8 +95,25 @@ export default {
         try {
           await runEscalation(env, message.body.contact_id);
           message.ack();
-        } catch {
-          message.retry();
+        } catch (error) {
+          // A blanket `retry()` is what turns one failing call into a call loop: the queue
+          // redelivers, the same failure recurs, and the recipient is phoned again on every
+          // redelivery. Cloudflare caps redeliveries, but a demo that dials real handsets must
+          // bound this itself rather than rely on that cap.
+          //
+          // One retry is allowed — a transient store blip is worth a second attempt. Beyond that
+          // the message is acked (dropped) and the failure is logged, because a human is on the
+          // other end of the call this queue would otherwise place.
+          const attempts = message.attempts ?? 1;
+          if (attempts <= MAX_QUEUE_ATTEMPTS) {
+            message.retry();
+            return;
+          }
+          const detail = error instanceof Error ? error.message : String(error);
+          console.error(
+            `jadal-outbound: dropping contact ${message.body.contact_id} after ${attempts} attempts: ${detail}`,
+          );
+          message.ack();
         }
       }),
     );

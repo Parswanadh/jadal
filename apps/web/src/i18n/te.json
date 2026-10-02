@@ -73,7 +73,13 @@
     "no": "కాదు",
     "backHome": "హోమ్‌కు వెళ్ళండి",
     "notFoundTitle": "ఈ పేజీ లేదు",
-    "notFoundBody": "ఈ పేజీ లేదు. పైన ఉన్న మెనూ వాడండి."
+    "notFoundBody": "ఈ పేజీ లేదు. పైన ఉన్న మెనూ వాడండి.",
+    "connect": {
+      "confirmStep": "{action}: {step} / 2 వ దశ",
+      "confirmArmed": "1",
+      "confirmConfirm": "2 / 2 వ దశ: పూర్తి చేయడానికి కింద ఒక ఎంపిక ఎంచుకోండి.",
+      "confirmAsking": "దయచేసి నిర్ధారించండి: {question}"
+    }
   },
   "fixture": {
     "reasonMaizeTasseling": "మా మొక్కజొన్న పూత దశలో ఉంది, ఎండకు ఆకులు ముడుచుకుంటున్నాయి.",
@@ -370,9 +376,11 @@
       },
       "grantLabel": "ఇవ్వాల్సిన నీరు (మీ³)",
       "approve": "{m3} ఆమోదించండి",
+      "approveAction": "ఆమోదించండి",
       "approveQuestion": "{name} కు {m3} ఇవ్వాలా? ఇది {source} తగ్గిస్తారు.",
       "approveYes": "అవును, ఆమోదించండి",
       "reject": "వద్దని చెప్పండి",
+      "rejectAction": "వద్దని చెప్పండి",
       "rejectQuestion": "{name} కు వద్దని చెప్పాలా?",
       "rejectYes": "అవును, వద్దని చెప్పండి",
       "fromQuota": "వారి తర్వాతి వంతుల నుంచి",
@@ -384,7 +392,8 @@
       "dispatched": "{channel} ద్వారా రైతుకు తెలియజేశాము.",
       "notDispatched": "నమోదైంది. రైతుకు ఇంకా ఏమీ పంపలేదు. తెలియజేయడానికి “ఈ రైతుకు సందేశం” వాడండి.",
       "refresh": "మళ్లీ చూడండి",
-      "loading": "కొత్త అభ్యర్థనలు చూస్తున్నాము…"
+      "loading": "కొత్త అభ్యర్థనలు చూస్తున్నాము…",
+      "decideError": "ఆ నిర్ణయం భద్రపరచబడలేదు: {reason}"
     },
     "ent": {
       "title": "వారపు నీటి వాటాలు",
@@ -535,7 +544,9 @@
       "allocationSummary": "{m3}, {when}",
       "allocationUnavailable": "కేటాయింపు లోడ్ అవుతోంది…",
       "allocationSend": "కేటాయింపు పంపండి",
-      "allocationSent": "{name} కు {when} న {m3} వాడుకోవాలని తెలియజేశాము."
+      "allocationSent": "{name} కు {when} న {m3} వాడుకోవాలని తెలియజేశాము.",
+      "dialled": "కాల్ {number} కు వెళ్ళింది.",
+      "dialledNone": "కాల్ ప్లేస్ కాలేదు, కాబట్టి ఏ నంబర్ కు కాల్ వెళ్ళలేదు."
     }
   },
   "canal": {

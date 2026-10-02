@@ -244,6 +244,15 @@ export function updateTurn(rosterId: string, turnId: string, body: UpdateTurnBod
 }
 
 /**
+ * The same route under the contract's own name (`routes.setTurnTime`).
+ *
+ * `updateTurn` reads better at the call site, but the contract — and the tests
+ * that pin one function per route key — call it `setTurnTime`. Both names are
+ * the same PATCH, so neither can drift from the other.
+ */
+export const setTurnTime = updateTurn;
+
+/**
  * Alert one farmer by call, SMS or WhatsApp.
  * POST /api/alerts -> { ok, contact_id, simulated, detail }
  */
@@ -267,6 +276,7 @@ export const api = {
   raiseRequest,
   listRequests,
   decideRequest,
+  setTurnTime,
   ledger,
   events,
   contacts,

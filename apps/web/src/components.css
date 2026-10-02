@@ -169,6 +169,7 @@
   padding: 0.75rem 1rem;
   background: var(--surface-alt);
   border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
   border-radius: var(--radius);
 }
 
@@ -178,10 +179,44 @@
   font-weight: 500;
 }
 
+/* "Reject: step 1 of 2" — the marker that says the control is armed, not done. */
+.confirm-step {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.confirm-step-next {
+  margin: 0;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .confirm-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+/* The "?" on the arming button: the label is the deed, this says a question follows. */
+.btn-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-right: 0.4rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.65;
 }
 
 /* ---------- Cards and layout ---------- */

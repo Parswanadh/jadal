@@ -56,6 +56,14 @@ export const alertResponseSchema = z.object({
   contact_id: z.string(),
   simulated: z.boolean(),
   detail: z.string(),
+  /**
+   * The handset the API actually rang, or null/absent when no call was placed.
+   *
+   * Optional because `detail` always carries the same fact in prose and older
+   * responses omit the field; the UI prefers `dialled` and falls back to the
+   * neutral "no call was placed" line rather than guessing a destination.
+   */
+  dialled: z.string().nullable().optional(),
 });
 
 export type TurnTime = z.infer<typeof turnTimeSchema>;

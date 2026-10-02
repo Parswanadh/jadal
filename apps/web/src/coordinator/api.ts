@@ -109,6 +109,11 @@ export const api = {
    * really left. When `allocation` is given, the alert tells the farmer how much
    * water they have been given and the window to use it in — the numbers come
    * from the API, never from this layer.
+   *
+   * `dialled` is the handset the API reports it actually rang, which is not always
+   * the farmer's stored number: a demo mapping can forward a call elsewhere. The
+   * console shows this field rather than the farmer's number, so it never implies
+   * a call went somewhere it did not.
    */
   async sendAlert(
     farmerId: string,
@@ -116,7 +121,7 @@ export const api = {
     severity: AlertSeverity,
     message?: string,
     allocation?: Allocation,
-  ): Promise<{ simulated: boolean; detail: string }> {
+  ): Promise<{ simulated: boolean; detail: string; dialled: string | null }> {
     const trimmed = message?.trim();
     const res = await clientSendAlert({
       farmer_id: farmerId,
@@ -125,7 +130,7 @@ export const api = {
       message: trimmed ? trimmed : undefined,
       allocation,
     });
-    return { simulated: res.simulated, detail: res.detail };
+    return { simulated: res.simulated, detail: res.detail, dialled: res.dialled ?? null };
   },
 
   /**

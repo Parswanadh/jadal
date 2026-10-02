@@ -395,6 +395,9 @@ export async function mockSendAlert(body: AlertBody): Promise<AlertResponse> {
     contact_id,
     simulated: true,
     detail: MOCK_ALERT_DETAIL,
+    // Nothing was dialled, so there is no destination to name. The live API
+    // reports the handset it actually rang; the mock must not invent one.
+    dialled: null,
   });
 }
 

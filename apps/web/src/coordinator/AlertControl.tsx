@@ -19,6 +19,14 @@ interface SentResult {
   severity: AlertSeverity;
   simulated: boolean;
   detail: string;
+  /**
+   * The handset the API says it actually rang, or null when no call was placed.
+   *
+   * Never the farmer's stored number: a demo mapping can redirect a call to a
+   * different handset (see `forwardTargetForFarmer` on the API side), so the
+   * only honest source for "where did this go" is what the API reports.
+   */
+  dialled: string | null;
   /** The allocation the alert carried, when it carried one. */
   allocation: Allocation | null;
 }
@@ -43,7 +51,7 @@ export default function AlertControl({ farmerId, farmerName }: Props) {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<SentResult | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
 
   const [allocation, setAllocation] = useState<Allocation | null>(null);
   const [allocationReady, setAllocationReady] = useState(false);
@@ -78,13 +86,22 @@ export default function AlertControl({ farmerId, farmerName }: Props) {
   async function send(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setBusy(true);
-    setFailed(false);
+    setFailure(null);
     try {
       const sending = withAllocation && allocation ? allocation : undefined;
       const res = await api.sendAlert(farmerId, channel, severity, message, sending);
-      setResult({ channel, severity, simulated: res.simulated, detail: res.detail, allocation: sending ?? null });
-    } catch {
-      setFailed(true);
+      setResult({
+        channel,
+        severity,
+        simulated: res.simulated,
+        detail: res.detail,
+        dialled: res.dialled,
+        allocation: sending ?? null,
+      });
+    } catch (error) {
+      // The API's own reason, not a generic line: an alert that did not leave must
+      // say why, the same way a refused decision does.
+      setFailure(error instanceof Error && error.message.trim() ? error.message : null);
     } finally {
       setBusy(false);
     }
@@ -168,9 +185,10 @@ export default function AlertControl({ farmerId, farmerName }: Props) {
           </button>
         </div>
 
-        {failed && (
+        {failure !== null && (
           <div className="notice notice-crit" role="alert">
             <p>{t('coord.alert.error')}</p>
+            {failure && <p className="alert-reason">{failure}</p>}
           </div>
         )}
 
@@ -187,6 +205,14 @@ export default function AlertControl({ farmerId, farmerName }: Props) {
                     channel: t(`coord.alert.channel.${result.channel}`),
                     severity: t(`coord.alert.severity.${result.severity}`),
                   })}
+            </p>
+            {/* Where it actually went, in the API's own words. A demo mapping can
+                redirect a call to a different handset, so the farmer's stored
+                number is not an honest answer to "where did this go". */}
+            <p className="alert-dialled">
+              {result.dialled !== null
+                ? t('coord.alert.dialled', { number: result.dialled })
+                : t('coord.alert.dialledNone')}
             </p>
             {result.allocation && (
               <p>

@@ -48,3 +48,43 @@ describe("Worker entry module exports", () => {
     expect(typeof worker.default.queue).toBe("function");
   });
 });
+
+describe("outbound queue retry cap", () => {
+  /**
+   * A blanket `message.retry()` on every failure is what makes one failing call into a call loop.
+   * The cap is what stops it, so it needs a test: without one, a future edit can restore the
+   * unbounded retry and nobody notices until a real handset rings repeatedly.
+   */
+  function batchOf(attempts: number) {
+    const retried: string[] = [];
+    const acked: string[] = [];
+    return {
+      retried,
+      acked,
+      batch: {
+        messages: [
+          {
+            body: { contact_id: "ct-loop" },
+            attempts,
+            retry: () => void retried.push("ct-loop"),
+            ack: () => void acked.push("ct-loop"),
+          },
+        ],
+      },
+    };
+  }
+
+  it("retries a first failure", async () => {
+    const { retried, acked, batch } = batchOf(1);
+    await (worker.default as { queue: (b: unknown, e: unknown) => Promise<void> }).queue(batch, {});
+    expect(retried).toHaveLength(1);
+    expect(acked).toHaveLength(0);
+  });
+
+  it("drops the message once the attempts are exhausted instead of dialling again", async () => {
+    const { retried, acked, batch } = batchOf(3);
+    await (worker.default as { queue: (b: unknown, e: unknown) => Promise<void> }).queue(batch, {});
+    expect(retried).toHaveLength(0);
+    expect(acked).toHaveLength(1);
+  });
+});

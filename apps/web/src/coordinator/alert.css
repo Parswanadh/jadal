@@ -90,3 +90,16 @@
 .coord .alert-form .notice p + p {
   margin-top: 0.35rem;
 }
+
+/* The API's own reason for a refused alert, kept with the alert it belongs to. */
+.coord .alert-form .notice .alert-reason {
+  margin-top: 0.35rem;
+  font-size: var(--text-sm);
+}
+
+/* Where the call actually went, as the API reported it. */
+.coord .alert-form .notice .alert-dialled {
+  margin-top: 0.35rem;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}

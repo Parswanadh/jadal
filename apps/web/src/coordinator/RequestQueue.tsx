@@ -5,6 +5,7 @@ import { useFormat } from "../lib/useFormat";
 import ConfirmAction from "../components/ConfirmAction";
 import EmptyState from "../components/EmptyState";
 import UnitHint from "../components/UnitHint";
+import { ApiClientError } from "../api";
 import AlertControl from "./AlertControl";
 import { api } from "./api";
 import type { RequestRow } from "./types";
@@ -33,11 +34,35 @@ interface Decision {
   dispatched: string | null;
 }
 
+/** A decision the API refused, with the reason the API itself gave. */
+interface DecideFailure {
+  /** The farmer the failed decision was about, so the message can name them. */
+  farmerName: string;
+  /** The API's own `error.message` (or the transport's message when it never got there). */
+  reason: string;
+}
+
+/**
+ * The reason a decision failed, as text fit to show a coordinator.
+ *
+ * The API answers a refused decision with `{"error":{"code":..,"message":..}}`,
+ * which the client turns into an `ApiClientError` carrying that message. Showing
+ * it verbatim is the point: "volume_m3: Required" tells a coordinator (and a
+ * developer) exactly what broke, where a generic banner tells nobody anything.
+ * A transport failure has no such message, so it falls back to what was thrown;
+ * a bare throw with no message at all is the only case that gets a generic line.
+ */
+function failureReason(error: unknown, fallback: string): string {
+  if (error instanceof ApiClientError && error.message.trim()) return error.message;
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return fallback;
+}
+
 export default function RequestQueue({ rows, loading, failed, onRefresh, onDecided }: Props) {
   const { t, lang } = useI18n();
   const f = useFormat();
   const [grants, setGrants] = useState<Record<string, number>>({});
-  const [decideFailed, setDecideFailed] = useState(false);
+  const [decideFailure, setDecideFailure] = useState<DecideFailure | null>(null);
   const [decisions, setDecisions] = useState<Record<string, Decision>>({});
 
   function grantFor(r: RequestRow): number {
@@ -46,13 +71,15 @@ export default function RequestQueue({ rows, loading, failed, onRefresh, onDecid
 
   async function decide(r: RequestRow, decision: "approve" | "reject"): Promise<void> {
     const volume = decision === "approve" ? grantFor(r) : 0;
-    setDecideFailed(false);
+    setDecideFailure(null);
     try {
       const res = await api.decideRequest(r.id, decision, volume);
       setDecisions((d) => ({ ...d, [r.id]: { decision, dispatched: res.dispatched } }));
       onDecided(r.id, decision, volume);
-    } catch {
-      setDecideFailed(true);
+    } catch (error) {
+      // Never swallow this. An invisible failure is what let a broken Reject ship:
+      // the coordinator saw nothing, and neither did anyone reading the screen.
+      setDecideFailure({ farmerName: r.farmerName, reason: failureReason(error, t("coord.req.decideFailed")) });
     }
   }
 
@@ -86,9 +113,12 @@ export default function RequestQueue({ rows, loading, failed, onRefresh, onDecid
         </div>
       )}
 
-      {decideFailed && (
+      {decideFailure && (
         <div className="notice notice-crit" role="alert">
-          <p>{t("coord.req.decideFailed")}</p>
+          <p>
+            {decideFailure.farmerName ? `${decideFailure.farmerName}: ` : ""}
+            {t("coord.req.decideError", { reason: decideFailure.reason })}
+          </p>
         </div>
       )}
 
@@ -142,6 +172,7 @@ export default function RequestQueue({ rows, loading, failed, onRefresh, onDecid
                   <ConfirmAction
                     variant="primary"
                     label={t("coord.req.approve", { m3: f.m3(grant) })}
+                    action={t("coord.req.approveAction")}
                     question={t("coord.req.approveQuestion", { name: r.farmerName, m3: f.m3(grant), source: t(deducted) })}
                     confirmLabel={t("coord.req.approveYes")}
                     onConfirm={() => decide(r, "approve")}
@@ -149,6 +180,7 @@ export default function RequestQueue({ rows, loading, failed, onRefresh, onDecid
                   <ConfirmAction
                     variant="danger"
                     label={t("coord.req.reject")}
+                    action={t("coord.req.rejectAction")}
                     question={t("coord.req.rejectQuestion", { name: r.farmerName })}
                     confirmLabel={t("coord.req.rejectYes")}
                     onConfirm={() => decide(r, "reject")}
