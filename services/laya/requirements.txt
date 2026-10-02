@@ -1,0 +1,17 @@
+# Pinned to the versions actually installed and verified on this laptop (2026-10-02).
+#
+# In the reference environment these were already present in the host interpreter
+# (conda env `autogit`: Python 3.12.13), and the service venv reused them with
+# `python -m venv --system-site-packages`, so only `laya` itself was installed:
+#
+#     python -m venv --system-site-packages .venv
+#     .venv/bin/pip install --no-deps laya==0.3.23
+#
+# The full set is pinned below for a clean-room install. Note transformers 5.13.1: the
+# checkpoint is mmBERT (`model_type: modernbert`) and loads through AutoConfig/AutoModel.
+laya==0.3.23
+torch==2.7.1
+transformers==5.13.1
+safetensors==0.8.0
+huggingface_hub==1.18.0
+numpy==2.4.4
