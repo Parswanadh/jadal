@@ -1,0 +1,1074 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Jadal — Canal water shared by volume, not by hours</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      :root {
+        --bg: #faf9f5;
+        --surface: #ffffff;
+        --surface-alt: #f3f1ea;
+        --ink: #1f1e1d;
+        --muted: #5c5850;
+        --rule: #dedad0;
+        --rule-strong: #c8c3b7;
+        --accent: #873419;
+        --accent-subtle: #fbeee9;
+        --accent-border: #d47b5f;
+        --water: #245373;
+        --water-tint: #e4eef5;
+        --ok: #235817;
+        --ok-tint: #eaf3e6;
+        --font-serif: "Source Serif 4", Georgia, serif;
+        --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        --font-te: "Noto Sans Telugu", "IBM Plex Sans", sans-serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+      }
+      html, body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+      }
+      #root {
+        width: 1920px;
+        height: 1080px;
+        position: relative;
+        overflow: hidden;
+        background: var(--bg);
+      }
+
+      /* Scenes */
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        padding: 70px 100px 140px 100px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* Header Pill */
+      .badge-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+        background: var(--accent-subtle);
+        border: 1px solid var(--accent-border);
+        padding: 8px 18px;
+        border-radius: 999px;
+      }
+      .badge-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .badge-muted {
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--muted);
+      }
+
+      /* Cards */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 18px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03);
+      }
+
+      /* Burned-in Bilingual Caption Bar */
+      #caption-bar {
+        position: absolute;
+        bottom: 24px;
+        left: 100px;
+        right: 100px;
+        height: 86px;
+        background: rgba(31, 30, 29, 0.92);
+        backdrop-filter: blur(8px);
+        border-radius: 14px;
+        padding: 12px 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      #caption-en {
+        color: #ffffff;
+        font-size: 19px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        text-align: center;
+        line-height: 1.3;
+      }
+      #caption-te {
+        color: #e5dfd0;
+        font-family: var(--font-te);
+        font-size: 15px;
+        font-weight: 500;
+        text-align: center;
+        margin-top: 4px;
+        line-height: 1.3;
+      }
+
+      /* Scene 1: The Hook */
+      .hook-hero {
+        max-width: 1400px;
+        margin: auto;
+        text-align: center;
+      }
+      .hook-title {
+        font-family: var(--font-serif);
+        font-size: 82px;
+        font-weight: 700;
+        line-height: 1.05;
+        letter-spacing: -0.03em;
+        color: var(--ink);
+        margin-bottom: 24px;
+      }
+      .hook-title span {
+        color: var(--accent);
+      }
+      .hook-sub {
+        font-size: 28px;
+        color: var(--muted);
+        line-height: 1.4;
+        max-width: 1100px;
+        margin: 0 auto 36px auto;
+      }
+      .hook-context-card {
+        display: inline-flex;
+        gap: 36px;
+        padding: 16px 36px;
+        background: var(--surface);
+        border: 1px solid var(--rule-strong);
+        border-radius: 12px;
+      }
+      .hook-metric {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .hook-metric-label {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .hook-metric-val {
+        font-family: var(--font-mono);
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--ink);
+        margin-top: 4px;
+      }
+
+      /* Scene 2: Canal Seepage */
+      .seepage-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        height: 100%;
+        justify-content: center;
+      }
+      .seepage-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+      }
+      .scene-heading {
+        font-family: var(--font-serif);
+        font-size: 44px;
+        font-weight: 600;
+        color: var(--ink);
+        line-height: 1.15;
+      }
+      .scene-desc {
+        font-size: 18px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .seepage-card {
+        padding: 24px 36px;
+      }
+      .flow-metrics-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+      .flow-badge {
+        padding: 12px 24px;
+        border-radius: 12px;
+        background: var(--surface-alt);
+        border: 1px solid var(--rule);
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+      }
+      .flow-badge.head {
+        border-left: 5px solid var(--water);
+      }
+      .flow-badge.tail {
+        border-left: 5px solid var(--accent);
+      }
+      .flow-badge-tag {
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .flow-badge.head .flow-badge-tag {
+        color: var(--water);
+      }
+      .flow-badge.tail .flow-badge-tag {
+        color: var(--accent);
+      }
+      .flow-badge-val {
+        font-family: var(--font-mono);
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .flow-badge-sub {
+        font-family: var(--font-mono);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .flow-badge.tail .flow-badge-sub {
+        color: var(--accent);
+      }
+
+      /* Scene 3: Equal Water */
+      .roster-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+        margin-top: 20px;
+      }
+      .roster-panel {
+        padding: 28px 32px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .roster-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--rule);
+        padding-bottom: 14px;
+        margin-bottom: 18px;
+      }
+      .roster-title {
+        font-family: var(--font-serif);
+        font-size: 24px;
+        font-weight: 600;
+      }
+      .roster-bars {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .roster-bar-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .roster-bar-name {
+        width: 140px;
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .roster-bar-track {
+        flex: 1;
+        height: 28px;
+        background: var(--surface-alt);
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+        overflow: hidden;
+        position: relative;
+      }
+      .roster-bar-fill {
+        height: 100%;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        padding-left: 10px;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        font-weight: 600;
+        color: #ffffff;
+      }
+      .fill-hours {
+        background: var(--muted);
+        width: 60%;
+      }
+      .fill-water-head {
+        background: var(--water);
+        width: 52%;
+      }
+      .fill-water-tail {
+        background: var(--accent);
+        width: 78%;
+      }
+      .formula-badge-card {
+        margin-top: 20px;
+        padding: 16px 24px;
+        background: var(--surface-alt);
+        border-radius: 10px;
+        border: 1px solid var(--rule);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      /* Scene 4: Architecture */
+      .arch-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 28px;
+        margin-top: 36px;
+      }
+      .arch-card {
+        padding: 36px 30px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 480px;
+        position: relative;
+        overflow: hidden;
+      }
+      .arch-step-num {
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--accent);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      .arch-card-title {
+        font-family: var(--font-serif);
+        font-size: 32px;
+        font-weight: 600;
+        color: var(--ink);
+        line-height: 1.2;
+        margin-bottom: 14px;
+      }
+      .arch-card-desc {
+        font-size: 16px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .arch-card-footer {
+        padding-top: 20px;
+        border-top: 1px solid var(--rule);
+        font-family: var(--font-mono);
+        font-size: 13px;
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      /* Scene 5: Voice & Ledger */
+      .voice-ledger-grid {
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        gap: 36px;
+        margin-top: 28px;
+      }
+      .phone-card {
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .phone-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--rule);
+        padding-bottom: 14px;
+      }
+      .telugu-quote-box {
+        margin: 20px 0;
+        padding: 20px 24px;
+        background: var(--water-tint);
+        border: 1px solid var(--water);
+        border-radius: 12px;
+      }
+      .telugu-phrase {
+        font-family: var(--font-te);
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--water);
+        line-height: 1.3;
+      }
+      .telugu-translation {
+        font-size: 16px;
+        color: var(--muted);
+        margin-top: 8px;
+        font-style: italic;
+      }
+      .ledger-card {
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .ledger-table {
+        width: 100%;
+        margin-top: 14px;
+        border-collapse: collapse;
+        font-family: var(--font-mono);
+        font-size: 14px;
+      }
+      .ledger-table th {
+        text-align: left;
+        padding: 8px 12px;
+        border-bottom: 2px solid var(--rule);
+        color: var(--muted);
+      }
+      .ledger-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--rule);
+      }
+
+      /* Scene 6: Outro */
+      .outro-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+      }
+      .brand-title {
+        font-family: var(--font-serif);
+        font-size: 96px;
+        font-weight: 700;
+        color: var(--ink);
+        letter-spacing: -0.02em;
+      }
+      .brand-te {
+        font-family: var(--font-te);
+        font-size: 54px;
+        color: var(--accent);
+        margin-left: 20px;
+        font-weight: 600;
+      }
+      .outro-tagline {
+        font-size: 32px;
+        color: var(--muted);
+        margin: 16px 0 36px 0;
+        font-weight: 400;
+      }
+      .badges-row {
+        display: flex;
+        gap: 18px;
+        margin-bottom: 36px;
+      }
+      .tech-badge {
+        background: var(--surface);
+        border: 1px solid var(--rule-strong);
+        border-radius: 999px;
+        padding: 10px 24px;
+        font-family: var(--font-mono);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .footer-source {
+        font-family: var(--font-mono);
+        font-size: 15px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="56"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- Burned-in Bilingual Caption Bar -->
+      <div id="caption-bar">
+        <div id="caption-en">Everyone got their hours. The tail still lost the crop. Hours are not water.</div>
+        <div id="caption-te">అందరికీ గంటలు అందాయి. అయినా చివర రైతు పంట ఎండిపోయింది. గంటలు అంటే నీరు కాదు.</div>
+      </div>
+
+      <!-- Scene 1: The Hook (0.0s – 8.0s) -->
+      <section id="scene-1" class="scene clip" data-start="0.0" data-duration="8.0" data-track-index="1">
+        <div class="badge-row">
+          <div class="badge">
+            <span class="badge-dot"></span>
+            Problem Statement
+          </div>
+          <span class="badge-muted">Kondaveedu Minor Canal &middot; Andhra Pradesh</span>
+        </div>
+
+        <div class="hook-hero">
+          <h1 class="hook-title">
+            Hours are <span>not</span> water.
+          </h1>
+          <p class="hook-sub">
+            On this canal, everyone received their allotted hours &mdash; and the tail still lost her crop.
+          </p>
+          <div class="hook-context-card">
+            <div class="hook-metric">
+              <span class="hook-metric-label">Reach Length</span>
+              <span class="hook-metric-val">3 km</span>
+            </div>
+            <div class="hook-metric">
+              <span class="hook-metric-label">Bed Type</span>
+              <span class="hook-metric-val" style="color: var(--accent);">Unlined Earthen</span>
+            </div>
+            <div class="hook-metric">
+              <span class="hook-metric-label">Outlets</span>
+              <span class="hook-metric-val">8 Gates</span>
+            </div>
+            <div class="hook-metric">
+              <span class="hook-metric-label">Schedule Mode</span>
+              <span class="hook-metric-val">Fixed Warabandi</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-family: var(--font-mono); font-size: 14px; color: var(--muted); text-align: center;">
+          packages/contracts/fixtures/demo-scenario.json
+        </div>
+      </section>
+
+      <!-- Scene 2: Canal Seepage (8.0s – 19.0s) -->
+      <section id="scene-2" class="scene clip" data-start="8.0" data-duration="11.0" data-track-index="2">
+        <div class="badge-row">
+          <div class="badge">
+            <span class="badge-dot"></span>
+            Open-Channel Hydraulics
+          </div>
+          <span class="badge-muted">Exponential Conveyance Decay: Q(x) = Q₀ &middot; e^(-kx)</span>
+        </div>
+
+        <div class="seepage-container">
+          <div class="seepage-header-row">
+            <div>
+              <h2 class="scene-heading">Canal Seepage: 29.4% Flow Loss Over 3 km</h2>
+              <p class="scene-desc">Unlined soil absorbs conveyance water before it ever reaches the field.</p>
+            </div>
+          </div>
+
+          <div class="card seepage-card">
+            <div class="flow-metrics-row">
+              <div class="flow-badge head">
+                <span class="flow-badge-tag">Outlet 1 &middot; 300 m (Head)</span>
+                <span class="flow-badge-val">0.145 m³/s</span>
+                <span class="flow-badge-sub">3.5% conveyance loss</span>
+              </div>
+              <div class="flow-badge tail">
+                <span class="flow-badge-tag">Outlet 8 &middot; 2900 m (Tail)</span>
+                <span class="flow-badge-val">0.106 m³/s</span>
+                <span class="flow-badge-sub">29.4% conveyance loss</span>
+              </div>
+            </div>
+
+            <!-- SVG Schematic adapted from motion/canal.html -->
+            <svg id="canal-svg" viewBox="0 0 1600 220" width="100%" height="220">
+              <defs>
+                <linearGradient id="streamGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#245373" />
+                  <stop offset="100%" stop-color="#873419" />
+                </linearGradient>
+              </defs>
+              <!-- Canal Bed Background -->
+              <rect x="20" y="40" width="1560" height="120" rx="8" fill="#f3f1ea" stroke="#dedad0" stroke-width="1.5" />
+              <line x1="40" y1="185" x2="1560" y2="185" stroke="#c8c3b7" stroke-width="1.5" stroke-dasharray="4 4" />
+              <text x="40" y="205" font-family="IBM Plex Mono" font-size="13" fill="#5c5850">0 km (Head)</text>
+              <text x="800" y="205" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" fill="#5c5850">3000 m Unlined Reach (k = 0.00012 m⁻¹)</text>
+              <text x="1560" y="205" text-anchor="end" font-family="IBM Plex Mono" font-size="13" fill="#5c5850">3 km (Tail)</text>
+
+              <!-- Water Flow Stream Body (tapers down) -->
+              <path id="water-stream-path" d="M 40 60 L 1560 84 L 1560 116 L 40 140 Z" fill="url(#streamGrad)" opacity="0.85" />
+
+              <!-- Outlets -->
+              <!-- o1 -->
+              <g transform="translate(160, 50)">
+                <line x1="0" y1="10" x2="0" y2="90" stroke="#245373" stroke-width="3" />
+                <rect x="-8" y="30" width="16" height="40" rx="3" fill="#ffffff" stroke="#245373" stroke-width="2" />
+                <text x="0" y="0" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" font-weight="700" fill="#245373">o1 (300m)</text>
+                <text x="0" y="115" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" font-weight="600" fill="#245373">0.145 m³/s</text>
+              </g>
+
+              <!-- o4 -->
+              <g transform="translate(760, 50)">
+                <line x1="0" y1="20" x2="0" y2="80" stroke="#5c5850" stroke-width="2" />
+                <rect x="-6" y="34" width="12" height="32" rx="3" fill="#ffffff" stroke="#5c5850" stroke-width="2" />
+                <text x="0" y="0" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" font-weight="600" fill="#5c5850">o4 (1400m)</text>
+                <text x="0" y="115" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#5c5850">0.127 m³/s</text>
+              </g>
+
+              <!-- o8 -->
+              <g transform="translate(1440, 50)">
+                <line x1="0" y1="34" x2="0" y2="66" stroke="#873419" stroke-width="2.5" />
+                <rect x="-7" y="40" width="14" height="20" rx="3" fill="#ffffff" stroke="#873419" stroke-width="2" />
+                <text x="0" y="0" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" font-weight="700" fill="#873419">o8 (2900m)</text>
+                <text x="0" y="115" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" font-weight="700" fill="#873419">0.106 m³/s</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <div style="font-family: var(--font-mono); font-size: 14px; color: var(--muted); text-align: center;">
+          packages/core/src/hydraulics.ts &middot; apps/web/src/canal/seed.json
+        </div>
+      </section>
+
+      <!-- Scene 3: Equal Volume (19.0s – 30.0s) -->
+      <section id="scene-3" class="scene clip" data-start="19.0" data-duration="11.0" data-track-index="3">
+        <div class="badge-row">
+          <div class="badge">
+            <span class="badge-dot"></span>
+            Deterministic Physics
+          </div>
+          <span class="badge-muted">FAO-56 Crop Evapotranspiration + Local Hydrodynamics</span>
+        </div>
+
+        <div>
+          <h2 class="scene-heading">Equal Volume, Not Equal Hours</h2>
+          <p class="scene-desc">Turn duration dynamically scales with local conveyance flow: Tᵢ = Vᵢ / Q(xᵢ).</p>
+
+          <div class="roster-grid">
+            <!-- Left: Equal Hours Roster -->
+            <div class="card roster-panel">
+              <div class="roster-panel-header">
+                <span class="roster-title">Equal Hours Model</span>
+                <span style="font-family: var(--font-mono); font-size: 13px; color: var(--muted);">Fixed Warabandi</span>
+              </div>
+              <div class="roster-bars">
+                <div class="roster-bar-row">
+                  <span class="roster-bar-name">Outlet 1 (Head)</span>
+                  <div class="roster-bar-track">
+                    <div class="roster-bar-fill fill-hours">4.0 hrs &middot; 2,088 m³</div>
+                  </div>
+                </div>
+                <div class="roster-bar-row">
+                  <span class="roster-bar-name">Outlet 4 (Mid)</span>
+                  <div class="roster-bar-track">
+                    <div class="roster-bar-fill fill-hours">4.0 hrs &middot; 1,828 m³</div>
+                  </div>
+                </div>
+                <div class="roster-bar-row">
+                  <span class="roster-bar-name">Outlet 8 (Tail)</span>
+                  <div class="roster-bar-track">
+                    <div class="roster-bar-fill fill-hours" style="background: var(--accent);">4.0 hrs &middot; 1,526 m³ (Deficit)</div>
+                  </div>
+                </div>
+              </div>
+              <div style="font-family: var(--font-mono); font-size: 13px; color: var(--accent); margin-top: 14px;">
+                &bull; Same time, but tail receives 27% less delivered water volume
+              </div>
+            </div>
+
+            <!-- Right: Equal Water Roster -->
+            <div class="card roster-panel" style="border: 2px solid var(--water);">
+              <div class="roster-panel-header">
+                <span class="roster-title" style="color: var(--water);">Equal Water Model (Jadal)</span>
+                <span style="font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--water); background: var(--water-tint); padding: 4px 10px; border-radius: 6px;">Active Allocation</span>
+              </div>
+              <div class="roster-bars">
+                <div class="roster-bar-row">
+                  <span class="roster-bar-name">Outlet 1 (Head)</span>
+                  <div class="roster-bar-track">
+                    <div class="roster-bar-fill fill-water-head">3.8 hrs &middot; Equal Volume</div>
+                  </div>
+                </div>
+                <div class="roster-bar-row">
+                  <span class="roster-bar-name">Outlet 4 (Mid)</span>
+                  <div class="roster-bar-track">
+                    <div class="roster-bar-fill fill-water-head" style="width: 62%;">4.4 hrs &middot; Equal Volume</div>
+                  </div>
+                </div>
+                <div class="roster-bar-row">
+                  <span class="roster-bar-name">Outlet 8 (Tail)</span>
+                  <div class="roster-bar-track">
+                    <div class="roster-bar-fill fill-water-tail">5.5 hrs &middot; Equal Volume Delivered</div>
+                  </div>
+                </div>
+              </div>
+              <div style="font-family: var(--font-mono); font-size: 13px; color: var(--ok); margin-top: 14px; font-weight: 600;">
+                ✓ Tail turn extends to compensate for conveyance loss and travel lag
+              </div>
+            </div>
+          </div>
+
+          <div class="formula-badge-card">
+            <span style="font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: var(--ink);">
+              Governing Equation: Tᵢ = Vᵢ / Q(xᵢ)
+            </span>
+            <span style="font-family: var(--font-mono); font-size: 14px; color: var(--muted);">
+              Manning open channel velocity: v = (1/n) · R^(2/3) · S^(1/2)
+            </span>
+          </div>
+        </div>
+
+        <div style="font-family: var(--font-mono); font-size: 14px; color: var(--muted); text-align: center;">
+          packages/core/src/roster.ts &middot; packages/core/src/hydraulics.ts
+        </div>
+      </section>
+
+      <!-- Scene 4: Architecture (30.0s – 41.0s) -->
+      <section id="scene-4" class="scene clip" data-start="30.0" data-duration="11.0" data-track-index="4">
+        <div class="badge-row">
+          <div class="badge">
+            <span class="badge-dot"></span>
+            Architectural Invariant
+          </div>
+          <span class="badge-muted">docs/HANDOFF-ENGINEERING.md §6</span>
+        </div>
+
+        <div>
+          <h2 class="scene-heading">The Governing Mandate</h2>
+          <p class="scene-desc">Zero water arithmetic in prompts, routes, or UI. Pure separation of powers.</p>
+
+          <div class="arch-grid">
+            <!-- Stage 1 -->
+            <div class="card arch-card">
+              <div>
+                <div class="arch-step-num">Layer 01</div>
+                <h3 class="arch-card-title">LLMs Propose</h3>
+                <p class="arch-card-desc">
+                  Language models interpret farmer intent, translate bilingual requests, and extract crop stage parameters from unstructured voice conversations.
+                </p>
+              </div>
+              <div class="arch-card-footer">
+                Proposals only &middot; Zero dispatch authority
+              </div>
+            </div>
+
+            <!-- Stage 2 -->
+            <div class="card arch-card" style="border: 2px solid var(--water);">
+              <div>
+                <div class="arch-step-num" style="color: var(--water);">Layer 02</div>
+                <h3 class="arch-card-title" style="color: var(--water);">Deterministic Core Computes</h3>
+                <p class="arch-card-desc">
+                  Pure TypeScript engine (@jadal/core) solves Manning hydraulics, conveyance decay, and FAO-56 evapotranspiration with zero I/O and zero network dependencies.
+                </p>
+              </div>
+              <div class="arch-card-footer" style="color: var(--water);">
+                Deterministic &middot; 100% reproducible physics
+              </div>
+            </div>
+
+            <!-- Stage 3 -->
+            <div class="card arch-card" style="border: 2px solid var(--ok);">
+              <div>
+                <div class="arch-step-num" style="color: var(--ok);">Layer 03</div>
+                <h3 class="arch-card-title" style="color: var(--ok);">Coordinator Approves</h3>
+                <p class="arch-card-desc">
+                  Every roster allocation, emergency water grant, and canal gate release requires explicit human coordinator approval. Gated execution guards dispatch.
+                </p>
+              </div>
+              <div class="arch-card-footer" style="color: var(--ok);">
+                Human-in-the-loop &middot; Gated dispatch
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-family: var(--font-mono); font-size: 14px; color: var(--muted); text-align: center;">
+          apps/api/src/agents/loop.ts &middot; packages/contracts/src/agents.ts
+        </div>
+      </section>
+
+      <!-- Scene 5: Voice & Ledger (41.0s – 51.0s) -->
+      <section id="scene-5" class="scene clip" data-start="41.0" data-duration="10.0" data-track-index="5">
+        <div class="badge-row">
+          <div class="badge">
+            <span class="badge-dot"></span>
+            Inclusion &amp; Verifiability
+          </div>
+          <span class="badge-muted">Telephony Outreach &middot; Double-Entry Conservation</span>
+        </div>
+
+        <div>
+          <h2 class="scene-heading">Telugu Voice Outreach &amp; Conservation Ledger</h2>
+          <p class="scene-desc">Spoken phone updates for non-smartphone farmers; double-entry conservation ledger for every drop.</p>
+
+          <div class="voice-ledger-grid">
+            <!-- Left: Phone Simulator Card -->
+            <div class="card phone-card">
+              <div>
+                <div class="phone-header">
+                  <span style="font-family: var(--font-mono); font-weight: 700; font-size: 14px;">Telugu Voice Dialing</span>
+                  <span style="font-family: var(--font-mono); font-size: 13px; color: var(--ok); background: var(--ok-tint); padding: 4px 10px; border-radius: 6px;">601/601 Key Parity</span>
+                </div>
+                <div class="telugu-quote-box">
+                  <div class="telugu-phrase">«నాకు ఈ వారం అత్యవసరంగా నీరు కావాలి.»</div>
+                  <div class="telugu-translation">"I urgently need water this week."</div>
+                </div>
+                <p style="font-size: 15px; color: var(--muted); line-height: 1.5;">
+                  IVR phone alerts reach tail-end farmers without smartphones before gates open. DTMF tone confirms receipt.
+                </p>
+              </div>
+              <div style="padding-top: 14px; border-top: 1px solid var(--rule); font-family: var(--font-mono); font-size: 12px; color: var(--muted);">
+                Rate limit: 3 calls / 60 s per handset &middot; apps/api/src/voice/telugu.ts
+              </div>
+            </div>
+
+            <!-- Right: Double-Entry Conservation Ledger Card -->
+            <div class="card ledger-card">
+              <div>
+                <div class="phone-header">
+                  <span style="font-family: var(--font-mono); font-weight: 700; font-size: 14px; text-transform: uppercase; color: var(--accent);">Double-Entry Water Ledger</span>
+                  <span style="font-family: var(--font-mono); font-size: 13px; color: var(--ok); font-weight: 700; background: var(--ok-tint); padding: 4px 10px; border-radius: 6px;">conservation_ok: true</span>
+                </div>
+                <table class="ledger-table">
+                  <thead>
+                    <tr>
+                      <th>Account</th>
+                      <th>Debit (m³)</th>
+                      <th>Credit (m³)</th>
+                      <th>State</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Canal Inflow (Supply)</td>
+                      <td>180,000</td>
+                      <td>0</td>
+                      <td style="color: var(--ok);">Verified</td>
+                    </tr>
+                    <tr>
+                      <td>Allocated Farmer Quotas</td>
+                      <td>0</td>
+                      <td>124,500</td>
+                      <td style="color: var(--ok);">Balanced</td>
+                    </tr>
+                    <tr>
+                      <td>Conveyance Losses (Seepage)</td>
+                      <td>0</td>
+                      <td>36,500</td>
+                      <td style="color: var(--ok);">Modelled</td>
+                    </tr>
+                    <tr>
+                      <td>Emergency Public Buffer</td>
+                      <td>0</td>
+                      <td>19,000</td>
+                      <td style="color: var(--ok);">Reserved</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style="padding-top: 14px; border-top: 1px solid var(--rule); font-family: var(--font-mono); font-size: 12px; color: var(--muted); display: flex; justify-content: space-between;">
+                <span>Invariant: ∑ Debits = ∑ Credits</span>
+                <span>packages/core/src/ledger.ts</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-family: var(--font-mono); font-size: 14px; color: var(--muted); text-align: center;">
+          packages/core/src/ledger.ts &middot; apps/web/src/i18n/{en,te}.json
+        </div>
+      </section>
+
+      <!-- Scene 6: Outro (51.0s – 56.0s) -->
+      <section id="scene-6" class="scene clip" data-start="51.0" data-duration="5.0" data-track-index="6">
+        <div class="outro-container">
+          <div style="display: flex; align-items: baseline; justify-content: center;">
+            <span class="brand-title">Jadal</span>
+            <span class="brand-te">జదల్</span>
+          </div>
+          <p class="outro-tagline">Canal water shared by volume, not by hours.</p>
+
+          <div class="badges-row">
+            <div class="tech-badge">Zero Water Arithmetic in LLMs</div>
+            <div class="tech-badge">Deterministic Open-Source Core</div>
+            <div class="tech-badge">Conservation Invariant Verified</div>
+          </div>
+
+          <div class="footer-source">
+            Kondaveedu Minor Canal &middot; 3 km &middot; 8 Outlets &middot; github.com/Parswanadh/jadal
+          </div>
+        </div>
+      </section>
+
+      <!-- Audio Track Elements -->
+      <!-- Background Ambient Bed -->
+      <audio
+        id="bg-music"
+        data-start="0.0"
+        data-duration="56.0"
+        data-track-index="10"
+        data-volume="0.35"
+        src="assets/audio/ambient-bed.ogg"
+      ></audio>
+
+      <!-- Sound Effects -->
+      <audio
+        id="sfx-tick-1"
+        data-start="9.5"
+        data-duration="0.035"
+        data-track-index="11"
+        data-volume="0.55"
+        src="assets/audio/tick.wav"
+      ></audio>
+      <audio
+        id="sfx-tick-2"
+        data-start="12.0"
+        data-duration="0.035"
+        data-track-index="11"
+        data-volume="0.55"
+        src="assets/audio/tick.wav"
+      ></audio>
+      <audio
+        id="sfx-tick-3"
+        data-start="14.5"
+        data-duration="0.035"
+        data-track-index="11"
+        data-volume="0.55"
+        src="assets/audio/tick.wav"
+      ></audio>
+      <audio
+        id="sfx-tick-4"
+        data-start="16.5"
+        data-duration="0.035"
+        data-track-index="11"
+        data-volume="0.70"
+        src="assets/audio/tick.wav"
+      ></audio>
+
+      <!-- Pivot Swell -->
+      <audio
+        id="sfx-swell"
+        data-start="19.5"
+        data-duration="3.5"
+        data-track-index="12"
+        data-volume="0.80"
+        src="assets/audio/swell.wav"
+      ></audio>
+
+      <!-- Chimes -->
+      <audio
+        id="sfx-chime-1"
+        data-start="23.5"
+        data-duration="1.2"
+        data-track-index="13"
+        data-volume="0.75"
+        src="assets/audio/chime.wav"
+      ></audio>
+      <audio
+        id="sfx-chime-2"
+        data-start="47.0"
+        data-duration="1.2"
+        data-track-index="13"
+        data-volume="0.75"
+        src="assets/audio/chime.wav"
+      ></audio>
+
+      <!-- DTMF tone -->
+      <audio
+        id="sfx-dtmf"
+        data-start="43.0"
+        data-duration="0.15"
+        data-track-index="14"
+        data-volume="0.70"
+        src="assets/audio/dtmf_ack.wav"
+      ></audio>
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+
+      // Initial state: hide all scenes
+      tl.set("#scene-1", { opacity: 0, pointerEvents: "none" }, 0);
+      tl.set("#scene-2", { opacity: 0, pointerEvents: "none" }, 0);
+      tl.set("#scene-3", { opacity: 0, pointerEvents: "none" }, 0);
+      tl.set("#scene-4", { opacity: 0, pointerEvents: "none" }, 0);
+      tl.set("#scene-5", { opacity: 0, pointerEvents: "none" }, 0);
+      tl.set("#scene-6", { opacity: 0, pointerEvents: "none" }, 0);
+
+      // --- Scene 1: 0.0s – 8.0s ---
+      tl.to("#scene-1", { opacity: 1, duration: 0.5, ease: "power2.out" }, 0.0);
+      tl.set("#caption-en", { textContent: "Everyone got their hours. The tail still lost the crop. Hours are not water." }, 0.0);
+      tl.set("#caption-te", { textContent: "అందరికీ గంటలు అందాయి. అయినా చివర రైతు పంట ఎండిపోయింది. గంటలు అంటే నీరు కాదు." }, 0.0);
+      tl.to("#scene-1", { opacity: 0, duration: 0.4, ease: "power2.in" }, 7.6);
+
+      // --- Scene 2: 8.0s – 19.0s ---
+      tl.to("#scene-2", { opacity: 1, duration: 0.5, ease: "power2.out" }, 8.0);
+      tl.set("#caption-en", { textContent: "Head Outlet 1: 0.145 m³/s (3.5% loss) · Tail Outlet 8: 0.106 m³/s (29.4% loss). Same hours. Not the same water." }, 8.0);
+      tl.set("#caption-te", { textContent: "తల వద్ద 0.145 m³/s (3.5% నష్టం) · తోక వద్ద 0.106 m³/s (29.4% నష్టం). అదే గంటలు. అదే నీరు కాదు." }, 8.0);
+      tl.fromTo("#water-stream-path", { opacity: 0.2, scaleY: 0.5 }, { opacity: 0.85, scaleY: 1.0, duration: 1.2, ease: "power2.out" }, 8.4);
+      tl.to("#scene-2", { opacity: 0, duration: 0.4, ease: "power2.in" }, 18.6);
+
+      // --- Scene 3: 19.0s – 30.0s ---
+      tl.to("#scene-3", { opacity: 1, duration: 0.5, ease: "power2.out" }, 19.0);
+      tl.set("#caption-en", { textContent: "Equal Volume Allocation: Tᵢ = Vᵢ / Q(xᵢ). Turn duration scales with local flow and transit lag." }, 19.0);
+      tl.set("#caption-te", { textContent: "సమాన పరిమాణ కేటాయింపు: Tᵢ = Vᵢ / Q(xᵢ). స్థానిక ప్రవాహం ఆధారంగా సమయం నిర్ణయం." }, 19.0);
+      tl.fromTo(".fill-water-tail", { width: "40%" }, { width: "78%", duration: 1.5, ease: "power2.out" }, 20.0);
+      tl.to("#scene-3", { opacity: 0, duration: 0.4, ease: "power2.in" }, 29.6);
+
+      // --- Scene 4: 30.0s – 41.0s ---
+      tl.to("#scene-4", { opacity: 1, duration: 0.5, ease: "power2.out" }, 30.0);
+      tl.set("#caption-en", { textContent: "LLMs propose · Deterministic core computes · Coordinator approves." }, 30.0);
+      tl.set("#caption-te", { textContent: "AI సూచిస్తుంది · లెక్కల కోర్ గణిస్తుంది · కోఆర్డినేటర్ ఆమోదిస్తారు." }, 30.0);
+      tl.fromTo(".arch-card", { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, stagger: 0.15, ease: "power2.out" }, 30.5);
+      tl.to("#scene-4", { opacity: 0, duration: 0.4, ease: "power2.in" }, 40.6);
+
+      // --- Scene 5: 41.0s – 51.0s ---
+      tl.to("#scene-5", { opacity: 1, duration: 0.5, ease: "power2.out" }, 41.0);
+      tl.set("#caption-en", { textContent: "Telugu Voice Outreach · 601/601 Bilingual Keys · Double-Entry Water Conservation Ledger." }, 41.0);
+      tl.set("#caption-te", { textContent: "తెలుగు వాయిస్ సమాచారం · 601/601 సమాన అనువాదాలు · పక్కా నీటి పరిరక్షణ లెడ్జర్." }, 41.0);
+      tl.to("#scene-5", { opacity: 0, duration: 0.4, ease: "power2.in" }, 50.6);
+
+      // --- Scene 6: 51.0s – 56.0s ---
+      tl.to("#scene-6", { opacity: 1, duration: 0.5, ease: "power2.out" }, 51.0);
+      tl.set("#caption-en", { textContent: "Jadal · Real physics. Verifiable core. Fair water for the tail." }, 51.0);
+      tl.set("#caption-te", { textContent: "జదల్ · నిజమైన భౌతికశాస్త్రం. నిరూపితమైన కోర్. తోక రైతుకు న్యాయమైన నీరు." }, 51.0);
+
+      tl.seek(0);
+    </script>
+  </body>
+</html>
