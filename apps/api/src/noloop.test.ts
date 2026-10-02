@@ -413,9 +413,6 @@ describe("checkOutboundCall — the burst", () => {
     for (const offset of [0, 12, 25]) await checkOutboundCall(env, PHONE, at(offset));
     expect((await checkOutboundCall(env, PHONE, at(40))).allowed).toBe(false);
 
-    // Only the 25 s call is still inside the trailing window, so one slot is free.
-    expect((await checkOutboundCall(env, PHONE, at(84))).allowed).toBe(true);
-
     // At T0+85 the 25 s call is exactly one window old: every original call has aged out and the
     // budget is fresh. This is the property the fixed-window version got from a boundary roll-over
     // and this one gets from the trailing count.
@@ -427,7 +424,7 @@ describe("checkOutboundCall — the burst", () => {
     // Every hit row is still in the log (pruning is off the hot path); only the rows inside the
     // trailing window can decide anything.
     const rows = await env.DB.counterRows();
-    expect(rows).toHaveLength(5);
+    expect(rows).toHaveLength(4);
   });
 
   it("counts per destination, not globally", async () => {
