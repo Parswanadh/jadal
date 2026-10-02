@@ -82,6 +82,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const t = useCallback(
     (path: string, vars?: TVars): string => {
       const hit = lookup(dictionaries[lang], path) ?? lookup(dictionaries.en, path);
+      if (hit === undefined && import.meta.env.DEV) {
+        // A missing key must be loud. In development this logs an error, which
+        // fails the e2e "no console errors" assertions; the unit suite also
+        // scans every key the components reference. Never render the key name
+        // on screen silently.
+        console.error(`[i18n] missing translation key: ${path}`);
+      }
       return fill(hit ?? path, vars);
     },
     [lang],

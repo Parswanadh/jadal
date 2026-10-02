@@ -74,17 +74,85 @@ describe("language files", () => {
 });
 
 describe("translation keys used in the code", () => {
-  it("exist in the language files", () => {
+  // Every literal key a component asks for must resolve in BOTH dictionaries.
+  // A key that resolves to nothing renders as its own name, so this must fail
+  // the suite rather than let a raw "login.title" reach the screen.
+  it("exist in both language files", () => {
     const root = join(__dirname, "..");
     const missing: string[] = [];
     for (const file of sourceFiles(root)) {
       const text = readFileSync(file, "utf8");
-      for (const match of text.matchAll(/\bt\(\s*["'`]([\w.]+)["'`]/g)) {
+      for (const match of text.matchAll(/\bt\(\s*["']([\w.]+)["']/g)) {
         const key = match[1] ?? "";
-        if (!(key in enFlat)) missing.push(`${file.slice(root.length + 1)}: ${key}`);
+        for (const [lang, dict] of [["en", enFlat], ["te", teFlat]] as const) {
+          if (!(key in dict)) missing.push(`${lang} ${file.slice(root.length + 1)}: ${key}`);
+        }
       }
     }
     expect(missing).toEqual([]);
+  });
+
+  // Template keys such as t(`coord.alert.severity.${level}`) cannot be checked
+  // member by member, but the family prefix must exist in both dictionaries.
+  it("only reference template key families that exist", () => {
+    const root = join(__dirname, "..");
+    const missing: string[] = [];
+    for (const file of sourceFiles(root)) {
+      const text = readFileSync(file, "utf8");
+      for (const match of text.matchAll(/\bt\(\s*`([^`]*)`/g)) {
+        const raw = match[1] ?? "";
+        const prefix = raw.split("${")[0] ?? "";
+        if (!prefix.endsWith(".")) continue;
+        const inEn = Object.keys(enFlat).some((key) => key.startsWith(prefix));
+        const inTe = Object.keys(teFlat).some((key) => key.startsWith(prefix));
+        if (!inEn || !inTe) missing.push(`${file.slice(root.length + 1)}: ${prefix}*`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  // Regression pin for the surfaces that were broken by a bulk dictionary edit:
+  // the sign-in screen, the schedule editor and the alert control with severity.
+  it("keep the sign-in screen and coordinator tools fully translated", () => {
+    const required = [
+      "login.eyebrow",
+      "login.title",
+      "login.lead",
+      "login.roleLabel",
+      "login.role.farmer",
+      "login.role.coordinator",
+      "login.passwordLabel",
+      "login.submit",
+      "login.error",
+      "login.noteTitle",
+      "login.rolesHint",
+      "login.noteBody",
+      "auth.signedInAs",
+      "auth.signOut",
+      "coord.roster.edit.action",
+      "coord.roster.edit.forTurn",
+      "coord.roster.edit.save",
+      "coord.roster.edit.backwards",
+      "coord.roster.edit.saved",
+      "coord.roster.edit.changed",
+      "coord.alert.title",
+      "coord.alert.channel.call",
+      "coord.alert.channel.sms",
+      "coord.alert.channel.whatsapp",
+      "coord.alert.severity.info",
+      "coord.alert.severity.warning",
+      "coord.alert.severity.urgent",
+      "coord.alert.severity.emergency",
+      "coord.alert.simulated",
+      "phone.agentCallTitle",
+      "phone.agentCallPlay",
+      "phone.agentCallSimulated",
+      "ask.urgentCallNote",
+    ];
+    for (const key of required) {
+      expect(enFlat[key], `en ${key}`).toBeTruthy();
+      expect(teFlat[key], `te ${key}`).toBeTruthy();
+    }
   });
 
   it("cover every crop, soil, channel and request value", () => {

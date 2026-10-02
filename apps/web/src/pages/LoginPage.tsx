@@ -93,6 +93,15 @@ export default function LoginPage() {
           </button>
         </div>
       </form>
+
+      {/* Quiet note: there is no self sign-up, and the passwords are not public. */}
+      <aside className="login-note" aria-labelledby="login-note-title">
+        <p className="field-label" id="login-note-title">
+          {t('login.noteTitle')}
+        </p>
+        <p className="muted small">{t('login.rolesHint')}</p>
+        <p className="muted small">{t('login.noteBody')}</p>
+      </aside>
     </section>
   );
 }

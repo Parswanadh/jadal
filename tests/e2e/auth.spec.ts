@@ -6,6 +6,21 @@ import en from '../../apps/web/src/i18n/en.json';
  * screen, no cross-over, sign-out, session restore.
  */
 
+test('the sign-in screen shows real copy, never raw keys', async ({ page, consoleErrors }) => {
+  await page.goto('/login');
+
+  const text = await page.locator('main').innerText();
+  expect(text).not.toMatch(/\blogin\.[a-zA-Z]/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(en.login.title);
+  await expect(page.getByRole('button', { name: en.login.role.farmer, exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: en.login.role.coordinator, exact: true })).toBeVisible();
+  await expect(page.getByText(en.login.noteTitle)).toBeVisible();
+  await expect(page.getByText(en.login.noteBody)).toBeVisible();
+
+  await settle(page);
+  expect(consoleErrors).toEqual([]);
+});
+
 test('an unauthenticated visit to a protected route redirects to /login', async ({ page, consoleErrors }) => {
   await page.goto('/coordinator?tab=farmers');
   await expect(page).toHaveURL(/\/login$/);

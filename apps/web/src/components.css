@@ -529,6 +529,10 @@
   border-radius: var(--radius-sm);
 }
 
+.segmented-wrap {
+  flex-wrap: wrap;
+}
+
 .segment {
   font: inherit;
   font-size: var(--text-sm);
@@ -560,5 +564,20 @@
 
 .login-card {
   margin-top: 1.5rem;
+}
+
+/* Quiet note under the card: fixed credentials, no self sign-up. */
+.login-note {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+
+.login-note p {
+  margin: 0 0 0.5rem;
+}
+
+.login-note p:last-child {
+  margin-bottom: 0;
 }
 

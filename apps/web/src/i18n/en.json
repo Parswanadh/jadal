@@ -29,6 +29,9 @@
     }
   },
   "login": {
+    "noteTitle": "This is a fixed sign-in",
+    "rolesHint": "The farmer sees their own turns and asks for water. The coordinator approves plans and can alert farmers.",
+    "noteBody": "There is no self sign-up. The two passwords are set by whoever runs this copy. If you need access, ask your canal coordinator.",
     "eyebrow": "Sign in",
     "title": "Sign in to Jadal",
     "lead": "Choose who you are, then enter the password for that role.",
@@ -299,7 +302,9 @@
     "decisionApproved": "Approved {m3}.",
     "decisionRejected": "The coordinator did not approve this.",
     "errVolume": "Enter an amount of water more than 0.",
-    "errReason": "Write a short reason."
+    "errReason": "Write a short reason.",
+    "urgentCallNote": "An urgent request also asks the agent to call you.",
+    "callFailed": "The request was raised, but the agent call could not be queued."
   },
   "pool": {
     "title": "Shared pool",
@@ -504,9 +509,16 @@
       "messageHint": "Leave empty to send the standard message.",
       "send": "Send alert",
       "sending": "Sending…",
-      "simulated": "Simulated only: no real {channel} was sent. {detail}",
-      "sent": "Sent by {channel}.",
-      "error": "The alert could not be sent. Please try again."
+      "simulated": "Simulated only: no real {channel} was sent. {severity} level. {detail}",
+      "sent": "Sent by {channel}. {severity} level.",
+      "error": "The alert could not be sent. Please try again.",
+      "severityLabel": "Warning level",
+      "severity": {
+        "info": "Info",
+        "warning": "Warning",
+        "urgent": "Urgent",
+        "emergency": "Emergency"
+      }
     }
   },
   "canal": {
@@ -583,7 +595,16 @@
     "reachEmptyTitle": "No calls queued yet",
     "reachEmptyBody": "Calls appear here after the coordinator approves a schedule.",
     "colCall": "Phone call",
-    "colWhatsapp": "WhatsApp"
+    "colWhatsapp": "WhatsApp",
+    "agentCallTitle": "Agent call",
+    "agentCallLead": "The agent answers and speaks in Telugu.",
+    "agentCallSimulated": "Simulated call: the agent's reply plays on this device only.",
+    "agentCallPlay": "Play the agent's reply",
+    "agentCallReplay": "Play again",
+    "agentCallSpeaking": "Speaking…",
+    "agentCallNoSpeech": "This device cannot speak. The reply is written below.",
+    "agentCallError": "The agent's reply could not be loaded.",
+    "agentCallOpen": "Open the phone screen"
   },
   "demo": {
     "start": "Start demo",
