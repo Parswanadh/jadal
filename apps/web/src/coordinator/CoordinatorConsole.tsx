@@ -33,6 +33,8 @@ export default function CoordinatorConsole() {
   const [water, setWater] = useState<RosterProposal | null>(null);
   const [hours, setHours] = useState<RosterProposal | null>(null);
   const [requests, setRequests] = useState<RequestRow[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [requestsFailed, setRequestsFailed] = useState(false);
   const [ledger, setLedger] = useState<LedgerView | null>(null);
   const [audit, setAudit] = useState<AuditView | null>(null);
   const [changedTurns, setChangedTurns] = useState<Set<string>>(new Set());
@@ -68,6 +70,19 @@ export default function CoordinatorConsole() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /** Re-read the queue, so a request raised in another session shows up on a plain load. */
+  const refreshRequests = useCallback(async (): Promise<void> => {
+    setRequestsLoading(true);
+    setRequestsFailed(false);
+    try {
+      setRequests(await api.listRequests());
+    } catch {
+      setRequestsFailed(true);
+    } finally {
+      setRequestsLoading(false);
+    }
+  }, []);
 
   const pendingRequests = requests.filter((r) => !r.decision).length;
   const pendingFarmers = farmers.filter((r) => !r.verified).length;
@@ -138,10 +153,16 @@ export default function CoordinatorConsole() {
   );
 
   // The audit is a live trail: re-read it whenever the accounts tab is opened,
-  // so a schedule change or an alert sent a moment ago is already there.
+  // so a schedule change or an alert sent a moment ago is already there. The
+  // request queue is re-read the same way: requests are raised in other
+  // sessions, so opening the tab must not show a stale list.
   useEffect(() => {
     if (tab === "accounts") void refreshAccounts();
   }, [tab, refreshAccounts]);
+
+  useEffect(() => {
+    if (tab === "requests" && ready) void refreshRequests();
+  }, [tab, ready, refreshRequests]);
 
   const tabLabel = useMemo(() => (k: Tab) => t(`coord.tabs.${k}`), [t]);
 
@@ -177,7 +198,15 @@ export default function CoordinatorConsole() {
                 </p>
               </div>
             )}
-            {tab === "requests" && <RequestQueue rows={requests} onDecided={onDecided} />}
+            {tab === "requests" && (
+              <RequestQueue
+                rows={requests}
+                loading={requestsLoading}
+                failed={requestsFailed}
+                onRefresh={() => void refreshRequests()}
+                onDecided={onDecided}
+              />
+            )}
             {tab === "farmers" && <VerifyRegistrations rows={farmers} onVerified={onVerified} />}
             {tab === "entitlements" && (
               <EntitlementReview

@@ -5,12 +5,26 @@
 // displayed comes from the API (or its mock).
 
 import { api as client, sendAlert as clientSendAlert, updateTurn as clientUpdateTurn } from "../api";
-import type { AlertChannel, AlertSeverity } from "../api/extra";
+import type { AlertChannel, AlertSeverity, Allocation } from "../api/extra";
 import type { AuditView, EntitlementRow, FarmerRegistration, LedgerView, RequestRow, RosterProposal } from "./types";
 
 async function farmerNames(): Promise<Map<string, string>> {
   const list = await client.listFarmers();
   return new Map(list.map((r) => [r.farmer.id, r.farmer.name]));
+}
+
+/**
+ * The turn the API scheduled for one farmer in the first release window, or
+ * null when there is no window or the farmer has no turn. Read straight from the
+ * roster proposal: this layer never derives a window of its own.
+ */
+async function nextTurnFor(farmerId: string): Promise<{ start: string; end: string } | null> {
+  const windows = await client.releaseWindows();
+  const win = windows[0];
+  if (!win) return null;
+  const { roster } = await client.proposeRoster({ release_window_id: win.id, mode: "equal_water" });
+  const turn = roster.turns.find((t) => t.farmer_id === farmerId);
+  return turn ? { start: turn.start, end: turn.end } : null;
 }
 
 export const api = {
@@ -90,12 +104,18 @@ export const api = {
     return { start: res.turn.start, end: res.turn.end };
   },
 
-  /** Alert one farmer by call, SMS or WhatsApp. `simulated` says whether anything really left. */
+  /**
+   * Alert one farmer by call, SMS or WhatsApp. `simulated` says whether anything
+   * really left. When `allocation` is given, the alert tells the farmer how much
+   * water they have been given and the window to use it in — the numbers come
+   * from the API, never from this layer.
+   */
   async sendAlert(
     farmerId: string,
     channel: AlertChannel,
     severity: AlertSeverity,
     message?: string,
+    allocation?: Allocation,
   ): Promise<{ simulated: boolean; detail: string }> {
     const trimmed = message?.trim();
     const res = await clientSendAlert({
@@ -103,8 +123,27 @@ export const api = {
       channel,
       severity,
       message: trimmed ? trimmed : undefined,
+      allocation,
     });
     return { simulated: res.simulated, detail: res.detail };
+  },
+
+  /**
+   * The allocation to offer a farmer: the volume the coordinator approved for
+   * their request, and the turn window the API scheduled for them. Returns null
+   * when the API has no approved amount and no turn, so the control can say so
+   * instead of inventing a number.
+   */
+  async allocationFor(farmerId: string): Promise<Allocation | null> {
+    const [requests, turn] = await Promise.all([
+      client.listRequests(),
+      nextTurnFor(farmerId),
+    ]);
+    const approved = requests
+      .filter((r) => r.farmer_id === farmerId && r.coordinator_decision?.decision === "approve")
+      .at(-1)?.coordinator_decision;
+    if (!approved || !turn) return null;
+    return { volume_m3: approved.volume_m3, start: turn.start, end: turn.end };
   },
 
   async listRequests(): Promise<RequestRow[]> {
@@ -129,8 +168,20 @@ export const api = {
     }));
   },
 
-  async decideRequest(id: string, decision: "approve" | "reject", volumeM3: number): Promise<void> {
-    await client.decideRequest(id, { decision, volume_m3: volumeM3 });
+  /**
+   * Record the coordinator's decision. Returns what the API reported about
+   * letting the farmer know: `dispatched` names the contact the decision queued
+   * for that farmer, and null when nothing was dispatched — the console says so
+   * plainly rather than implying the farmer was told.
+   */
+  async decideRequest(id: string, decision: "approve" | "reject", volumeM3: number): Promise<{ dispatched: string | null }> {
+    const decided = await client.decideRequest(id, { decision, volume_m3: volumeM3 });
+    const contacts = await client.contacts();
+    // A decision queues a `request_update` contact. The roster contacts that
+    // exist for every farmer do not count: this asks specifically whether the
+    // decision itself dispatched anything.
+    const queued = contacts.find((c) => c.farmer_id === decided.farmer_id && c.purpose === "request_update");
+    return { dispatched: queued ? queued.channel : null };
   },
 
   async ledger(): Promise<LedgerView> {

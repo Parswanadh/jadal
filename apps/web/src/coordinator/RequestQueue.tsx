@@ -11,6 +11,11 @@ import type { RequestRow } from "./types";
 
 interface Props {
   rows: RequestRow[];
+  /** True while the queue is being re-read from the API. */
+  loading: boolean;
+  /** True when the last re-read failed. */
+  failed: boolean;
+  onRefresh: () => void;
   onDecided: (id: string, decision: "approve" | "reject", volumeM3: number) => void;
 }
 
@@ -22,10 +27,18 @@ function urgencyLevel(score: number): "high" | "mid" | "low" {
 
 const URGENCY_PILL = { high: "pill-crit", mid: "pill-warn", low: "pill-ok" } as const;
 
-export default function RequestQueue({ rows, onDecided }: Props) {
+interface Decision {
+  decision: "approve" | "reject";
+  /** What the API said it dispatched, if anything. */
+  dispatched: string | null;
+}
+
+export default function RequestQueue({ rows, loading, failed, onRefresh, onDecided }: Props) {
   const { t, lang } = useI18n();
   const f = useFormat();
   const [grants, setGrants] = useState<Record<string, number>>({});
+  const [decideFailed, setDecideFailed] = useState(false);
+  const [decisions, setDecisions] = useState<Record<string, Decision>>({});
 
   function grantFor(r: RequestRow): number {
     return grants[r.id] ?? r.recommendation?.volumeM3 ?? r.volumeM3;
@@ -33,8 +46,14 @@ export default function RequestQueue({ rows, onDecided }: Props) {
 
   async function decide(r: RequestRow, decision: "approve" | "reject"): Promise<void> {
     const volume = decision === "approve" ? grantFor(r) : 0;
-    await api.decideRequest(r.id, decision, volume);
-    onDecided(r.id, decision, volume);
+    setDecideFailed(false);
+    try {
+      const res = await api.decideRequest(r.id, decision, volume);
+      setDecisions((d) => ({ ...d, [r.id]: { decision, dispatched: res.dispatched } }));
+      onDecided(r.id, decision, volume);
+    } catch {
+      setDecideFailed(true);
+    }
   }
 
   const pending = rows.filter((r) => !r.decision);
@@ -44,6 +63,34 @@ export default function RequestQueue({ rows, onDecided }: Props) {
     <section aria-labelledby="req-h">
       <h2 className="card-title" id="req-h">{t("coord.req.title")}</h2>
       <p className="card-sub">{t("coord.req.sub")}</p>
+
+      <div className="btn-row req-toolbar">
+        <button type="button" className="btn" onClick={onRefresh} disabled={loading}>
+          {t("coord.req.refresh")}
+        </button>
+        {loading && (
+          <span className="muted small" role="status">
+            {t("coord.req.loading")}
+          </span>
+        )}
+      </div>
+
+      {failed && (
+        <div className="notice notice-crit" role="alert">
+          <p>
+            {t("common.loadError")}{" "}
+            <button type="button" className="btn" onClick={onRefresh}>
+              {t("common.retry")}
+            </button>
+          </p>
+        </div>
+      )}
+
+      {decideFailed && (
+        <div className="notice notice-crit" role="alert">
+          <p>{t("coord.req.decideFailed")}</p>
+        </div>
+      )}
 
       {pending.length === 0 ? (
         <EmptyState title={t("coord.req.emptyTitle")} body={t("coord.req.emptyBody")} />
@@ -126,6 +173,7 @@ export default function RequestQueue({ rows, onDecided }: Props) {
                   <th scope="col">{t("coord.col.request")}</th>
                   <th scope="col" className="col-num">{t("coord.col.asked")}</th>
                   <th scope="col">{t("coord.col.result")}</th>
+                  <th scope="col">{t("coord.col.alert")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -140,6 +188,18 @@ export default function RequestQueue({ rows, onDecided }: Props) {
                       ) : (
                         <span className="pill pill-crit">{t("coord.req.resultRejected")}</span>
                       )}
+                      {r.decision?.decision === "approve" && (
+                        <span className="muted small dispatch-note">
+                          {decisions[r.id]?.dispatched
+                            ? t("coord.req.dispatched", { channel: f.channel(decisions[r.id]?.dispatched ?? "") })
+                            : t("coord.req.notDispatched")}
+                        </span>
+                      )}
+                    </td>
+                    {/* An approved request is exactly when the farmer needs to be
+                        told their allocation, so the control lives here too. */}
+                    <td>
+                      <AlertControl farmerId={r.farmerId} farmerName={r.farmerName} />
                     </td>
                   </tr>
                 ))}

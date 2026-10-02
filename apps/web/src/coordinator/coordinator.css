@@ -171,6 +171,19 @@
   margin-top: 1.5rem;
 }
 
+/* What the API reported about telling the farmer after a decision. */
+.coord .dispatch-note {
+  display: block;
+  margin-top: 0.3rem;
+  max-width: 22rem;
+}
+
+/* Re-read the queue; requests arrive from other sessions. */
+.coord .req-toolbar {
+  align-items: center;
+  margin: 0.75rem 0 1rem;
+}
+
 /* Turn-time editing, inline in the schedule table */
 .coord .turn-edit {
   display: grid;
