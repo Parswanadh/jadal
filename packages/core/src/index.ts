@@ -19,7 +19,14 @@ export function mmHaToCubicMeters(depthMm: number, areaHa: number): number {
 
 // Public API of the deterministic core. Every water number in Jadal comes from these objects;
 // each one implements its interface in packages/contracts/src/core.ts.
-export { cropEngine, SOIL_AVAILABLE_WATER } from "./crop";
+export {
+  cropEngine,
+  SOIL_AVAILABLE_WATER,
+  adjustKcForClimate,
+  adjustCropParamsForClimate,
+  KC_END_ADJUSTMENT_THRESHOLD,
+} from "./crop";
+export type { ClimateInputs } from "./crop";
 export { hydraulics } from "./hydraulics";
 export { rosterEngine } from "./roster";
 export { ledger } from "./ledger";
