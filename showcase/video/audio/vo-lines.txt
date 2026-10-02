@@ -1,0 +1,22 @@
+# Jadal 45-60s Launch Video — Voiceover Narration Lines
+# Pacing: ~145 words total (~2.4 words/sec) calibrated for 60.0s polished runtime.
+# Tone: Calm, authoritative, civic-infrastructure documentary; serious, clear, evidence-based.
+
+[00:00 - 00:08] (Duration: 8.0s | Scene: Hook & Title Card)
+"On this canal, every farmer received their allotted hours — and the tail still lost her crop. Because hours are not water."
+
+[00:08 - 00:20] (Duration: 12.0s | Scene: Canal Hero View & Seepage Deficit)
+"Over three kilometres of unlined soil, seepage claims nearly thirty percent of the flow. Outlet one receives full flow; outlet eight receives a trickle. The old register calls both fair."
+
+[00:20 - 00:32] (Duration: 12.0s | Scene: The Pivot & Equal-Water Roster)
+"Jadal shares canal water by volume, not by time. When the coordinator switches to equal-water, tail turns run longer to deliver true volume. Tail need-met surges from forty-two percent to over ninety percent."
+
+[00:32 - 00:44] (Duration: 12.0s | Scene: Telugu Phone Request & Triage)
+"When drought threatens, farmers call in Telugu: «నాకు ఈ వారం అత్యవసరంగా నీరు కావాలి.» AI triages urgency, and the coordinator approves forty cubic metres deducted from seasonal quota."
+[Note for renderer: Farmer spoken line in Telugu is pronounced: "Naaku ee vaaram atyavasaram-gaa neeru kaavaali." Meaning: "I urgently need water this week."]
+
+[00:44 - 00:54] (Duration: 10.0s | Scene: Double-Entry Ledger & Conservation Proof)
+"Every transaction updates a double-entry volume ledger. Physical conservation holds strictly across all eight outlets: supply equals quotas, buffer, delivered water, and conveyance losses."
+
+[00:54 - 00:60] (Duration: 6.0s | Scene: Architecture Principle & Outro)
+"LLMs propose, deterministic physics compute, and human coordinators approve. Fair water, verified by code."
