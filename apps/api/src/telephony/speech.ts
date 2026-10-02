@@ -1,4 +1,5 @@
 import { fromBase64 } from "./signature";
+import type { SttEngine } from "./types";
 
 export const SARVAM_TTS_URL = "https://api.sarvam.ai/text-to-speech";
 export const SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text";
@@ -54,4 +55,54 @@ export async function deepgramStt(f: Fetch, apiKey: string, wav: ArrayBuffer): P
     results?: { channels?: { alternatives?: { transcript?: string }[] }[] };
   };
   return (data.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "").trim();
+}
+
+/** Keys the STT chain needs; a structural slice of `TelephonyEnv` so this stays decoupled. */
+export interface SttKeys {
+  readonly SARVAM_API_KEY?: string;
+  readonly DEEPGRAM_API_KEY?: string;
+}
+
+/**
+ * The outcome of one transcription attempt across the engine chain.
+ *
+ * `ok: false` carries the last engine's failure text so the caller can record **why** nothing was
+ * transcribed — "Sarvam 503, then no Deepgram key" is a fact worth keeping, and it is what makes the
+ * keyword fallback honest rather than a silent default.
+ */
+export type TranscriptionOutcome =
+  | { readonly ok: true; readonly transcript: string; readonly engine: SttEngine }
+  | { readonly ok: false; readonly reason: string };
+
+/**
+ * Transcribe a recorded reply by trying each engine in `order` until one returns a non-empty
+ * transcript. Never throws; a thrown engine is recorded and the next one is tried.
+ *
+ * The order is a parameter because the two call sites have different mandates: the outbound recording
+ * path keeps ADR-005's Sarvam-first order, while the inbound answer path (task 3) puts Deepgram first.
+ * Both fall through to the same System-1 classifier, so the order changes who transcribes, never what
+ * the transcript means.
+ */
+export async function transcribe(
+  f: Fetch,
+  keys: SttKeys,
+  wav: ArrayBuffer,
+  order: readonly SttEngine[] = ["sarvam", "deepgram"],
+): Promise<TranscriptionOutcome> {
+  const reasons: string[] = [];
+  for (const engine of order) {
+    const key = engine === "sarvam" ? keys.SARVAM_API_KEY : keys.DEEPGRAM_API_KEY;
+    if (!key) {
+      reasons.push(`${engine}: no key`);
+      continue;
+    }
+    try {
+      const transcript = (engine === "sarvam" ? await sarvamStt(f, key, wav) : await deepgramStt(f, key, wav)).trim();
+      if (transcript.length > 0) return { ok: true, transcript, engine };
+      reasons.push(`${engine}: empty transcript`);
+    } catch (error) {
+      reasons.push(`${engine}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  return { ok: false, reason: reasons.join("; ") };
 }
