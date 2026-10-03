@@ -84,6 +84,9 @@ export default {
       batch.messages.map(async (message) => {
         try {
           await runEscalation(env, message.body.contact_id);
+          if (env.CALL_CAMPAIGN_WORKFLOW !== undefined) {
+            void env.CALL_CAMPAIGN_WORKFLOW.create({ params: { contactId: message.body.contact_id } }).catch(() => {});
+          }
           message.ack();
         } catch {
           message.retry();

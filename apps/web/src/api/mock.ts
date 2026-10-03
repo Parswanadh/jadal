@@ -12,8 +12,18 @@ import { routes } from "@jadal/contracts";
 import type { z } from "zod";
 import scenarioJson from "@jadal/contracts/fixtures/demo-scenario.json";
 import { ApiClientError } from "./errors";
-import { alertBodySchema, alertResponseSchema, updateTurnResponseSchema } from "./extra";
-import type { AlertBody, AlertChannel, AlertResponse, AlertSeverity, Allocation, UpdateTurnBody, UpdateTurnResponse } from "./extra";
+import { alertBodySchema, alertResponseSchema, harvestBodySchema, harvestResponseSchema, updateTurnResponseSchema } from "./extra";
+import type {
+  AlertBody,
+  AlertChannel,
+  AlertResponse,
+  AlertSeverity,
+  Allocation,
+  HarvestBody,
+  HarvestResponse,
+  UpdateTurnBody,
+  UpdateTurnResponse,
+} from "./extra";
 import { formatDateTime, formatRange } from "../lib/format";
 
 // ASSUMED: illustrative mock values only, used until @jadal/core (Task A) and the intake agent (Task B) supply real numbers.
@@ -83,6 +93,8 @@ interface MockState {
   alerts: MockAlert[];
   /** Calls queued by a coordinator's decision on a request, newest last. */
   decisionContacts: MockDecisionContact[];
+  /** Farmers whose crop has been harvested, so a second harvest frees nothing. */
+  harvested: Set<string>;
   clockHours: number;
   nextId: number;
 }
@@ -122,6 +134,7 @@ function freshState(): MockState {
     turnEdits: new Map(),
     alerts: [],
     decisionContacts: [],
+    harvested: new Set(),
     clockHours: 0,
     nextId: 1,
   };
@@ -408,6 +421,29 @@ export function mockRaiseRequest(body: z.input<typeof routes.raiseRequest.body>)
   };
   state.raised.push(request);
   return routes.raiseRequest.response.parse(request);
+}
+
+/**
+ * Mock of POST /api/canal/harvest. The farmer's remaining quota moves into the
+ * shared buffer, the same movement the server's `crop.harvested` event books.
+ * A farmer already harvested frees nothing a second time.
+ */
+export async function mockHarvest(body: HarvestBody): Promise<HarvestResponse> {
+  const input = harvestBodySchema.parse(body);
+  const plan = cropPlansOfFarmer(input.farmer_id).find((cp) => cp.status !== "harvested");
+  if (!plan) throw new ApiClientError(400, "That farmer has no crop to harvest.", "no_crop_to_harvest");
+
+  const balances = mockBalances();
+  const already = state.harvested.has(input.farmer_id);
+  const remaining = already ? 0 : (balances.farmers.find((f) => f.farmer_id === input.farmer_id)?.quota_m3 ?? 0);
+  state.harvested.add(input.farmer_id);
+  return harvestResponseSchema.parse({
+    ok: true,
+    farmer_id: input.farmer_id,
+    crop_plan_id: plan.id,
+    remaining_m3: remaining,
+    buffer_m3: balances.buffer_m3 + remaining,
+  });
 }
 
 function seededRequests(): WaterRequestT[] {

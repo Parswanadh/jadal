@@ -321,6 +321,56 @@ describe("POST /api/requests/:id/decide", () => {
   });
 });
 
+describe("POST /api/canal/harvest", () => {
+  it("appends crop.harvested, marks the plan harvested and moves the remaining quota to the buffer", async () => {
+    const env = await demoEnv();
+    const app0 = app();
+
+    const before = routes.ledger.response.parse((await call(app0, "GET", routes.ledger.path, { env })).body);
+    const f3Before = before.balances.farmers.find((farmer) => farmer.farmer_id === "f3");
+    if (f3Before === undefined) throw new Error("seed has no f3 balance");
+    const bufferBefore = before.balances.buffer_m3;
+
+    const res = await call(app0, "POST", "/api/canal/harvest", { env, body: { farmer_id: "f3" } });
+
+    expectStatus(res, 200);
+    const body = res.body as {
+      ok: boolean;
+      farmer_id: string;
+      crop_plan_id: string;
+      remaining_m3: number;
+      buffer_m3: number;
+    };
+    expect(body.ok).toBe(true);
+    expect(body.farmer_id).toBe("f3");
+    expect(body.crop_plan_id).toBe("cp3");
+    expect(body.remaining_m3).toBeCloseTo(f3Before.quota_m3, 6);
+    expect(body.buffer_m3).toBeCloseTo(bufferBefore + f3Before.quota_m3, 6);
+
+    // The plan is now `harvested` and the event is in the log.
+    const listed = routes.listFarmers.response.parse((await call(app0, "GET", routes.listFarmers.path, { env })).body);
+    const plan = listed.find((entry) => entry.farmer.id === "f3")?.crop_plans.find((cp) => cp.id === "cp3");
+    expect(plan?.status).toBe("harvested");
+
+    const events = routes.events.response.parse((await call(app0, "GET", routes.events.path, { env })).body);
+    const harvested = events.find((event) => event.type === "crop.harvested");
+    expect(harvested).toBeDefined();
+    if (harvested?.type === "crop.harvested") {
+      expect(harvested.farmer_id).toBe("f3");
+      expect(harvested.crop_plan_id).toBe("cp3");
+      expect(harvested.remaining_m3).toBeCloseTo(f3Before.quota_m3, 6);
+    }
+  });
+
+  it("404s for an unknown farmer", async () => {
+    const env = await demoEnv();
+    const res = await call(app(), "POST", "/api/canal/harvest", { env, body: { farmer_id: "nope" } });
+
+    expectStatus(res, 404);
+    apiError(res.body);
+  });
+});
+
 describe("demo script, end to end", () => {
   it("runs the scripted order through the HTTP surface", async () => {
     const env = await demoEnv();

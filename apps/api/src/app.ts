@@ -13,6 +13,7 @@ import { Hono } from "hono";
 
 import type { Env } from "./env";
 import { errorPayload } from "./http";
+import { failproofMiddleware } from "./observability/hono-middleware";
 import { registerReadRoutes } from "./routes/read";
 import { registerWriteRoutes } from "./routes/write";
 import { registerVoiceRoutes } from "./routes/voice";
@@ -41,6 +42,8 @@ export function createApp(): Hono<{ Bindings: Env }> {
   app.notFound((c) =>
     c.json({ error: { code: "not_found", message: `no route for ${c.req.method} ${c.req.path}` } }, 404),
   );
+
+  app.use("*", failproofMiddleware());
 
   registerReadRoutes(app);
   registerWriteRoutes(app);

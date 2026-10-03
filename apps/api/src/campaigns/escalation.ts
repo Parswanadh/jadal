@@ -28,7 +28,7 @@ import type { Contact } from "@jadal/contracts";
 
 import { now as clockNow } from "../db/clock";
 import { deterministicId } from "../db/id";
-import { getContact, getFarmer, listOutlets } from "../db/repo";
+import { getContact, getFarmer, listOutlets, listRequests } from "../db/repo";
 import type { FarmerRecord } from "../db/repo";
 import { appendEvent, isStoreError } from "../db/store";
 import type { Db } from "../db/store";
@@ -306,6 +306,15 @@ export async function runEscalation(env: CampaignEnv, contactId: string): Promis
    */
   let landed = next;
   if (decision.channel === "voice") {
+    if (next.purpose === "request_update") {
+      const approvedRequests = await listRequests(env, { farmerId: record.farmer.id, status: "approved" });
+      if (approvedRequests.length === 0) {
+        console.warn(
+          `campaigns: skipping voice call for farmer ${record.farmer.id} — no coordinator-approved water request exists`,
+        );
+        return landed;
+      }
+    }
     const placed = await placeCallFromCampaign(env, {
       contactId: next.id,
       to: record.farmer.phone,

@@ -34,6 +34,37 @@ async function seeded(routes: FetchRoutes = {}): Promise<TestEnv> {
 
 const WEEK = "2026-09-14";
 
+async function seedApprovedRequest(env: TestEnv, farmerId: string): Promise<void> {
+  const request = WaterRequest.parse({
+    id: newId("req"),
+    farmer_id: farmerId,
+    type: "urgent",
+    volume_m3: 100,
+    reason: "paddy leaves yellowing and the soil is cracking",
+    channel: "voice",
+    status: "raised",
+    raised_at: "2026-09-14T06:00:00Z",
+  });
+  await appendEvent(env, {
+    id: newId("evt"),
+    at: "2026-09-14T06:00:00Z",
+    canal_id: "c1",
+    actor: { kind: "farmer", id: farmerId },
+    type: "request.raised",
+    request,
+  });
+  await appendEvent(env, {
+    id: newId("evt"),
+    at: "2026-09-14T06:00:00Z",
+    canal_id: "c1",
+    actor: { kind: "coordinator", id: "coord-1" },
+    type: "request.decided",
+    request_id: request.id,
+    decision: "approve",
+    volume_m3: 100,
+  });
+}
+
 /* ------------------------------------------------------------------ registry integrity */
 
 describe("tool registry", () => {
@@ -60,6 +91,7 @@ describe("tool registry", () => {
 describe("tool results", () => {
   it("each non-network tool returns a contract-shaped value", async () => {
     const env = await seeded();
+    await seedApprovedRequest(env, "f1");
 
     const entitlements = await runTool(env, "propose_entitlements", { week_start: WEEK });
     expect(routes.suggestEntitlements.response.parse(entitlements.value)).toBeTruthy();
@@ -116,12 +148,49 @@ describe("tool results", () => {
 
   it("places a call on the outbound queue and appends a contact.updated event", async () => {
     const env = await seeded();
+    await seedApprovedRequest(env, "f2");
     const before = await getEventCount(env);
     const outcome = await runTool(env, "place_call", { farmer_id: "f2", purpose: "night release warning", message_te: "జడల్", message_en: "Jadal" });
 
     expect(await getEventCount(env)).toBe(before + 1);
     expect(env.OUTBOUND.sent).toHaveLength(1);
     expect((outcome.value as { queued: boolean }).queued).toBe(true);
+  });
+
+  it("sends a WhatsApp message via the Meta Graph API when credentials are set", async () => {
+    const env = await seeded({
+      "graph.facebook.com": {
+        messages: [{ id: "wamid.123" }],
+      },
+    });
+    env.META_WHATSAPP_TOKEN = "test-token";
+    env.META_PHONE_NUMBER_ID = "test-phone-id";
+
+    const outcome = await runTool(env, "send_whatsapp", { farmer_id: "f1", message_te: "జడల్", message_en: "Jadal" });
+    const value = outcome.value as { whatsapp: { ok: boolean; messageId?: string } };
+
+    expect(value.whatsapp.ok).toBe(true);
+    expect(value.whatsapp.messageId).toBe("wamid.123");
+    expect(env.calls).toHaveLength(1);
+    const call = env.calls[0]!;
+    expect(call.url).toContain("graph.facebook.com");
+    expect(call.url).toContain("test-phone-id");
+    expect(call.method).toBe("POST");
+    expect(call.headers.Authorization).toBe("Bearer test-token");
+  });
+
+  it("falls back to event-log behavior when WhatsApp credentials are not set", async () => {
+    const env = await seeded();
+    const before = await getEventCount(env);
+
+    const outcome = await runTool(env, "send_whatsapp", { farmer_id: "f1", message_te: "జడల్", message_en: "Jadal" });
+    const value = outcome.value as { contact: unknown; queued: boolean; whatsapp?: unknown };
+
+    expect(value.whatsapp).toBeUndefined();
+    expect(Contact.parse(value.contact).channel).toBe("whatsapp");
+    expect(value.queued).toBe(true);
+    expect(await getEventCount(env)).toBe(before + 1);
+    expect(env.calls).toHaveLength(0);
   });
 
   it("fetches a mocked forecast without touching the network", async () => {
@@ -186,6 +255,7 @@ describe("request assessor and caller", () => {
 
   it("records a caller acknowledgement and renders a Telugu reply", async () => {
     const env = await seeded();
+    await seedApprovedRequest(env, "f1");
     const call = await runTool(env, "place_call", { farmer_id: "f1", purpose: "reminder", message_te: "జడల్", message_en: "Jadal" });
     const contact = Contact.parse((call.value as { contact: unknown }).contact);
 

@@ -42,8 +42,22 @@ export interface RosterInput {
 export interface RosterEngine {
   /** Deterministic: same input → same roster. Head-to-tail order; turn = V / Q_outlet (+ lag before the first tail turn). */
   build(input: RosterInput, rosterId: string): Roster;
-  /** % of need met per farmer for a roster (used for the equal-hours vs equal-water comparison). */
+  /**
+   * DELIVERED need met: % of each farmer's demand that the roster's turned volume covers, **capped
+   * at 100**. This is the post-allocation, "can we claim the crop is watered" measure and its
+   * documented cap is deliberate: a farmer cannot have more than 100% of their need met.
+   */
   needMet(input: RosterInput, roster: Roster): { farmer_id: string; outlet_id: string; pct: number }[];
+  /**
+   * PLANNED need met: the same ratio **without the 100% cap**, so a head-end farmer that the roster
+   * over-allocates reads >100 and the tail-end deficit stays visible at proposal time.
+   *
+   * The fairness comparison the product exists to make (equal-hours warabandi vs equal-water) is a
+   * comparison of *planned* allocation, before any water is delivered, and the cap is what made the
+   * live path report 100% for everyone (handoff P4). This is an additive method: the contract's
+   * `RosterEngine.needMet` keeps its capped semantics.
+   */
+  plannedNeedMet(input: RosterInput, roster: Roster): { farmer_id: string; outlet_id: string; pct: number }[];
 }
 
 export const rosterEngine = {
@@ -279,6 +293,51 @@ export const rosterEngine = {
       const totalDem = totalDemandByFarmerOutlet.get(key) ?? 0;
       const delivered = deliveredByFarmerOutlet.get(key) ?? 0;
       const pct = totalDem > 0 ? Math.min(100, (delivered / totalDem) * 100) : 100;
+      return {
+        farmer_id: demand.farmer_id,
+        outlet_id: demand.outlet_id,
+        pct,
+      };
+    });
+  },
+
+  /**
+   * Planned need met — the *un-capped* allocation ratio `planned_volume_m3 / demand . 100`.
+   *
+   * `needMet` caps at 100 so a farmer never reads as "more than satisfied". That cap is correct for
+   * a delivered claim but destroys the equal-hours vs equal-water comparison: in the demo seed the
+   * 24 h `rw1` window carries more than the week's FAO-56 need, so equal-hours over-allocates every
+   * head-end outlet past 100%. Clamping then reports 100% for everyone and the Gini collapses to 0
+   * (handoff P4). This method keeps the over-allocation visible so the head-vs-tail spread and the
+   * Gini are meaningful at proposal time.
+   *
+   * Units: both sides are m3, so pct is dimensionless [%]. NOT capped at 100.
+   *
+   * Boundaries:
+   *  * A demand of 0 (or a demand with no positive total) reports 100: nothing was asked for, so
+   *    nothing was missed — matching `needMet`'s documented boundary.
+   *  * A demand with no turn reports 0: the outlet was not scheduled at all.
+   *  * Keyed by `farmer_id` + `outlet_id` and returned one row per INPUT demand, exactly like
+   *    `needMet`, so the two arrays zip together row for row.
+   */
+  plannedNeedMet(input: RosterInput, roster: Roster): { farmer_id: string; outlet_id: string; pct: number }[] {
+    const allocatedByFarmerOutlet = new Map<string, number>();
+    for (const turn of roster.turns) {
+      const key = `${turn.farmer_id}:${turn.outlet_id}`;
+      allocatedByFarmerOutlet.set(key, (allocatedByFarmerOutlet.get(key) ?? 0) + turn.planned_volume_m3);
+    }
+
+    const totalDemandByFarmerOutlet = new Map<string, number>();
+    for (const d of input.demands) {
+      const key = `${d.farmer_id}:${d.outlet_id}`;
+      totalDemandByFarmerOutlet.set(key, (totalDemandByFarmerOutlet.get(key) ?? 0) + d.volume_m3);
+    }
+
+    return input.demands.map(demand => {
+      const key = `${demand.farmer_id}:${demand.outlet_id}`;
+      const totalDem = totalDemandByFarmerOutlet.get(key) ?? 0;
+      const allocated = allocatedByFarmerOutlet.get(key) ?? 0;
+      const pct = totalDem > 0 ? (allocated / totalDem) * 100 : 100;
       return {
         farmer_id: demand.farmer_id,
         outlet_id: demand.outlet_id,

@@ -42,15 +42,18 @@ import { getForecast, loadDemoWeather } from "../../voice/openmeteo";
 import {
   getCanal,
   getContact,
+  getFarmer,
   getLedgerEntries,
   getSeason,
   getWeather,
   listFarmers,
   listOutlets,
+  listRequests,
   listRosters,
 } from "../../db/repo";
 import { computeEntitlements } from "../need";
 import { proposeRoster } from "../scheduler";
+import { sendWhatsAppMessage } from "../whatsapp";
 
 export type ToolName = keyof typeof toolSpecs;
 
@@ -78,6 +81,8 @@ export interface ToolEnv {
   readonly OPENROUTER_MODEL?: string;
   readonly SARVAM_API_KEY?: string;
   readonly JEV_MODEL?: string;
+  readonly META_WHATSAPP_TOKEN?: string;
+  readonly META_PHONE_NUMBER_ID?: string;
 }
 
 /**
@@ -353,6 +358,17 @@ async function runPlaceCall(env: ToolEnv, input: Record<string, unknown>): Promi
   const purpose = inputString(input, "purpose");
   const messageTe = inputString(input, "message_te");
   const messageEn = inputString(input, "message_en");
+
+  if (tools.place_call.gated) {
+    const approvedRequests = await listRequests(env, { farmerId, status: "approved" });
+    if (approvedRequests.length === 0) {
+      console.warn(
+        `place_call: skipping call for farmer ${farmerId} — no coordinator-approved water request exists`,
+      );
+      return { contact: undefined, queued: false };
+    }
+  }
+
   const at = await now(env);
   const canalId = (await canalContext(env)).canal.id;
   const contact: Contact = Contact.parse({
@@ -420,6 +436,17 @@ async function runSendWhatsapp(env: ToolEnv, input: Record<string, unknown>): Pr
     message_en: messageEn,
     at,
   });
+
+  const token = env.META_WHATSAPP_TOKEN;
+  const phoneNumberId = env.META_PHONE_NUMBER_ID;
+  if (token && phoneNumberId && env.fetch) {
+    const farmer = await getFarmer(env, farmerId);
+    if (farmer) {
+      const result = await sendWhatsAppMessage(env.fetch, token, phoneNumberId, farmer.farmer.phone, messageEn);
+      return { contact, queued, whatsapp: result };
+    }
+  }
+
   return { contact, queued };
 }
 

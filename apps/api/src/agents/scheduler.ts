@@ -68,7 +68,10 @@ async function windowInput(env: ToolEnv, releaseWindowId: string): Promise<Roste
 function build(input: RosterInput, releaseWindowId: string, mode: RosterMode): { roster: Roster; need_met: { farmer_id: string; outlet_id: string; pct: number }[] } {
   const withMode: RosterInput = { ...input, mode };
   const roster = rosterEngine.build(withMode, deterministicId("rost", releaseWindowId, mode));
-  return { roster, need_met: rosterEngine.needMet(withMode, roster) };
+  // PLANNED need met, not delivered: the comparison is made at proposal time, before any water
+  // moves, and the delivered view caps at 100% (handoff P4). The un-capped planned ratio is what
+  // makes the equal-hours head-vs-tail gap and the Gini visible.
+  return { roster, need_met: rosterEngine.plannedNeedMet(withMode, roster) };
 }
 
 /** Gini over the per-farmer need-met percentages of a built rotation. */

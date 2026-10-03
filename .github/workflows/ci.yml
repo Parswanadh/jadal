@@ -10,7 +10,7 @@ on:
 
 jobs:
   ci:
-    name: Verify (Typecheck, Test, Build)
+    name: Verify (Typecheck, Lint, Test, E2E, Build)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -31,8 +31,14 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Lint
+        run: pnpm lint
+
       - name: Run Tests
         run: pnpm test
+
+      - name: Run E2E Tests
+        run: pnpm e2e
 
       - name: Build All Packages and Apps
         run: pnpm build

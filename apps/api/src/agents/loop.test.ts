@@ -8,9 +8,11 @@
 
 import { describe, expect, it } from "vitest";
 
+import { WaterRequest } from "@jadal/contracts";
 import { createEnv, readMigrations, type FetchRoutes, type TestEnv } from "../../test/harness";
 import { demoScenario, demoWeather, seedScenario, seedWeather } from "../../test/fixtures";
-import { getEventCount } from "../db/store";
+import { newId } from "../db/id";
+import { appendEvent, getEventCount } from "../db/store";
 import { runAgent } from "./loop";
 import type { ToolEnv } from "./tools";
 
@@ -122,6 +124,35 @@ describe("runAgent", () => {
           { id: "call_2", name: "place_call", args: { farmer_id: "f1", purpose: "reminder", message_te: "జడల్", message_en: "Jadal" } },
         ]);
       },
+    });
+
+    const request = WaterRequest.parse({
+      id: newId("req"),
+      farmer_id: "f1",
+      type: "urgent",
+      volume_m3: 100,
+      reason: "paddy leaves yellowing and the soil is cracking",
+      channel: "voice",
+      status: "raised",
+      raised_at: "2026-09-14T06:00:00Z",
+    });
+    await appendEvent(env, {
+      id: newId("evt"),
+      at: "2026-09-14T06:00:00Z",
+      canal_id: "c1",
+      actor: { kind: "farmer", id: "f1" },
+      type: "request.raised",
+      request,
+    });
+    await appendEvent(env, {
+      id: newId("evt"),
+      at: "2026-09-14T06:00:00Z",
+      canal_id: "c1",
+      actor: { kind: "coordinator", id: "coord-1" },
+      type: "request.decided",
+      request_id: request.id,
+      decision: "approve",
+      volume_m3: 100,
     });
 
     const before = await getEventCount(env);

@@ -99,6 +99,35 @@ describe("RosterEngine (A4)", () => {
       expect(giniHours).toBeGreaterThan(0.02); // Inequality due to conveyance losses
       expect(giniWater).toBeLessThan(giniHours);
     });
+
+    it("plannedNeedMet exposes over-allocation that the capped needMet hides", () => {
+      // Tiny demands under equal_hours: each farmer gets a fixed share of the 24 h window, so the
+      // volume actually turned far exceeds the 1 m3 asked for. `needMet` clamps that to 100% for
+      // everyone (Gini 0); `plannedNeedMet` keeps the over-allocation so the fairness gap survives.
+      const tinyDemands = seedDemands.map(p => ({
+        farmer_id: p.farmer_id,
+        outlet_id: p.outlet_id,
+        volume_m3: 1,
+        priority: 1,
+      }));
+      const tinyInput: RosterInput = {
+        canal: seedCanal,
+        outlets: seedOutlets,
+        window: seedWindow,
+        demands: tinyDemands,
+        mode: "equal_hours",
+      };
+
+      const roster = rosterEngine.build(tinyInput, "rost-planned");
+      const capped = rosterEngine.needMet(tinyInput, roster);
+      const planned = rosterEngine.plannedNeedMet(tinyInput, roster);
+
+      for (const row of capped) expect(row.pct).toBe(100);
+      expect(calculateGini(capped.map(n => n.pct))).toBe(0);
+
+      for (const row of planned) expect(row.pct).toBeGreaterThan(100);
+      expect(calculateGini(planned.map(n => n.pct))).toBeGreaterThan(0);
+    });
   });
 
   describe("sequencing, lag, and packing constraints", () => {

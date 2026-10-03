@@ -83,5 +83,10 @@ export async function raiseRequest(env: Env, input: RaiseRequestInput): Promise<
   if (stored === null) {
     throw new HttpError("internal_error", `request ${request.id} vanished after being raised`, 500);
   }
+
+  if (input.type === "urgent" && env.URGENT_REQUEST_WORKFLOW !== undefined) {
+    void env.URGENT_REQUEST_WORKFLOW.create({ params: { requestId: stored.id } }).catch(() => {});
+  }
+
   return stored;
 }

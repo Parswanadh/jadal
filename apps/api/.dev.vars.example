@@ -36,6 +36,9 @@ LAYA_TIMEOUT_MS=
 # OpenRouter key. Powers Jev (System 1) and the System-2 agent prose. Unset => Jev is skipped.
 OPENROUTER_API_KEY=
 
+# OpenRouter chat-model slug for the System-2 agent prose. Unset => `openai/gpt-4o-mini`.
+OPENROUTER_MODEL=
+
 # Jev route slug on OpenRouter's typed Decisions API. Unset => `typesafe/jev-1.13`.
 # `~typesafe/jev-latest` floats to the newest Jev release; pin a version when urgency thresholds
 # were tuned against it. NOT `typesafe/jev-router`: that slug is an OpenRouter chat-model router
@@ -87,3 +90,9 @@ REAL_TELEPHONY=false
 # LOCAL TESTS ONLY: `1` disables X-Twilio-Signature validation so a webhook can be replayed with curl.
 # Never set this on a deployed Worker.
 # SKIP_TWILIO_SIGNATURE=1
+
+# --- Failproof observability ---------------------------------------------------------------
+# When FAILPROOF_TRACE=1, every API request is traced as a Failproof session and POSTed to the
+# Failproof ingest endpoint using FAILPROOF_API_KEY. Unset/blank => tracing is off.
+FAILPROOF_API_KEY=
+FAILPROOF_TRACE=

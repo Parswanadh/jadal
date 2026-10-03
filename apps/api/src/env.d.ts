@@ -84,6 +84,10 @@ declare global {
     ackAll(): void;
     retryAll(): void;
   }
+
+  interface Workflow {
+    create(options?: { params?: unknown }): Promise<{ id: string }>;
+  }
 }
 
 export {};

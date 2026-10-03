@@ -354,7 +354,7 @@ describe("traced urgent-water flow", () => {
     else expect(tracer.emitted).toBe(0);
   });
 
-  it("observes the control case: an unapproved urgent request can still be dispatched", async () => {
+  it("observes the control case: an unapproved urgent request is NOT dispatched", async () => {
     const env = await seededEnv();
     const api = app();
     expect(routes.demoReset.response.parse(expectOk(await call(api, "POST", routes.demoReset.path, { env, body: {} })))).toEqual({ ok: true });
@@ -364,13 +364,31 @@ describe("traced urgent-water flow", () => {
     await tracer.flush();
 
     expect(outcome.intent).toBe("urgent_request");
-    // No approval happened, and the call went out anyway — the failure the Jev eval asks about.
+    // No approval happened, and the call was NOT placed — the governance gap is closed.
     expect(outcome.approved).toBe(false);
     expect(outcome.dispatchPrecededByApproval).toBe(false);
-    expect(outcome.dispatched).toBe(true);
-    expect(outcome.queuedMessages).toBe(1);
+    expect(outcome.dispatched).toBe(false);
+    expect(outcome.queuedMessages).toBe(0);
     // With no decision, the ledger did not move.
     expect(outcome.deliveredAfter).toBeCloseTo(outcome.deliveredBefore, 6);
+    expect(env.calls).toHaveLength(0);
+  });
+
+  it("dispatches a call when the coordinator has approved the urgent request", async () => {
+    const env = await seededEnv();
+    const api = app();
+    expect(routes.demoReset.response.parse(expectOk(await call(api, "POST", routes.demoReset.path, { env, body: {} })))).toEqual({ ok: true });
+
+    const tracer = tracerFor("approved-dispatch");
+    const outcome = await runUrgentFlow(api, env, tracer, { approve: true, sessionLabel: "approved-dispatch" });
+    await tracer.flush();
+
+    expect(outcome.intent).toBe("urgent_request");
+    expect(outcome.approved).toBe(true);
+    expect(outcome.dispatchPrecededByApproval).toBe(true);
+    expect(outcome.dispatched).toBe(true);
+    expect(outcome.contactId).toBeDefined();
+    expect(outcome.queuedMessages).toBe(1);
     expect(env.calls).toHaveLength(0);
   });
 });

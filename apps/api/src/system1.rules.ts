@@ -87,6 +87,11 @@ const STRESS_TERMS: readonly Rule[] = [
   rule("నీళ్లు లేవు", 2),
   rule("నీరు లేదు", 2),
   rule("నీటి లేదు", 2),
+  // English/transliterated severe-stress phrasing. The demo seeds "the leaves are rolling in the
+  // heat" (maize at tasseling), which is visible wilting: severe, not mild.
+  rule("leaves are rolling", 2),
+  rule("leaves rolling", 2),
+  rule("rolling in the heat", 2),
 ];
 
 /** Mild distress: enough to matter, not enough on its own to raise urgency to the top band. */
@@ -103,6 +108,13 @@ const DISTRESS_TERMS: readonly Rule[] = [
   rule("wilt"),
   rule("dying"),
   rule("wilting"),
+  // Growth-stage stress the demo seeds. Flowering/tasseling are the stages where a missed turn
+  // costs yield, but they are not by themselves a crop-death claim, so they stay mild.
+  rule("tasseling"),
+  rule("tasselling"),
+  rule("flowering"),
+  rule("drying out"),
+  rule("drying up"),
 ];
 
 /** Crop nouns, Telugu script and the English/transliterated forms farmers actually mix in. */
@@ -143,6 +155,8 @@ const URGENCY_TERMS: readonly Rule[] = [
   rule("asap", 2),
   rule("immediately", 2),
   rule("emergency", 2),
+  rule("right away", 2),
+  rule("as soon as possible", 2),
 ];
 
 /** Asking-for-water verbs. Weak on their own; strong only next to a stress or urgency marker. */
@@ -164,6 +178,12 @@ const REQUEST_TERMS: readonly Rule[] = [
   rule("give water"),
   rule("send water"),
   rule("release water"),
+  // English request shapes the demo seeds. "Water needed for my crop." is a request with the
+  // verb after the noun, so "need water" alone does not catch it.
+  rule("water needed", 2),
+  rule("water is needed", 2),
+  rule("short of water", 2),
+  rule("short turn", 2),
 ];
 
 /** Wording that lowers urgency: thanks, confirmation, deference, "whenever possible". */
@@ -203,6 +223,10 @@ const INTENT_RULES: Readonly<Record<Exclude<Intent, "other">, readonly Rule[]>> 
     rule("రోజువారీగా అవసరం"),
     rule("తాగాగా"),
     rule("ఎప్పుడైనా పంపండి"),
+    // English growth-stage stress: "my maize is tasseling", "my paddy is flowering".
+    rule("tasseling", 2),
+    rule("tasselling", 2),
+    rule("flowering", 2),
   ],
   buffer_request: [
     rule("బఫర్", 2),
@@ -212,6 +236,9 @@ const INTENT_RULES: Readonly<Record<Exclude<Intent, "other">, readonly Rule[]>> 
     rule("కొంచెం ఎక్కువ", 2),
     rule("buffer", 2),
     rule("extra water", 2),
+    rule("short turn", 2),
+    rule("short of water", 2),
+    rule("tail end", 1),
     rule("ఇంకావసరం"),
     rule("తక్కువ ఉంది"),
     rule("వేపరి"),
@@ -357,9 +384,13 @@ function clamp01(value: number): number {
 }
 
 /**
- * Weighted urgency. Each band is capped so a farmer who says the same distressed word three times
- * cannot outrank a farmer who is both distressed *and* asking for an immediate release. Negations
- * and acknowledgements push the score down.
+ * Weighted urgency for a message that matched **something**. Each band is capped so a farmer who
+ * says the same distressed word three times cannot outrank a farmer who is both distressed *and*
+ * asking for an immediate release. Negations and acknowledgements push the score down.
+ *
+ * `URGENCY_BASE` is only added here, never for a message that matched no term at all: an unmatched
+ * message is returned as explicitly unscored by {@link classifyByRules} instead of being handed the
+ * floor as if it were a measurement. See {@link isUnscored}.
  */
 function scoreUrgency(text: string, negationStrength: number): number {
   let score = URGENCY_BASE;
@@ -380,6 +411,19 @@ function scoreUrgency(text: string, negationStrength: number): number {
 
 /* ------------------------------------------------------------------ classification */
 
+/**
+ * The explicit "nothing matched" state.
+ *
+ * `System1Result` has no `unscored` / `reasons` field and the contract is immutable, so the state is
+ * encoded in the fields that do exist: `intent: "other"`, `intent_confidence: 0` (no confidence at
+ * all, not a low one), `urgency: 0` as the schema-valid numeric placeholder, and no crop stress.
+ * The numeric field stays valid for `triage_score`; {@link isUnscored} is the reader that turns the
+ * combination back into the marker, so no caller has to re-derive it.
+ */
+function unscored(): System1Result {
+  return build("other", 0, 0, false);
+}
+
 function build(intent: Intent, confidence: number, urgency: number, stress: boolean): System1Result {
   return System1Result.parse({
     intent,
@@ -388,6 +432,25 @@ function build(intent: Intent, confidence: number, urgency: number, stress: bool
     mentions_crop_stress: stress,
     source: "rules",
   });
+}
+
+/**
+ * True when the deterministic rules matched no signal at all — no intent, stress, distress, urgency,
+ * request or calm term — so `urgency` is a placeholder rather than a measurement.
+ *
+ * The contract cannot express "unscored" directly (no contract change is allowed), so the marker is
+ * the only combination {@link unscored} emits: `source: "rules"`, `intent: "other"`,
+ * `intent_confidence: 0`, `urgency: 0`, no crop stress. A model result is never unscored even if it
+ * happens to carry those values under `source: "laya" | "jev"`.
+ */
+export function isUnscored(result: System1Result): boolean {
+  return (
+    result.source === "rules" &&
+    result.intent === "other" &&
+    result.intent_confidence === 0 &&
+    result.urgency === 0 &&
+    !result.mentions_crop_stress
+  );
 }
 
 /** Confidence rises with the number and strength of matches: one weak hit ≈ 0.35, many ≈ 0.95. */
@@ -404,7 +467,7 @@ export function classifyByRules(text: string): System1Result {
   const normalized = normalizeText(text);
 
   if (normalized.length === 0) {
-    return build("other", 0.05, 0, false);
+    return unscored();
   }
 
   const scores = new Map<Exclude<Intent, "other">, Match>();
@@ -428,13 +491,26 @@ export function classifyByRules(text: string): System1Result {
   const crop = matches(normalized, CROP_TERMS);
   const mentionsCropStress = stress || (crop && distress);
 
+  const urgencyMarker = matches(normalized, URGENCY_TERMS);
+  const requestMarker = matches(normalized, REQUEST_TERMS);
+  const calmHits = matchTerms(normalized, CALM_TERMS).hits.length;
+
   const negationStrength = scores.get("not_needed_this_week")?.strength ?? 0;
 
-  if (best === null) {
-    return build("other", 0.15, scoreUrgency(normalized, negationStrength), mentionsCropStress);
+  // No term in any table fired: there is nothing to score, so return the explicit unscored marker
+  // rather than dressing `URGENCY_BASE` up as a measurement. `crop` alone is deliberately not a
+  // signal — naming a crop is not asking for water.
+  const hasSignal = best !== null || distress || urgencyMarker || requestMarker || calmHits > 0;
+  if (!hasSignal) {
+    return unscored();
   }
 
-  return build(best, confidenceFor(bestStrength), scoreUrgency(normalized, negationStrength), mentionsCropStress);
+  return build(
+    best ?? "other",
+    best === null ? 0.15 : confidenceFor(bestStrength),
+    scoreUrgency(normalized, negationStrength),
+    mentionsCropStress,
+  );
 }
 
 /* ------------------------------------------------------------------ slot extraction */

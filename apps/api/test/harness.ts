@@ -78,6 +78,8 @@ export interface TestEnv {
    * fails loudly instead of hanging.
    */
   fetch: (input: string, init?: { method?: string; body?: unknown; headers?: Record<string, string> }) => Promise<Response>;
+  META_WHATSAPP_TOKEN?: string;
+  META_PHONE_NUMBER_ID?: string;
 }
 
 /** Provider routes keyed by URL substring, matched in insertion order. */

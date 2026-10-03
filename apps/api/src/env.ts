@@ -29,6 +29,11 @@ export interface Env {
   LAYA_TIMEOUT_MS?: string;
   OPENROUTER_API_KEY?: string;
   /**
+   * OpenRouter chat-model slug for the System-2 agent prose. Unset => the module default
+   * `openai/gpt-4o-mini` (see `src/agents/llm.ts`).
+   */
+  OPENROUTER_MODEL?: string;
+  /**
    * Jev route slug on OpenRouter's Decisions API. Unset => the module default `typesafe/jev-1.13`
    * (see `src/system1.ts`). `~typesafe/jev-latest` floats to the newest release; `typesafe/jev-router`
    * is a chat-model router and is NOT a valid Decisions model (ADR-006).
@@ -59,6 +64,12 @@ export interface Env {
   META_WHATSAPP_TOKEN?: string;
   META_PHONE_NUMBER_ID?: string;
   REAL_TELEPHONY?: string;
+  // --- Failproof observability
+  FAILPROOF_API_KEY?: string;
+  FAILPROOF_TRACE?: string;
+  // --- Durable Workflows (B7)
+  URGENT_REQUEST_WORKFLOW?: Workflow;
+  CALL_CAMPAIGN_WORKFLOW?: Workflow;
 }
 
 /**

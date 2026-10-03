@@ -14,8 +14,9 @@
  */
 
 import type { Hono } from "hono";
+import { z } from "zod";
 
-import { routes } from "@jadal/contracts";
+import { Id, routes } from "@jadal/contracts";
 import type {
   Contact,
   CropPlan,
@@ -54,6 +55,23 @@ const COORDINATOR_ACTOR = { kind: "coordinator", id: "coordinator" } as const;
 const AGENT_NEED_ACTOR = { kind: "agent", id: "agent_need" } as const;
 const AGENT_SCHEDULER_ACTOR = { kind: "agent", id: "agent_scheduler" } as const;
 const AGENT_CALLER_ACTOR = { kind: "agent", id: "agent_caller" } as const;
+
+/**
+ * `POST /api/canal/harvest` — outside the frozen contract.
+ *
+ * `packages/contracts` is the integration agreement and only the orchestrator changes it, so this
+ * route's path/body/response are declared here rather than in `routes`. Appending `crop.harvested` is
+ * the one way water leaves a farmer's quota for the shared buffer before the season ends.
+ */
+const HARVEST_PATH = "/api/canal/harvest";
+const harvestBody = z.object({ farmer_id: Id });
+const harvestResponse = z.object({
+  ok: z.literal(true),
+  farmer_id: Id,
+  crop_plan_id: Id,
+  remaining_m3: z.number(),
+  buffer_m3: z.number(),
+});
 
 /** Monday-aligned week start (`YYYY-MM-DD`) for an ISO instant, using the same rule the core uses. */
 function weekStartOf(iso: string): string {
@@ -436,5 +454,44 @@ export function registerWriteRoutes(app: Hono<{ Bindings: Env }>): void {
       throw new HttpError("internal_error", `request ${requestId} vanished after being decided`, 500);
     }
     return c.json(parseResponse(routes.decideRequest.response, stored));
+  });
+
+  app.post(HARVEST_PATH, async (c) => {
+    const body = await parseBody(c, harvestBody);
+    const farmer = await getFarmer(c.env, body.farmer_id);
+    if (farmer === null) {
+      throw notFound("farmer_not_found", `no farmer ${body.farmer_id}`);
+    }
+    const plan = farmer.crop_plans.find((candidate) => candidate.status !== "harvested");
+    if (plan === undefined) {
+      throw badRequest("no_crop_to_harvest", `farmer ${body.farmer_id} has no crop plan to harvest`);
+    }
+
+    // The remaining quota is what the farmer has been credited but not yet delivered — the water a
+    // harvest frees for the buffer. `ledger.balances` is the pure fold over the double entries.
+    const before = ledger.balances(await getLedgerEntries(c.env));
+    const remaining = before.farmers[body.farmer_id]?.quota ?? 0;
+
+    await appendEvent(c.env, {
+      id: newId("evt"),
+      at: await now(c.env),
+      canal_id: DEMO_CANAL_ID,
+      actor: COORDINATOR_ACTOR,
+      type: "crop.harvested",
+      farmer_id: body.farmer_id,
+      crop_plan_id: plan.id,
+      remaining_m3: remaining,
+    });
+
+    const after = ledger.balances(await getLedgerEntries(c.env));
+    return c.json(
+      parseResponse(harvestResponse, {
+        ok: true,
+        farmer_id: body.farmer_id,
+        crop_plan_id: plan.id,
+        remaining_m3: remaining,
+        buffer_m3: after.buffer,
+      }),
+    );
   });
 }

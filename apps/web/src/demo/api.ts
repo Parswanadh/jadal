@@ -6,7 +6,7 @@
  * from those responses. This module only picks rows and reshapes them.
  */
 
-import { api, isMockMode } from "../api";
+import { api, harvest, isMockMode } from "../api";
 
 export interface ApiResult<T> {
   ok: boolean;
@@ -221,7 +221,9 @@ export interface BufferResult {
 
 export function releaseToBuffer(reason: string): Promise<ApiResult<BufferResult>> {
   return run(async () => {
-    const [ledger, requests, names] = await Promise.all([api.ledger(), api.listRequests(), farmerNameMap()]);
+    const [requests, names] = await Promise.all([api.listRequests(), farmerNameMap()]);
+    // f3's cotton harvest frees the remaining quota into the shared pool.
+    const harvested = await harvest({ farmer_id: "f3" });
     // Farmer 7 asks the pool for the same amount as the pool request already on record.
     const existing = requests.find((r) => r.type === "buffer");
     let requestedM3: number | null = null;
@@ -236,7 +238,7 @@ export function releaseToBuffer(reason: string): Promise<ApiResult<BufferResult>
       });
       requestedM3 = raised.volume_m3;
     }
-    return { bufferM3: ledger.balances.buffer_m3, requester: names.get(requesterId) ?? "", requestedM3 };
+    return { bufferM3: harvested.buffer_m3, requester: names.get(requesterId) ?? "", requestedM3 };
   });
 }
 
