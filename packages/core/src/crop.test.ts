@@ -465,6 +465,54 @@ describe('cropEngine (Task A2)', () => {
       expect(needLow.bounds!.raw_mm / needLow.bounds!.taw_mm).toBeCloseTo(0.8, 2);
     });
 
+    it('averages ETc over days with a water need, not the full weather window (FAO-56 Eq. 8.5)', () => {
+      const plot: Plot = {
+        id: 'plot-need-days',
+        farmer_id: 'farmer-8',
+        outlet_id: 'outlet-1',
+        area_ha: 1.0,
+        soil: 'sandy_loam',
+        lat: 16.5,
+        lon: 80.5,
+      };
+
+      const plan: CropPlan = {
+        id: 'plan-need-days',
+        plot_id: 'plot-need-days',
+        crop: 'maize',
+        sowing_date: '2026-07-01',
+        area_fraction: 1.0,
+        application_efficiency: 0.65,
+        status: 'active',
+      };
+
+      // 4 days at ET0 = 5.0 and 3 days at ET0 = 0.0, all in the initial stage (Kc = 0.3).
+      // totalEtc = 4 * 0.3 * 5.0 = 6.0 mm; daysWithNeed = 4 (the ET0 = 0 days add no ETc).
+      // meanEtc = 6.0 / 4 = 1.5 mm/day  (the old / weather.length gave 6.0 / 7 = 0.857).
+      // p = 0.50 + 0.04 * (5 - 1.5) = 0.64  (the old denominator gave 0.666).
+      const weather: WeatherDay[] = [
+        { date: '2026-07-01', et0_mm: 5.0, rain_mm: 0 },
+        { date: '2026-07-02', et0_mm: 5.0, rain_mm: 0 },
+        { date: '2026-07-03', et0_mm: 0.0, rain_mm: 0 },
+        { date: '2026-07-04', et0_mm: 5.0, rain_mm: 0 },
+        { date: '2026-07-05', et0_mm: 0.0, rain_mm: 0 },
+        { date: '2026-07-06', et0_mm: 5.0, rain_mm: 0 },
+        { date: '2026-07-07', et0_mm: 0.0, rain_mm: 0 },
+      ];
+
+      const need = cropEngine.weeklyNeed({
+        plan,
+        plot,
+        params: sampleParams,
+        weather,
+        weekStart: '2026-07-01',
+      });
+
+      expect(need.bounds).not.toBeNull();
+      // raw_mm / taw_mm isolates p_adj and must reflect the 4-day mean, not the 7-day mean.
+      expect(need.bounds!.raw_mm / need.bounds!.taw_mm).toBeCloseTo(0.64, 2);
+    });
+
     it('executes weeklyNeed cleanly for every crop in crop-params.json', async () => {
       const cropParamsList = (await import('./data/crop-params.json')).default as CropParams[];
       for (const params of cropParamsList) {

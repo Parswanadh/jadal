@@ -325,6 +325,16 @@ export const cropEngine = {
       // Depletion p adjustment for evaporative demand (FAO-56 Eq. 8.5, bounded 0.1-0.8).
       // MEASURED: the 0.04 coefficient and the 0.1/0.8 clamp are from Eq. 8.5 (2025 text,
       // `.ref/fao56-book/FAO56-full.txt` line 17605 and the "0.1 <= p <= 0.8" constraint following it).
+      //
+      // Eq. 8.5 defines its ETc term as the MEAN daily ETc "during the period considered" — the
+      // days the crop actually transpires — not the raw length of the weather window. A window can
+      // straddle days with no crop demand (Kc = 0 once t > L_total, or ET0 = 0), which add 0 to
+      // `totalEtc`. The previous `/ weather.length` denominator counted those zero-demand days,
+      // biasing the mean down and — because p rises as 0.04*(5 - meanEtc) — inflating p and RAW on
+      // the weeks the crop was least active. Dividing by `daysWithNeed` (days with `dailyEtc > 0`)
+      // restores the source's mean; REFERENCE_ETC_MM_DAY is the fallback only when the entire
+      // window has zero demand, so p is then returned unmodified. See `packages/core/README.md` §5
+      // and `docs/research/fao56-crop-tables.md` §4.5.3.
       const meanEtc = daysWithNeed > 0 ? totalEtc / daysWithNeed : REFERENCE_ETC_MM_DAY;
       let pAdj = params.depletion_p + 0.04 * (REFERENCE_ETC_MM_DAY - meanEtc);
       pAdj = Math.max(0.1, Math.min(0.8, pAdj));
