@@ -113,9 +113,6 @@ export function emptyTwiml(): string {
  * their own name without a per-caller URL existing anywhere else.
  */
 export interface InboundUrls {
-  readonly greeting: string;
-  readonly prompt: string;
-  readonly listenCue: string;
   readonly respond: string;
   readonly listen: string;
   readonly recording: string;
@@ -125,9 +122,6 @@ export interface InboundUrls {
 export function inboundUrls(base: string, mountPath: string): InboundUrls {
   const root = `${base.replace(/\/+$/, "")}${mountPath}`;
   return {
-    greeting: `${root}/inbound/audio/greeting`,
-    prompt: `${root}/inbound/audio/prompt`,
-    listenCue: `${root}/inbound/audio/listen-cue`,
     respond: `${root}/inbound/respond`,
     listen: `${root}/inbound/listen`,
     recording: `${root}/inbound/recording`,

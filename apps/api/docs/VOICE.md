@@ -143,13 +143,12 @@ async resolveCaller(phone) {
   const hit = farmers.find((f) => f.farmer.phone.replace(/\D/g, "").endsWith(digits));
   return hit === undefined ? null : { farmerId: hit.farmer.id, farmerName: hit.farmer.name };
 },
-async nextTurnFor(farmerId) { /* the farmer's next release as MessageFacts, or null */ },
 async onSpeechPath(d) { console.log("[voice]", JSON.stringify(d)); },
 ```
 
 Without `resolveCaller` the agent still answers, greets, listens, transcribes and classifies; it just
-cannot attribute a raised request and says `caller_unknown`. Without `nextTurnFor` a release-time
-question is answered with `schedule_hold` rather than an invented time.
+cannot attribute a raised request and says `caller_unknown`. A release-time question is answered with
+`schedule_hold` rather than an invented time.
 
 ## Local testing and a live check
 

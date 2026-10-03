@@ -151,7 +151,7 @@ export function formatChainageM(chainageM: number | undefined): string {
  * `Farmer` in `@jadal/contracts` has no gender field, so the vocative suffix has to be inferred from
  * the spelling of the name. `గారు` — the respectful honorific — is the default because it is
  * **gender-neutral** in Telugu and is what a farmer is actually addressed with, so a wrong guess
- * here produces ordinary Telugu rather than something wrong. The feminine form `గారి` is used only
+ * here produces ordinary Telugu rather than something wrong. The feminine form `గుడి` is used only
  * when the name carries a suffix that is high-precision feminine.
  *
  * The heuristic is a small, deliberately conservative suffix list rather than a general rule,
@@ -202,7 +202,7 @@ function nameStem(name: string): string {
   return trimmed;
 }
 
-/** `వెంకటేశ్వర్లు` + `గారు`, or `సీతమ్మ` + `గారి`. Falls back to an empty string for no name. */
+/** `వెంకటేశ్వర్లు` + `గారు`, or `సీతమ్మ` + `గుడి`. Falls back to an empty string for no name. */
 function vocative(name: string | undefined): string {
   if (name === undefined) return "";
   const stem = nameStem(name);
