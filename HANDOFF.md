@@ -16,7 +16,7 @@ Read this first when you resume. It records the current state, the open work in 
 - **Still open, in priority order:**
   1. **C11 UX cleanup**: draft **#22**, about half done.
   2. **B9 integration**: mount telephony in the API, call `placeCall` from the escalation ladder, and do a live local run with the web app in live mode. Not started.
-  3. **Showcase**: demo video, deck, and the brag config, which is still a stub.
+  3. **Showcase**: demo video and deck; the brag research and config have landed (see §5.3).
   4. **Cloudflare deploy**: never succeeded from this machine because of the network.
 - **Nothing is running that you need.** All subagents are stopped. The PR reviewer loop may still be running on the original laptop; see §8.
 
@@ -58,7 +58,7 @@ packages/core        deterministic core: cropEngine, hydraulics, rosterEngine, l
 apps/api             Hono on Cloudflare Workers: D1 event store, routes, System-1/2 agents, voice, campaigns, telephony
 apps/web             React + Vite: farmer, coordinator, canal, phone, demo screens; mock or live API client
 tests/e2e            Playwright (mock mode); run with `pnpm e2e`
-showcase/            pitch, shot list, screenshot capture, brag config (stub)
+showcase/            pitch, shot list, video script, screenshot capture, real brag config
 scripts/agents/      PR reviewer loop and its prompt
 ```
 
@@ -80,7 +80,7 @@ Non-negotiables:
 | **Task B: backend** (#2) | #17 | Event store + projections + ledger in one `db.batch`, all contract routes, demo reset/advance, System 1 (Jev + Telugu keyword fallback), System-2 agents, Sarvam/Open-Meteo, escalation ladder, rain re-plan, night release. Uses the real `@jadal/core`. `e2e.test.ts` runs demo steps 1–6 and asserts `conservation_ok: true` and Gini(equal_water) < Gini(equal_hours). |
 | **B8: telephony** | #18 | `apps/api/src/telephony/`: Twilio Calls API, TwiML, Sarvam TTS/STT, Deepgram `nova-3` `language=te` fallback, X-Twilio-Signature validation, DTMF 1 = ack and 2 = record a request, status mapping. **Not mounted yet** (see B9). |
 | **Task C: web** (#3) | #4 shell · #5 client+mock · #19 screens C3–C7 integrated · #20 design pass · #21 e2e | #6–#10 (by v1r4t) were closed as superseded by #19, with credit. |
-| Showcase | #11 | Pitch outline, shot list, screenshot script, **brag stub**. |
+| Showcase | #11 · #24 (open) | #11 pitch outline, shot list, screenshot script and brag stub. #24 replaces the stub with the real brag research/config and adds `showcase/video-script.md`. |
 
 ---
 
@@ -129,14 +129,12 @@ Done when: `pnpm -r typecheck && pnpm -r test && pnpm -r build && pnpm e2e` pass
 Prompt: §11.2.
 
 ### 5.3 Showcase: video, deck, brag
-- `showcase/brag.config.json` is a **stub** (`_stub: true`). The research doc `docs/research/brag.md` (latent-spaces/brag tooling, planned as ADR for showcase tooling) **never landed**. The research worker was lost.
-- Have: `showcase/pitch-outline.md` (3 min), `showcase/backup-video-shot-list.md`, `showcase/screenshots/capture.mjs`, `docs/presentation/jadal-deck.html`, and app screenshots in `apps/web/docs/screenshots/`.
+- `docs/research/brag.md` **landed** (latent-spaces/brag research, upstream sources noted) and `showcase/brag.config.json` is the **real** Jadal config (no `_stub`, no secrets); `showcase/brag-note.md` was deleted as obsolete.
+- Have: `showcase/pitch-outline.md` (3 min), `showcase/backup-video-shot-list.md`, `showcase/video-script.md` (3 min, bilingual captions), `showcase/screenshots/capture.mjs`, `docs/presentation/jadal-deck.html`, and app screenshots in `apps/web/docs/screenshots/`.
 - To do:
-  1. Research brag and write `docs/research/brag.md`.
-  2. Replace the stub config.
-  3. Record a backup demo video, following the shot list. The demo route is `/demo` and runs the 6 steps.
-  4. Refresh the deck with the final screenshots and the hero metric. Take numbers **from the app**, not from memory.
-  5. Include the real Telugu call audio. A sample is `.ref/call/note-te.wav` on the original laptop; regenerate it with Sarvam if needed.
+  1. Record a backup demo video, following the shot list. The demo route is `/demo` and runs the 6 steps.
+  2. Refresh the deck with the final screenshots and the hero metric. Take numbers **from the app**, not from memory.
+  3. Include the real Telugu call audio. A sample is `.ref/call/note-te.wav` on the original laptop; regenerate it with Sarvam if needed.
 
   Prompt for agy: §11.3.
 

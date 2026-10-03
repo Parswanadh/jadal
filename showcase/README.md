@@ -9,10 +9,10 @@ is a placeholder until the frontend + backend preview deploys land.
 | ---- | ---- |
 | `pitch-outline.md` | 3-minute pitch outline with timed beats + speaker notes |
 | `backup-video-shot-list.md` | Backup-video shot list (shots, narration, capture notes) |
+| `video-script.md` | 3-minute narrated demo script (bilingual captions + timings) |
 | `screenshots/capture.mjs` | Playwright screenshot script for every screen |
 | `screenshots/screenshots.config.json` | Routes + viewports (placeholder URLs) |
-| `brag.config.json` | STUB latent-spaces/brag config (see `brag-note.md`) |
-| `brag-note.md` | Why the brag config is a stub + what fills it in |
+| `brag.config.json` | latent-spaces/brag config for Jadal (see `docs/research/brag.md`) |
 
 ## Placeholder URLs
 
@@ -42,13 +42,13 @@ Captures (desktop 1440x900): `/farmer`, `/coordinator`, `/canal`, `/phone`,
 `/demo` (+ `/` as cover). Also captures mobile 390x844 for `/farmer` and
 `/phone` (voice-first users). See `screenshots/README.md`.
 
-## Brag stub status
+## Brag status
 
-`docs/research/brag.md` has not landed (ADR-005 open) so `brag.config.json`
-is a clearly-marked STUB matching the documented showcase intent
-(architecture overview §8: seeded 8-farm scenario, equal-hours vs equal-water
-hero, Telugu voice live moment). No secrets are stored here. Orchestrator
-replaces the stub once `docs/research/brag.md` lands — see `brag-note.md`.
+`docs/research/brag.md` has landed (latent-spaces/brag research, upstream
+sources verified) so `brag.config.json` is the real Jadal config matching the
+documented showcase intent (architecture overview §8: seeded 8-farm scenario,
+equal-hours vs equal-water hero, Telugu voice live moment). No secrets are
+stored here.
 
 ## Live-demo fallback order
 

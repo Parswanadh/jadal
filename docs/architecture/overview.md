@@ -112,6 +112,6 @@ Decided in `docs/decisions/ADR-001-004-stack.md`: one Hono Worker + static asset
 
 Showcasing is a first-class workstream:
 - **Demo mode:** a seeded scenario (one minor canal, 8 farms) with a time-travel replay of the event log.
-- **Hero visual:** the canal map, comparing "equal hours" (tail farm meets about 40% of need) with "equal water".
+- **Hero visual:** the canal map, comparing "equal hours" (tail farm meets about 42% of need) with "equal water".
 - **Live moment:** an urgent Telugu voice request → agent recommendation → coordinator approval → ledger deduction → affected farmers called → acknowledgements tick in.
-- **Brag:** the latent-spaces/brag setup is **[pending research]**.
+- **Brag:** the latent-spaces/brag setup is documented in `docs/research/brag.md` and configured in `showcase/brag.config.json`.
