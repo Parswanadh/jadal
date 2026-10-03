@@ -19,7 +19,7 @@
 | **05** | `/phone` (Simulated Telugu Call) | 1:08 – 1:33 | 25s | Demo Step 2: Telugu voice urgent request & triage |
 | **06** | `/coordinator` (Approval & Deduction) | 1:33 – 1:48 | 15s | Quota deduction: no more free overruns |
 | **07** | `/coordinator` + `/phone` (Notifications) | 1:48 – 2:08 | 20s | Demo Steps 3 & 4: Voice-first calls, night warning, DTMF ack |
-| **08** | `/demo` (Harvest & Buffer Pool) | 2:08 – 2:23 | 15s | Demo Step 5: Post-harvest remainder pooled to buffer |
+| **08** | `/coordinator` (Entitlement Re-Pricing) | 2:08 – 2:23 | 15s | Coordinator prices the week by need → 100% need met |
 | **09** | `/demo` (Ledger & Audit Proof) | 2:23 – 2:48 | 25s | Demo Step 6: Conservation invariant & bilingual audit |
 | **10** | End Card | 2:48 – 3:00 | 12s | Architecture principle & closing call |
 
@@ -53,7 +53,7 @@
   - Mode toggle is set to **Equal Hours**.
   - Camera/cursor slowly pans downstream along the canal.
   - Callout highlights: Head outlet `o1` delivers `0.145 m³/s` (3.5% loss); Tail outlet `o8` thins down to `0.106 m³/s` (29.4% seepage loss).
-  - Bar chart zooms on `o7` and `o8` showing need met stagnating at only **40%–42%**, despite having an equal 1-hour turn.
+  - Bar chart zooms on `o7` and `o8` showing need met stagnating at only **42%**, despite having an equal 1-hour turn.
 - **Voiceover (EN):**
   > "Under traditional warabandi, turns are measured in hours. But as water travels through three kilometres of unlined soil, seepage and evaporation eat the flow. Outlet one gets strong flow, while outlet eight receives twenty-nine percent less water per second. The old paper register records both as fair."
 - **On-Screen Captions:**
@@ -63,7 +63,7 @@
 - **Evidence / Source:**
   - Head discharge `0.15 m³/s`, seepage $k = 0.00012\text{ m}^{-1}$: `demo-scenario.json#/canal`.
   - `o1` flow `0.1447 m³/s` (3.5% loss), `o8` flow `0.1059 m³/s` (29.4% loss): `apps/web/src/canal/seed.json` (derived by `@jadal/core/hydraulics`).
-  - Tail need-met 40%–42%: `apps/web/src/api/mock.ts#L190`, `HANDOFF.md §2`.
+  - Tail need-met 42%: `apps/web/src/api/mock.ts#L190`, `HANDOFF.md §2`.
 
 ---
 
@@ -183,23 +183,25 @@
 
 ---
 
-### Shot 08: Public Buffer Board & Harvest Sharing
-- **Route:** `/demo` (Step 5: Buffer Panel)
-- **Timecode:** `2:08 – 2:23` (Duration: 15s) — **Demo Step 5**
+### Shot 08: Coordinator Re-Pricing — 100% Need Met
+- **Route:** `/coordinator` (Entitlements Tab)
+- **Timecode:** `2:08 – 2:23` (Duration: 15s) — **Coordinator approval flow**
 - **Visual Action:**
-  - Step 5 active: Farmer `f3` (Venkata Rao) completes cotton harvesting early and declares `harvest_exit`.
-  - Unused seasonal quota transfers into the public canal buffer pool.
-  - Downstream tail farmer `f7` (Padmavathi) submits a request for `5 m³` buffer water on the portal.
-  - Public buffer transparency board updates openly for all water-user association members to inspect.
+  - Coordinator opens the **Entitlements** tab. The core proposes the week's field-gate volumes from FAO-56 crop need (`POST /api/entitlements/suggest`).
+  - Coordinator edits the rows — `1,300 m³` per farmer, with `f4`'s two crop plans at `650 m³` each so `f4`'s weekly total stays `1,300 m³` — then clicks **Approve** (`POST /api/entitlements/approve`).
+  - With the week priced to fit release window `rw1`, the equal-water rotation places every farmer's full need inside the 24-hour window: need-met reads **100% for every farmer** and the Gini coefficient is exactly **0**.
+  - A lower-third note states the honest boundary: the harvest → buffer movement is not exposed by the HTTP surface, so it is not shown.
 - **Voiceover (EN):**
-  > "When Venkata Rao harvests his cotton early, his remaining quota doesn't vanish into private hands. It pools into a public buffer. When a downstream farmer needs extra water, she requests it on an open board. Shared openly, approved openly."
+  > "The coordinator's real lever is the week's pricing. The core proposes each farmer's volume from crop need; the coordinator reviews and approves it. Once the week fits the release window, equal-water rotation meets one hundred percent of every farmer's need — not one farm at another's expense."
 - **On-Screen Captions:**
-  - **EN:** *Step 5: Early harvest quota transfers to common buffer. Buffer requests are public and transparent.*
-  - **TE:** *దశ 5: కోత పూర్తయిన మిగులు కోటా బఫర్‌కు చేరుతుంది. బఫర్ నీటి అభ్యర్థనలు అందరికీ బహిరంగంగా కనిపిస్తాయి.*
-- **Audio Cue:** Gentle chime, ledger counter tick.
+  - **EN:** *Coordinator prices the week by crop need, then approves. Equal water then meets 100% of every farmer's need; Gini = 0.*
+  - **TE:** *సమన్వయకర్త వారాన్ని పంట అవసరం ఆధారంగా ధర నిర్ణయించి ఆమోదిస్తారు. సమాన నీరు ప్రతి రైతు అవసరాన్ని 100% తీరుస్తుంది; గిని = 0.*
+- **Audio Cue:** UI confirm chime, soft ledger tick.
 - **Evidence / Source:**
-  - Farmer `f3` cotton harvest exit, `f7` buffer request: `demo-scenario.json#/demo_script[4]`, `apps/api/src/e2e.test.ts#L224-258`.
-  - Buffer policy rule (capped at 25% weekly, transparent board): `packages/core/README.md §10`.
+  - Re-pricing flow `POST /api/entitlements/suggest` → edits → `POST /api/entitlements/approve`: `apps/api/src/e2e.test.ts#L84-99`; routes `packages/contracts/src/api.ts#L58-69`.
+  - After re-pricing, `equal_water_gini === 0` and every `need_met` row is `100`: `apps/api/src/e2e.test.ts#L126-131`.
+  - Entitlement review UI: `apps/web/src/coordinator/EntitlementReview.tsx`.
+  - **Not shown (implementation gap):** no route appends `crop.harvested`, so approving `f3`'s `harvest_exit` moves no water and `f7`'s buffer request is refused `400 policy_refused` — `apps/api/src/e2e.test.ts#L29-33, L222-257`.
 
 ---
 
@@ -255,7 +257,7 @@
 > [1:08] When drought threatens, a farmer calls in Telugu: «నాకు ఈ వారం అత్యవసరంగా నీరు కావాలి.» The agent triages urgency and recommends a forty cubic metre grant.  
 > [1:33] The coordinator approves, and forty cubic metres are deducted from future seasonal quota. Upstream overruns stop being free.  
 > [1:48] Every affected farmer is notified. Farmers without smartphones receive automated voice phone calls, with a mandatory warning call before any night release.  
-> [2:08] When crops are harvested early, leftover quota pools into a public buffer shared transparently on the portal.  
+> [2:08] The coordinator prices the week from crop need and approves it. Equal-water rotation then meets one hundred percent of every farmer's need, with zero inequality.  
 > [2:23] And the double-entry ledger always balances: canal supply equals quotas plus buffer plus delivered water plus conveyance losses. Disputes are settled by audited evidence.  
 > [2:48] LLMs propose, deterministic physics compute, and human coordinators approve. Fair water, verified by code. Thank you.
 

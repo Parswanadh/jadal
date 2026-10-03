@@ -19,7 +19,7 @@ Say (presenter):
 > farmer still lost her crop. Hours are not water."
 
 Show: `/canal` hero visual (equal-hours mode). Point at tail outlets o7/o8:
-~40–45% of need met vs head outlets near 100%.
+~42% of need met vs head outlets near 100%.
 
 Speaker note: name the case, not the tech. One sentence on warabandi:
 a fixed weekly time roster that assumes one hour waters every field equally.
@@ -57,7 +57,7 @@ the backup video — do not debug on stage.
 
 **Beat 1 (25s) — Equal water, not equal hours.** On `/coordinator`, toggle
 `equal_hours → equal_water` for release window rw1. Tail o7/o8 jump from
-~45% to >90% need met; Gini of need-met falls. One line:
+~42% to >90% need met; Gini of need-met falls. One line:
 "Same water, longer tail turns — because the model converts volume into
 time with the flow that actually reaches each outlet."
 

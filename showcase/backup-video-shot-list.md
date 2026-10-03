@@ -26,7 +26,7 @@
 | # | Shot (route) | Dur. | Visual action | Narration (EN; TE where noted) |
 | - | ------------ | ---- | ------------- | ------------------------------ |
 | 1 | Title card (edit, not a route) | 8s | "JADAL — Whose turn is it to irrigate?" + Kondaveedu Minor, 8 farms, canal schematic | "Everyone got their hours — and the tail still lost her crop. Hours are not water." |
-| 2 | `/canal` equal-HOURS | 20s | Hero canal map, equal-hours mode; slow pan head→tail o1→o8; hold on o7/o8 bar (~45% need met) | "One hour at the head is not one hour at the tail. Seepage and lag eat it. The old register still calls this fair." |
+| 2 | `/canal` equal-HOURS | 20s | Hero canal map, equal-hours mode; slow pan head→tail o1→o8; hold on o7/o8 bar (~42% need met) | "One hour at the head is not one hour at the tail. Seepage and lag eat it. The old register still calls this fair." |
 | 3 | `/coordinator` roster compare | 25s | Toggle equal_hours → equal_water for rw1; Gini + need-met bars animate; tail rises to >90% | "Same water, converted to time with the flow that actually reaches each outlet. Tail turns run longer — because physics, not favouritism." |
 | 4 | `/farmer` registration + entitlement | 15s | Farmer card (f1, rice, flowering), plot area/soil, weekly entitlement m³; coordinator approve tick | "Need starts at registration: crop, stage, soil. The FAO-56 engine proposes volumes — the coordinator approves them." |
 | 5 | `/phone` Telugu urgent request | 25s | Simulated phone: Telugu transcript appears, then agent triage + recommendation EN+TE; keep audio waveform visible | TE audio: «నాకు ఈ వారం అత్యవసరంగా నీరు కావాలి.» EN VO: "An urgent request by voice. The agent recommends a partial grant — deducted from future quota, never free." |
