@@ -16,14 +16,20 @@
  * `auto` (the default when the variable is unset) prefers `laya`, then `jev`, then `rules`. Any
  * provider failure — unreachable, non-200, rate limit, timeout, malformed JSON, an out-of-schema
  * value — moves to the next provider in the chain and is recorded in the returned `attempts`, so a
- * fallback is never silent and never reported as if the model ran.
+ * fallback is never silent to a caller of `classifyDetailed` and never reported as if the model ran.
  *
  * `classify` never throws and never rejects. A triage service that 500s during a farmer's call is
  * worse than one that guesses conservatively with the Telugu keyword rules.
  *
  * Every result carries `source: "laya" | "jev" | "rules"` (already part of the `System1Result`
- * contract, so no contracts change was needed), which is what lets the UI and the audit trail prove
- * which engine actually ran.
+ * contract, so no contracts change was needed). **Provenance is available, but not yet persisted:**
+ * `classify` returns the bare `System1Result`, and every production caller today (`requests.ts`,
+ * `routes/voice.ts`, `agents/caller.ts`, `telephony-deps.ts`) reads only `intent`/`urgency`. The
+ * `request.triaged` event (`packages/contracts/src/events.ts`) has no `source` field, so the stored
+ * audit trail cannot yet distinguish a `source: "rules"` fallback from a real `laya`/`jev` decision.
+ * A caller that wants the provenance now must use {@link classifyDetailed} and keep `source` /
+ * `attempts` itself. Persisting it in `request.triaged` is planned and is a contract change, so it
+ * needs `contracts-ok`; see ADR-006.
  *
  * Every outbound call goes through `env.fetch` so tests can intercept it and so Cloudflare AI
  * Gateway can sit in front of the OpenRouter call (`AI_GATEWAY_URL`). The Laya sidecar is local and
@@ -161,7 +167,12 @@ export function resolveProviderChain(env: Pick<ProviderEnv, "SYSTEM1_PROVIDER">)
   return [setting, ...SYSTEM1_PROVIDERS.filter((provider) => provider !== setting)];
 }
 
-/** True when a provider has the configuration it needs to be attempted. `rules` always does. */
+/**
+ * True when a provider has the configuration it needs to be attempted. `rules` always does.
+ *
+ * This is the single config gate both model providers are called behind ({@link callLaya},
+ * {@link callJev}), and it is exported so a status or diagnostic caller can ask the same question.
+ */
 export function providerConfigured(
   provider: System1ProviderName,
   env: Pick<ProviderEnv, "LAYA_ENDPOINT" | "OPENROUTER_API_KEY">,
@@ -753,8 +764,8 @@ async function finishProviderCall(
  *  * JSON outside the schema       -> `out_of_schema`
  */
 async function callLaya(env: ProviderEnv, text: string, opts: ClassifyOptions): Promise<ProviderAttemptResult> {
-  const endpoint = env.LAYA_ENDPOINT?.trim();
-  if (!endpoint) return { ok: false, reason: "not_configured" };
+  if (!providerConfigured("laya", env)) return { ok: false, reason: "not_configured" };
+  const endpoint = env.LAYA_ENDPOINT?.trim() ?? "";
 
   const body = JSON.stringify(buildLayaRequest(text));
   const timeoutMs = resolveLayaTimeoutMs(env, opts);
@@ -779,8 +790,8 @@ async function callLaya(env: ProviderEnv, text: string, opts: ClassifyOptions): 
  * check, and the AI Gateway prefix on the URL.
  */
 async function callJev(env: ProviderEnv, text: string, opts: ClassifyOptions): Promise<ProviderAttemptResult> {
-  const key = env.OPENROUTER_API_KEY?.trim();
-  if (!key) return { ok: false, reason: "not_configured" };
+  if (!providerConfigured("jev", env)) return { ok: false, reason: "not_configured" };
+  const key = env.OPENROUTER_API_KEY?.trim() ?? "";
 
   const model = firstNonBlank(opts.model, env.JEV_MODEL) ?? JEV_MODEL;
   const url = gatewayUrl(env, OPENROUTER_DECISIONS_URL);

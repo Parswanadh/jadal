@@ -35,10 +35,16 @@ that choice.
   - `rules` → `rules` only: an explicit offline deployment must never touch the network
   - an unrecognised spelling degrades to `rules`, matching `isDemo`'s "a typo takes the safe path"
     rule rather than silently spending OpenRouter credit.
-- **Provenance is mandatory.** Every result carries `source: "laya" | "jev" | "rules"`, and
-  `classifyDetailed` additionally returns an `attempts` trail (`provider`, `ok`, `reason`, `status`)
-  plus a `fallback` summary when the rules answered. A fallback is never silent and never reported as
-  if the model ran.
+- **Provenance is available on every result, but it is not yet persisted.** Every result carries
+  `source: "laya" | "jev" | "rules"`, and `classifyDetailed` additionally returns an `attempts` trail
+  (`provider`, `ok`, `reason`, `status`) plus a `fallback` summary when the rules answered, so a
+  fallback is never silent to a `classifyDetailed` caller and never reported as if the model ran.
+  **Limitation (2026-10-03):** the production callers (`apps/api/src/requests.ts`,
+  `apps/api/src/routes/voice.ts`, `apps/api/src/agents/caller.ts`, `apps/api/src/telephony-deps.ts`)
+  call `classify` and read only `intent`/`urgency`, and the `request.triaged` event in
+  `packages/contracts/src/events.ts` has no `source` field. The *stored* audit trail therefore cannot
+  yet distinguish a `source: "rules"` fallback from a real `laya`/`jev` decision. Persisting `source`
+  in `request.triaged` is planned; because it changes the contract it needs the `contracts-ok` label.
 - **Every provider failure moves to the next link**: unreachable, non-200, rate limit, timeout,
   malformed JSON, or an out-of-schema value.
 - **Jev** is called on the Decisions API with `model` defaulting to `typesafe/jev-1.13`
@@ -46,9 +52,10 @@ that choice.
   `AI_GATEWAY_URL` is set.
 - **Laya** is called at `POST $LAYA_ENDPOINT` (`LAYA_ENDPOINT`, e.g.
   `http://127.0.0.1:8099/decide`), locally, and is never gateway-prefixed.
-- **No contracts change.** `System1Result.source` is already
-  `z.enum(["jev", "laya", "rules"])` in `packages/contracts/src/agents.ts`, so the provenance field
-  needed no `contracts-ok`.
+- **No contracts change was needed for the result.** `System1Result.source` is already
+  `z.enum(["jev", "laya", "rules"])` in `packages/contracts/src/agents.ts`, so the provenance field on
+  the returned result needed no `contracts-ok`. The event log was *not* changed, which is why the
+  provenance limitation above still stands.
 
 ## Verified wire contracts
 
@@ -157,8 +164,8 @@ deadline, so a slow model can never stall a farmer's call.
 - The old OpenAI chat-completions body (`messages`, `temperature`, `response_format`) is gone; it
   could never have produced a typed Jev answer.
 - `classify`'s signature is unchanged, so `routes/`, `telephony/` and `campaigns/` keep compiling;
-  they should switch to `classifyDetailed` (or read `source`) if they want the fallback reason in the
-  audit trail.
+  they should switch to `classifyDetailed` (or read `source`) if they want the fallback reason at all,
+  and persisting that provenance in `request.triaged` remains a planned `contracts-ok` change.
 - `SYSTEM1_PROVIDER=rules` preserves the offline demo guarantee: zero network calls.
 - **UNVERIFIED.** No live Jev call was made from this worktree (no `OPENROUTER_API_KEY` was present
   anywhere in the workspace), so the Jev request shape is verified against OpenRouter's published
