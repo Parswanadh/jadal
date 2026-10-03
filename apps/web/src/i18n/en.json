@@ -528,8 +528,6 @@
       },
       "allocationLabel": "Tell them their allocation",
       "allocationHelp": "The farmer hears how much water they have and when to use it. Both come from the approved request and their turn.",
-      "allocationVolume": "Water to use (m³)",
-      "allocationWindow": "Use it between",
       "allocationNone": "No approved allocation for this farmer yet. Approve their request (or plan their turn) first.",
       "allocationOn": "Include the allocation in this alert",
       "allocationSummary": "{m3}, {when}",
