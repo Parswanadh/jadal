@@ -23,7 +23,7 @@ Honesty rules this file implements (brief SS3):
   ``jadal_decision.py`` for the full argument and the opt-in switch.
 
 Environment:
-    LAYA_MODEL      checkpoint dir or hub id   (default: the verified local dir, else the hub)
+    LAYA_MODEL      checkpoint dir or hub id   (default: convaiinnovations/laya)
     LAYA_SUBFOLDER  subfolder inside the repo  (default: unset for a local dir)
     LAYA_DEVICE     auto|cpu|cuda              (default auto -> cuda when available)
     LAYA_HOST       bind address               (default 127.0.0.1)
@@ -60,11 +60,9 @@ from jadal_decision import (
     unwrap_answers,
 )
 
-#: The verified multilingual checkpoint, already on this machine (mmBERT-base, 643,835,514-byte
-#: model.safetensors). Pinned as a local directory so the service never hits the network, and
-#: pointed at the bundle repo's `multilingual/` subfolder -- the artifact the evaluation lane
-#: validated -- rather than a separately published repo.
-VERIFIED_LOCAL_MODEL = "/home/parshu/projects/contri/laya-lab/models/multilingual"
+#: The pinned hub repo + subfolder for the multilingual checkpoint (mmBERT-base, 322M params).
+#: Defaults to the hub so the service is portable; set LAYA_MODEL to a local directory to avoid
+#: any network access.
 HUB_MODEL = "convaiinnovations/laya"
 HUB_SUBFOLDER = "multilingual"
 
@@ -78,9 +76,7 @@ SERVICE_VERSION = "0.2.0"
 
 
 def default_model() -> tuple[str, str | None]:
-    """The verified local checkpoint when it is present, else the pinned hub repo + subfolder."""
-    if os.path.isdir(VERIFIED_LOCAL_MODEL):
-        return VERIFIED_LOCAL_MODEL, None
+    """The pinned hub repo + subfolder. Override with LAYA_MODEL / LAYA_SUBFOLDER env vars."""
     return HUB_MODEL, HUB_SUBFOLDER
 
 
@@ -100,6 +96,7 @@ class ModelHolder:
         self.resolved_device: str = "cpu"
         self.state = "loading"
         self.error: str | None = None
+        self.error_traceback: str | None = None
         self.load_seconds: float | None = None
         self.loaded_at: float | None = None
         self.inferences = 0
@@ -128,7 +125,7 @@ class ModelHolder:
             self.resolved_device = str(getattr(agent, "device", "cpu")).split(":")[0]
             self.state = "ready"
             self.loaded_at = time.time()
-        except BaseException as exc:  # noqa: BLE001 - recorded and surfaced, never swallowed
+        except Exception as exc:  # noqa: BLE001 - recorded and surfaced, never swallowed
             self.state = "failed"
             self.error = "%s: %s" % (type(exc).__name__, exc)
             self.error_traceback = traceback.format_exc()

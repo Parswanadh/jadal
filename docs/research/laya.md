@@ -67,10 +67,10 @@ laptop that had ~3 GB of RAM available and three other lanes running.
 ## 3. The checkpoint that was actually used
 
 ```
-/home/parshu/projects/contri/laya-lab/models/multilingual/
+convaiinnovations/laya (subfolder: multilingual)
 ```
 
-A pre-existing local copy, pointed at with `LAYA_MODEL` so the service never touches the network.
+The pinned hub repo + subfolder. The service defaults to this; set `LAYA_MODEL` to a local directory path to avoid network access.
 
 | fact | value | how |
 |---|---|---|
@@ -109,11 +109,10 @@ checkpoint is ModernBERT-large, 421M / 843 MB, and Laya's own `lang.py` document
 near-random on non-Latin scripts) `[READ]`. So the multilingual checkpoint is the only sane choice,
 and it is the one configured.
 
-The service defaults to the **local verified directory**, not a hub id. If that directory is
-absent it falls back to `convaiinnovations/laya` with `subfolder="multilingual"` — the repo and
+The service defaults to `convaiinnovations/laya` with `subfolder="multilingual"` — the repo and
 subfolder the evaluation lane validated — rather than the separately published
 `convaiinnovations/laya-multilingual` repo, so a cold start cannot silently fetch a different
-artifact.
+artifact. Set `LAYA_MODEL` to a local directory path to avoid network access entirely.
 
 ---
 

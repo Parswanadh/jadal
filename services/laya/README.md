@@ -31,7 +31,7 @@ python -m venv --system-site-packages .venv
 cd services/laya
 .venv/bin/python laya_service.py
 # [laya] listening on http://127.0.0.1:8099
-# [laya] loading /home/parshu/projects/contri/laya-lab/models/multilingual (device=auto) ...
+# [laya] loading convaiinnovations/laya::multilingual (device=auto) ...
 # [laya] ready: device=cuda load=8.3s
 ```
 
@@ -44,8 +44,8 @@ The model is loaded **once**, at startup. Nothing is loaded per request.
 ```json
 {
   "ok": true,
-  "model": "/home/parshu/projects/contri/laya-lab/models/multilingual",
-  "subfolder": null,
+  "model": "convaiinnovations/laya",
+  "subfolder": "multilingual",
   "device": "cuda",
   "state": "ready",
   "error": null,
@@ -81,7 +81,7 @@ The model is loaded **once**, at startup. Nothing is loaded per request.
   "is_release_time": null,
   "source": "laya",
   "latency_ms": 29,
-  "model": "/home/parshu/projects/contri/laya-lab/models/multilingual",
+  "model": "convaiinnovations/laya",
   "device": "cuda",
   "intent_confidence": 0.6479,
   "mentions_crop_stress": true,
@@ -152,8 +152,8 @@ padded. Farmer messages are one or two sentences, so this is not a practical lim
 
 | env | default | meaning |
 |---|---|---|
-| `LAYA_MODEL` | the verified local dir, else `convaiinnovations/laya` | checkpoint dir or hub id |
-| `LAYA_SUBFOLDER` | unset for a local dir, else `multilingual` | subfolder inside a hub repo |
+| `LAYA_MODEL` | `convaiinnovations/laya` | checkpoint dir or hub id |
+| `LAYA_SUBFOLDER` | `multilingual` | subfolder inside a hub repo |
 | `LAYA_DEVICE` | `auto` | `auto` / `cpu` / `cuda` |
 | `LAYA_HOST` | `127.0.0.1` | bind address |
 | `LAYA_PORT` | `8099` | port |
