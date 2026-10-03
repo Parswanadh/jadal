@@ -8,10 +8,18 @@
  *
  * System 1 only *scores* the request (`triage_score`, `intent`); it never decides water. The
  * coordinator's approval is a separate step (`request.decided` in `routes/write.ts`).
+ *
+ * Since task B the same path also **phones the coordinator**, because persisting a request without
+ * telling anyone about it left the approval queue invisible: a farmer could ask for water on three
+ * channels and no human was ever prompted to decide. The call is placed here — after the request is
+ * durable, in one place — so `POST /api/requests` and the telephony webhook's `raiseRequest` dep
+ * both get it and neither can drift. It is best-effort by construction: see
+ * `notifyCoordinatorOfRequest`, which returns a result rather than throwing.
  */
 
 import type { WaterRequest } from "@jadal/contracts";
 
+import { notifyCoordinatorOfRequest } from "./coordinator-alert";
 import { now } from "./db/clock";
 import { newId } from "./db/id";
 import { getFarmer, getRequest } from "./db/repo";
@@ -83,5 +91,13 @@ export async function raiseRequest(env: Env, input: RaiseRequestInput): Promise<
   if (stored === null) {
     throw new HttpError("internal_error", `request ${request.id} vanished after being raised`, 500);
   }
+
+  // Task B: the coordinator is phoned for approval. Deliberately after the read-back, so the call is
+  // only ever about a request that really exists, and deliberately awaited for ordering rather than
+  // for failure: `notifyCoordinatorOfRequest` returns a result and catches everything, so this line
+  // cannot throw and cannot take the farmer's request down with it. With `COORDINATOR_PHONE` unset
+  // or no Twilio env it is a clean no-op returning `{ simulated: true }`.
+  await notifyCoordinatorOfRequest(env, stored);
+
   return stored;
 }
