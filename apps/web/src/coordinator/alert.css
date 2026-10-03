@@ -1,0 +1,92 @@
+/* Manual alert control. Reads the global tokens from styles.css. */
+
+.coord .alert-control {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.coord .alert-control > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0.5rem 1.1rem;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  list-style: none;
+}
+
+.coord .alert-control > summary::-webkit-details-marker {
+  display: none;
+}
+
+.coord .alert-control > summary:hover {
+  border-color: var(--muted);
+  background: var(--surface-alt);
+}
+
+.coord .alert-control[open] > summary {
+  border-color: var(--muted);
+  background: var(--surface-alt);
+  margin-bottom: 0.75rem;
+}
+
+.coord .alert-form {
+  width: min(24rem, 100%);
+  padding: 1rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.coord .alert-form .field {
+  margin-bottom: 0.9rem;
+}
+
+.coord .alert-form .notice {
+  margin: 0.75rem 0 0;
+}
+
+.coord .alert-form textarea {
+  min-height: 3.5rem;
+}
+
+/* The allocation opt-in: one compact line, not a form of its own. */
+.coord .alert-form .choice-compact {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.coord .alert-form .choice-compact:hover {
+  border-color: var(--muted);
+}
+
+.coord .alert-form .choice-compact input {
+  margin-top: 0.15rem;
+  accent-color: var(--accent);
+}
+
+.coord .alert-form .choice-compact strong {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.coord .alert-form .choice-compact span span {
+  display: block;
+}
+
+/* The allocation the coordinator just told the farmer about. */
+.coord .alert-form .notice p + p {
+  margin-top: 0.35rem;
+}

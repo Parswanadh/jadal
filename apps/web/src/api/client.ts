@@ -11,8 +11,14 @@
 //                          -> calls the real backend over HTTP.
 
 import { ApiError, routes } from "@jadal/contracts";
-import type { z } from "zod";
+import { z } from "zod";
 import type { ZodTypeAny } from "zod";
+import {
+  alertResponseSchema,
+  updateTurnResponseSchema,
+} from "./extra";
+import type { AlertBody, AlertResponse, UpdateTurnBody, UpdateTurnResponse } from "./extra";
+import { ApiClientError } from "./errors";
 import {
   mockApproveEntitlements,
   mockApproveRoster,
@@ -33,9 +39,14 @@ import {
   mockRaiseRequest,
   mockRegister,
   mockReleaseWindows,
+  mockSendAlert,
   mockSuggestEntitlements,
+  mockUpdateTurn,
   mockVerifyFarmer,
 } from "./mock";
+
+export { ApiClientError } from "./errors";
+
 
 export type RouteKey = keyof typeof routes;
 
@@ -83,18 +94,6 @@ export function apiBaseUrl(): string {
   return (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "");
 }
 
-export class ApiClientError extends Error {
-  status: number;
-  code?: string;
-
-  constructor(status: number, message: string, code?: string) {
-    super(message);
-    this.name = "ApiClientError";
-    this.status = status;
-    this.code = code;
-  }
-}
-
 function fillPath(path: string, params: Record<string, string>): string {
   let out = path;
   for (const [key, value] of Object.entries(params)) {
@@ -103,7 +102,7 @@ function fillPath(path: string, params: Record<string, string>): string {
   return out;
 }
 
-async function http<T>(key: RouteKey, path: string, method: string, body?: unknown): Promise<T> {
+async function request<T>(path: string, method: string, schema: ZodTypeAny, body?: unknown): Promise<T> {
   const res = await fetch(`${apiBaseUrl()}${path}`, {
     method,
     headers: { "Content-Type": "application/json" },
@@ -118,8 +117,11 @@ async function http<T>(key: RouteKey, path: string, method: string, body?: unkno
       parsed.success ? parsed.data.error.code : undefined,
     );
   }
-  const schema = routes[key].response as unknown as ZodTypeAny;
   return schema.parse(json) as T;
+}
+
+async function http<T>(key: RouteKey, path: string, method: string, body?: unknown): Promise<T> {
+  return request<T>(path, method, routes[key].response as unknown as ZodTypeAny, body);
 }
 
 export function health(): Promise<HealthResponse> {
@@ -225,6 +227,29 @@ export function demoReset(): Promise<DemoResetResponse> {
 export function demoAdvance(body: DemoAdvanceBody): Promise<DemoAdvanceResponse> {
   if (isMockMode()) return Promise.resolve(mockDemoAdvance(body));
   return http<DemoAdvanceResponse>("demoAdvance", routes.demoAdvance.path, "POST", body);
+}
+
+// --- Coordinator tools: endpoints outside the frozen contract -----------------
+// Deliberately not part of `api` above: that object is pinned to the contract's
+// route keys by api/client.test.ts.
+
+/**
+ * Set one turn's start and end time.
+ * PATCH /api/rosters/:id/turns/:turnId -> { ok: true, turn }
+ */
+export function updateTurn(rosterId: string, turnId: string, body: UpdateTurnBody): Promise<UpdateTurnResponse> {
+  if (isMockMode()) return mockUpdateTurn(rosterId, turnId, body);
+  const path = `/api/rosters/${encodeURIComponent(rosterId)}/turns/${encodeURIComponent(turnId)}`;
+  return request<UpdateTurnResponse>(path, "PATCH", updateTurnResponseSchema, body);
+}
+
+/**
+ * Alert one farmer by call, SMS or WhatsApp.
+ * POST /api/alerts -> { ok, contact_id, simulated, detail }
+ */
+export function sendAlert(body: AlertBody): Promise<AlertResponse> {
+  if (isMockMode()) return mockSendAlert(body);
+  return request<AlertResponse>("/api/alerts", "POST", alertResponseSchema, body);
 }
 
 /** All client functions in one object, keyed exactly by route name. */

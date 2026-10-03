@@ -1,4 +1,4 @@
-import { expect, settle, test } from './support/app';
+import { expect, settle, signInAs, test } from './support/app';
 import en from '../../apps/web/src/i18n/en.json';
 import te from '../../apps/web/src/i18n/te.json';
 
@@ -37,4 +37,21 @@ test('the language choice survives a reload', async ({ page }) => {
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'te');
   await expect(page.locator('.hero').getByRole('heading', { level: 1 })).toHaveText(te.home.title);
+});
+
+test('a fixture request reason follows the active language', async ({ page, consoleErrors }) => {
+  // The seeded pool request carries the mock's own prose and a decision note.
+  await signInAs(page, 'farmer');
+  await page.goto('/farmer?tab=pool');
+  await expect(page.getByText(en.fixture.reasonTailShortTurn)).toBeVisible();
+  await expect(page.getByText(en.fixture.noteTailShort)).toBeVisible();
+
+  await page.getByRole('button', { name: te.controls.langOptionTe, exact: true }).click();
+  await expect(page.getByText(te.fixture.reasonTailShortTurn)).toBeVisible();
+  await expect(page.getByText(te.fixture.noteTailShort)).toBeVisible();
+  // The English fixture prose is gone, not left in place on the Telugu screen.
+  await expect(page.getByText(en.fixture.reasonTailShortTurn)).toHaveCount(0);
+
+  await settle(page);
+  expect(consoleErrors).toEqual([]);
 });

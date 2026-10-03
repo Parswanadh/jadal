@@ -45,7 +45,7 @@ export function validateRegistration(input: RegistrationFormInput, todayIso: str
 
 export function validateRequest(volume_m3: number, reason: string): string[] {
   const errors: string[] = [];
-  if (!(volume_m3 > 0)) errors.push("urgent.errVolume");
-  if (reason.trim().length === 0) errors.push("urgent.errReason");
+  if (!(volume_m3 > 0)) errors.push("ask.errVolume");
+  if (reason.trim().length === 0) errors.push("ask.errReason");
   return errors;
 }

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import en from "../i18n/en.json";
+import te from "../i18n/te.json";
 import {
   DEMO_BUDGET_SECS,
   DEMO_STEPS,
@@ -25,28 +27,27 @@ describe("demo script", () => {
     expect(DEMO_STEPS.map((s) => s.step)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
-  it("every step is bilingual with an API-backed action", () => {
+  it("every step has a plain title and sentence in both languages, and a screen to see it on", () => {
     for (const s of DEMO_STEPS) {
-      expect(s.titleEn.length, `step ${s.step} titleEn`).toBeGreaterThan(0);
-      expect(s.titleTe.length, `step ${s.step} titleTe`).toBeGreaterThan(0);
-      expect(s.whatEn.length, `step ${s.step} whatEn`).toBeGreaterThan(0);
-      expect(s.whatTe.length, `step ${s.step} whatTe`).toBeGreaterThan(0);
-      expect(s.actionLabelEn.length).toBeGreaterThan(0);
-      expect(s.actionLabelTe.length).toBeGreaterThan(0);
-      expect(s.apiCalls.length).toBeGreaterThan(0);
+      const key = String(s.step) as keyof typeof en.demo.steps;
+      for (const lang of [en, te]) {
+        expect(lang.demo.steps[key].title.length, `step ${s.step} title`).toBeGreaterThan(0);
+        expect(lang.demo.steps[key].what.length, `step ${s.step} sentence`).toBeGreaterThan(0);
+      }
+      expect(s.seeIt.startsWith("/"), `step ${s.step} link`).toBe(true);
       expect(s.estimatedSecs).toBeGreaterThan(0);
     }
   });
 
-  it("step actions cover demo controls and read models", () => {
-    const calls = DEMO_STEPS.flatMap((s) => s.apiCalls).join("\n");
-    expect(calls).toMatch(/\/api\/demo\/advance/);
-    expect(calls).toMatch(/\/api\/events/);
-    expect(calls).toMatch(/\/api\/rosters\/propose/);
-    expect(calls).toMatch(/\/api\/audit/);
+  it("each step has an outcome sentence in both languages", () => {
+    for (const lang of [en, te]) {
+      for (const n of ["1", "2", "3", "4", "5", "6"]) {
+        expect(lang.demo.outcome[n as keyof typeof lang.demo.outcome], `outcome ${n}`).toBeTruthy();
+      }
+    }
   });
 
-  it("start -> finish estimate stays under the 4-minute budget", () => {
+  it("start to finish stays under the 4-minute budget", () => {
     expect(DEMO_BUDGET_SECS).toBe(240);
     expect(totalEstimatedSecs()).toBeLessThan(DEMO_BUDGET_SECS);
   });
@@ -65,7 +66,7 @@ describe("demo script", () => {
 });
 
 describe("demo api adapter (mock mode)", () => {
-  it("runs every walkthrough step against the shared mock", async () => {
+  it("runs every walkthrough step against the shared mock and returns visible outcomes", async () => {
     expect((await demoReset()).ok).toBe(true);
     const compare = await compareRosters();
     expect(compare.ok).toBe(true);
@@ -74,18 +75,25 @@ describe("demo api adapter (mock mode)", () => {
 
     const urgent = await raiseUrgentRequest();
     expect(urgent.error).toBeUndefined();
-    expect(urgent.data?.decision).toMatch(/approved/);
+    expect(urgent.data?.approved).toBe(true);
+    expect(urgent.data?.farmerName).toBeTruthy();
+    expect(urgent.data?.grantedM3).toBeGreaterThan(0);
+    expect(urgent.data?.grantedM3).toBeLessThanOrEqual(urgent.data?.askedM3 ?? 0);
 
     const notify = await replanAndNotify();
     expect(notify.data?.callsPlaced).toBeGreaterThan(0);
     expect((notify.data?.voiceOnly.length ?? 0) + (notify.data?.whatsapp.length ?? 0)).toBeGreaterThan(0);
+    // Farmers without a smartphone get a call only.
+    expect(notify.data?.voiceOnly).toContain("Anjamma Bandi");
+    expect(notify.data?.voiceOnly).toContain("Narasimha Chinta");
 
     const night = await fireNightProtocol();
-    expect(night.data?.windowId).toBe("rw2");
-    expect(night.data?.startsAtIst).toBe("19:00 IST");
+    expect(night.data?.startsAt).toBe("2026-09-17T13:30:00Z");
+    expect(night.data?.farmersWarned).toBeGreaterThan(0);
 
-    const buffer = await releaseToBuffer();
+    const buffer = await releaseToBuffer("test reason");
     expect(buffer.data?.bufferM3).toBeGreaterThan(0);
+    expect(buffer.data?.requester).toBe("Padmavathi Kolli");
 
     const audit = await fetchAudit();
     expect(audit.data?.conservationOk).toBe(true);
@@ -93,5 +101,12 @@ describe("demo api adapter (mock mode)", () => {
 
     expect((await demoAdvance(1)).data?.now).toBeTruthy();
     expect(((await fetchEvents()).data ?? []).length).toBeGreaterThan(0);
+  });
+
+  it("turns events into rows the screen can write as sentences", async () => {
+    await demoReset();
+    const events = (await fetchEvents()).data ?? [];
+    expect(events.some((e) => e.type === "farmer_registered" && e.name)).toBe(true);
+    expect(events.every((e) => !e.type.includes("."))).toBe(true);
   });
 });

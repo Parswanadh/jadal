@@ -12,7 +12,15 @@ const dictionaries: Record<Language, Dict> = {
   te: te as unknown as Dict,
 };
 
+export type TVars = Record<string, string | number>;
+
 const STORAGE_KEY = 'jadal-lang';
+
+/** Replace {name} placeholders with values. Unknown placeholders are left as written. */
+function fill(text: string, vars?: TVars): string {
+  if (!vars) return text;
+  return text.replace(/\{(\w+)\}/g, (whole, key: string) => (key in vars ? String(vars[key]) : whole));
+}
 
 function lookup(dict: Dict, path: string): string | undefined {
   const parts = path.split('.');
@@ -28,7 +36,7 @@ interface I18nValue {
   lang: Language;
   setLang: (lang: Language) => void;
   toggleLang: () => void;
-  t: (path: string) => string;
+  t: (path: string, vars?: TVars) => string;
 }
 
 const I18nContext = createContext<I18nValue | null>(null);
@@ -72,9 +80,16 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, [lang]);
 
   const t = useCallback(
-    (path: string): string => {
+    (path: string, vars?: TVars): string => {
       const hit = lookup(dictionaries[lang], path) ?? lookup(dictionaries.en, path);
-      return hit ?? path;
+      if (hit === undefined && import.meta.env.DEV) {
+        // A missing key must be loud. In development this logs an error, which
+        // fails the e2e "no console errors" assertions; the unit suite also
+        // scans every key the components reference. Never render the key name
+        // on screen silently.
+        console.error(`[i18n] missing translation key: ${path}`);
+      }
+      return fill(hit ?? path, vars);
     },
     [lang],
   );

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { Outlet } from "@jadal/contracts";
 import { api as sharedApi } from "../api";
 import { useI18n } from "../i18n/I18nContext";
@@ -7,22 +8,35 @@ import type { FarmerApi, FarmerDirectoryEntry } from "./farmerApi";
 import { createFarmerApi } from "./farmerApi";
 import RegistrationForm from "./RegistrationForm";
 import MyWater from "./MyWater";
-import UrgentRequestForm from "./UrgentRequestForm";
-import BufferBoard from "./BufferBoard";
+import AskWater from "./AskWater";
+import SharedPool from "./SharedPool";
 import "./farmer.css";
 
-type Tab = "register" | "mywater" | "urgent" | "buffer";
-const TABS: Tab[] = ["register", "mywater", "urgent", "buffer"];
+type Tab = "mywater" | "ask" | "pool" | "register";
+const TABS: Tab[] = ["mywater", "ask", "pool", "register"];
 
-function Portal() {
+function isTab(value: string | null): value is Tab {
+  return value !== null && (TABS as string[]).includes(value);
+}
+
+export default function FarmerPortal() {
   const { t } = useI18n();
   const api: FarmerApi = useMemo(() => createFarmerApi(), []);
+  const [params, setParams] = useSearchParams();
   const [directory, setDirectory] = useState<FarmerDirectoryEntry[] | null>(null);
   const [failed, setFailed] = useState(false);
-  const [farmerId, setFarmerId] = useState<string>("f1");
-  const [tab, setTab] = useState<Tab>("mywater");
+  const [farmerId, setFarmerId] = useState<string>("");
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const requested = params.get("tab");
+  const tab: Tab = isTab(requested) ? requested : "mywater";
+  const setTab = useCallback(
+    (next: Tab) => {
+      setParams(next === "mywater" ? {} : { tab: next }, { replace: true });
+    },
+    [setParams],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -31,8 +45,8 @@ function Portal() {
       .then((d) => {
         if (cancelled) return;
         setDirectory(d);
-        const first = d[0];
-        if (first && !d.some((e) => e.farmer.id === farmerId)) setFarmerId(first.farmer.id);
+        const first = d.find((e) => e.verified);
+        if (first) setFarmerId((current) => current || first.farmer.id);
       })
       .catch(() => {
         if (!cancelled) setFailed(true);
@@ -40,7 +54,6 @@ function Portal() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api]);
 
   useEffect(() => {
@@ -58,66 +71,65 @@ function Portal() {
     };
   }, []);
 
-  const entry = directory?.find((e) => e.farmer.id === farmerId) ?? null;
-  const farmerName = (id: string) => directory?.find((e) => e.farmer.id === id)?.farmer.name ?? id;
+  const verified = (directory ?? []).filter((e) => e.verified);
+  const entry = verified.find((e) => e.farmer.id === farmerId) ?? null;
+  const farmerName = (id: string) => directory?.find((e) => e.farmer.id === id)?.farmer.name ?? t("farmer.someone");
+  const needsFarmer = tab === "mywater" || tab === "ask";
 
   return (
     <div className="farmer-portal">
-      <div className="fp-container">
-        <PageHeader
-          eyebrow={t("page.farmer.eyebrow")}
-          title={t("page.farmer.title")}
-          lead={t("page.farmer.lead")}
-          actions={
-            <span className={`chip ${api.source === "mock" ? "chip-warn" : "chip-ok"}`} aria-live="polite">
-              {api.source === "mock" ? t("app.offlineNote") : t("app.liveNote")}
-            </span>
-          }
-        />
+      <PageHeader eyebrow={t("page.farmer.eyebrow")} title={t("page.farmer.title")} lead={t("page.farmer.lead")} />
 
-        <div className="fp-body">
-        {failed && (
-          <div className="fp-errors" role="alert">
-            {t("app.error")}{" "}
-            <button type="button" className="fp-btn fp-btn-secondary" onClick={() => window.location.reload()}>
-              {t("app.retry")}
+      {failed && (
+        <div className="notice notice-crit" role="alert">
+          <p>
+            {t("common.loadError")}{" "}
+            <button type="button" className="btn" onClick={() => window.location.reload()}>
+              {t("common.retry")}
             </button>
-          </div>
-        )}
-
-        <div className="fp-field">
-          <label htmlFor="fp-farmer">{t("app.selectFarmer")}</label>
-          <select id="fp-farmer" value={farmerId} onChange={(e) => setFarmerId(e.target.value)}>
-            {(directory ?? []).map((e) => (
-              <option key={e.farmer.id} value={e.farmer.id}>
-                {e.farmer.name}
-              </option>
-            ))}
-          </select>
+          </p>
         </div>
+      )}
 
-        <nav className="fp-tabs" aria-label={t("page.farmer.title")}>
+      <div className="farmer-bar">
+        <div className="tabs" role="tablist" aria-label={t("page.farmer.title")}>
           {TABS.map((tb) => (
-            <button key={tb} type="button" className="fp-tab" aria-selected={tab === tb} onClick={() => setTab(tb)}>
-              {t(`tab.${tb}`)}
+            <button key={tb} type="button" role="tab" className="tab" aria-selected={tab === tb} onClick={() => setTab(tb)}>
+              {t(`farmer.tabs.${tb}`)}
             </button>
           ))}
-        </nav>
-
-        <main>
-          {tab === "register" && <RegistrationForm api={api} outlets={outlets} />}
-          {tab === "mywater" && <MyWater api={api} farmerId={farmerId} />}
-          {tab === "urgent" && (
-            <UrgentRequestForm api={api} farmerId={farmerId} cropPlans={entry?.cropPlans ?? []} onRaised={() => setRefreshKey((k) => k + 1)} />
-          )}
-          {tab === "buffer" && <BufferBoard api={api} farmerName={farmerName} refreshKey={refreshKey} />}
-        </main>
         </div>
+        {needsFarmer && verified.length > 0 && (
+          <div className="farmer-picker">
+            <label htmlFor="farmer-select">{t("farmer.showingFor")}</label>
+            <select id="farmer-select" value={farmerId} onChange={(e) => setFarmerId(e.target.value)}>
+              {verified.map((e) => (
+                <option key={e.farmer.id} value={e.farmer.id}>
+                  {e.farmer.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      <div role="tabpanel">
+        {tab === "mywater" && (
+          <MyWater api={api} farmerId={farmerId} entry={entry} outlets={outlets} onAsk={() => setTab("ask")} refreshKey={refreshKey} />
+        )}
+        {tab === "ask" && (
+          <AskWater
+            api={api}
+            farmerId={farmerId}
+            farmerName={entry?.farmer.name ?? ""}
+            cropPlans={entry?.cropPlans ?? []}
+            refreshKey={refreshKey}
+            onRaised={() => setRefreshKey((k) => k + 1)}
+          />
+        )}
+        {tab === "pool" && <SharedPool api={api} farmerName={farmerName} refreshKey={refreshKey} />}
+        {tab === "register" && <RegistrationForm api={api} outlets={outlets} />}
       </div>
     </div>
   );
-}
-
-export default function FarmerPortal() {
-  return <Portal />;
 }

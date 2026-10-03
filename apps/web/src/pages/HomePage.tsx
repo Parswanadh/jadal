@@ -1,29 +1,12 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext';
-import { fetchHealth } from '../lib/api';
-
-type HealthState =
-  | { status: 'loading' }
-  | { status: 'ok'; version: string; operational: boolean }
-  | { status: 'error'; message: string };
+import DataBadge from '../components/DataBadge';
+import HeroVideo from '../components/HeroVideo';
 
 const FLOW_STEPS = ['step1', 'step2', 'step3', 'step4', 'step5', 'step6'] as const;
 
 export default function HomePage() {
   const { t } = useI18n();
-  const [health, setHealth] = useState<HealthState>({ status: 'loading' });
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchHealth(controller.signal)
-      .then((data) => setHealth({ status: 'ok', version: data.version, operational: data.ok }))
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === 'AbortError') return;
-        setHealth({ status: 'error', message: err instanceof Error ? err.message : String(err) });
-      });
-    return () => controller.abort();
-  }, []);
 
   const cards = [
     { to: '/farmer', title: t('home.farmerCardTitle'), body: t('home.farmerCardBody') },
@@ -36,9 +19,21 @@ export default function HomePage() {
   return (
     <div>
       <section className="hero">
-        <p className="eyebrow">{t('home.eyebrow')}</p>
-        <h1>{t('home.title')}</h1>
-        <p>{t('home.subtitle')}</p>
+        <div className="hero-copy">
+          <p className="eyebrow">{t('home.eyebrow')}</p>
+          <h1>{t('home.title')}</h1>
+          <p>{t('home.subtitle')}</p>
+          <div className="hero-actions">
+            <Link className="btn btn-primary btn-lg" to="/demo">
+              {t('home.ctaDemo')}
+            </Link>
+            <Link className="btn btn-lg" to="/farmer">
+              {t('home.ctaFarmer')}
+            </Link>
+          </div>
+          <DataBadge />
+        </div>
+        <HeroVideo />
       </section>
 
       <section className="home-section" aria-labelledby="home-flow">
@@ -68,7 +63,6 @@ export default function HomePage() {
         <div className="screens">
           {cards.map((card) => (
             <Link key={card.to} className="screen-card" to={card.to}>
-              <span className="screen-card-path">{card.to}</span>
               <h3>{card.title}</h3>
               <p>{card.body}</p>
               <span className="screen-card-open">{t('home.openLabel')} →</span>
@@ -78,27 +72,6 @@ export default function HomePage() {
       </section>
 
       <p className="principle">{t('home.principle')}</p>
-
-      <div className="health" aria-live="polite" aria-label={t('home.healthTitle')}>
-        <span className="health-label">{t('home.healthTitle')}</span>
-        {health.status === 'loading' && <span>{t('home.healthChecking')}</span>}
-        {health.status === 'ok' && (
-          <>
-            <span className={`chip ${health.operational ? 'chip-ok' : 'chip-critical'}`}>
-              {health.operational ? t('home.healthOperational') : t('home.healthDegraded')}
-            </span>
-            <span>
-              {t('home.versionLabel')}: <span className="num">{health.version}</span>
-            </span>
-          </>
-        )}
-        {health.status === 'error' && (
-          <>
-            <span className="chip chip-critical">{t('home.healthUnreachable')}</span>
-            <span className="num">{health.message}</span>
-          </>
-        )}
-      </div>
     </div>
   );
 }

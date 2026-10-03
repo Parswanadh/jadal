@@ -1,0 +1,258 @@
+import { useEffect, useId, useState } from 'react';
+import type { FormEvent } from 'react';
+import type { AlertChannel, AlertSeverity, Allocation } from '../api/extra';
+import { useI18n } from '../i18n/I18nContext';
+import { useFormat } from '../lib/useFormat';
+import { api } from './api';
+import './alert.css';
+
+const CHANNELS: AlertChannel[] = ['call', 'sms', 'whatsapp'];
+const SEVERITIES: AlertSeverity[] = ['info', 'warning', 'urgent', 'emergency'];
+
+interface Props {
+  farmerId: string;
+  farmerName: string;
+}
+
+interface SentResult {
+  channel: AlertChannel;
+  severity: AlertSeverity;
+  simulated: boolean;
+  detail: string;
+  /** The allocation the alert carried, when it carried one. */
+  allocation: Allocation | null;
+}
+
+/**
+ * Reach one farmer by call, SMS or WhatsApp, at a chosen warning level.
+ *
+ * When the API has an approved allocation for the farmer — the volume the
+ * coordinator granted and the turn window it belongs to — the control offers to
+ * include it, so the call tells the farmer how much water they have and when to
+ * use it. Both figures are read from the API; this control never derives them.
+ *
+ * The result is reported exactly as the API returns it: when `simulated` is
+ * true the control says so plainly and never implies a real call or message.
+ */
+export default function AlertControl({ farmerId, farmerName }: Props) {
+  const { t } = useI18n();
+  const f = useFormat();
+  const uid = useId();
+  const [channel, setChannel] = useState<AlertChannel>('call');
+  const [severity, setSeverity] = useState<AlertSeverity>('info');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<SentResult | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  const [allocation, setAllocation] = useState<Allocation | null>(null);
+  const [allocationReady, setAllocationReady] = useState(false);
+  const [withAllocation, setWithAllocation] = useState(false);
+
+  // Read the farmer's allocation from the API whenever the control opens.
+  // Without one the block explains why and stays out of the way.
+  useEffect(() => {
+    let cancelled = false;
+    setAllocationReady(false);
+    setAllocation(null);
+    setWithAllocation(false);
+    api
+      .allocationFor(farmerId)
+      .then((found) => {
+        if (cancelled) return;
+        setAllocation(found);
+        // Offer it by default: telling the farmer their allocation is the point.
+        setWithAllocation(found !== null);
+      })
+      .catch(() => {
+        if (!cancelled) setAllocation(null);
+      })
+      .finally(() => {
+        if (!cancelled) setAllocationReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [farmerId]);
+
+  async function send(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setBusy(true);
+    setFailed(false);
+    try {
+      const sending = withAllocation && allocation ? allocation : undefined;
+      const res = await api.sendAlert(farmerId, channel, severity, message, sending);
+      setResult({ channel, severity, simulated: res.simulated, detail: res.detail, allocation: sending ?? null });
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const canSend = !busy && (!withAllocation || allocation !== null);
+
+  return (
+    <details className="alert-control">
+      <summary>{t('coord.alert.title')}</summary>
+      <form className="alert-form" onSubmit={(event) => void send(event)}>
+        <p className="muted small">{farmerName}</p>
+
+        <div className="field">
+          <span className="field-label" id={`${uid}-channel`}>
+            {t('coord.alert.channelLabel')}
+          </span>
+          <div className="segmented" role="group" aria-labelledby={`${uid}-channel`}>
+            {CHANNELS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className="segment"
+                aria-pressed={channel === option}
+                onClick={() => setChannel(option)}
+              >
+                {t(`coord.alert.channel.${option}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <span className="field-label" id={`${uid}-severity`}>
+            {t('coord.alert.severityLabel')}
+          </span>
+          <div className="segmented segmented-wrap" role="group" aria-labelledby={`${uid}-severity`}>
+            {SEVERITIES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className="segment"
+                aria-pressed={severity === option}
+                onClick={() => setSeverity(option)}
+              >
+                {t(`coord.alert.severity.${option}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <AllocationField
+          uid={uid}
+          ready={allocationReady}
+          allocation={allocation}
+          checked={withAllocation}
+          onToggle={setWithAllocation}
+          summary={(a) =>
+            t('coord.alert.allocationSummary', { m3: f.m3(a.volume_m3), when: f.range(a.start, a.end) })
+          }
+        />
+
+        <div className="field">
+          <label htmlFor={`${uid}-message`}>{t('coord.alert.messageLabel')}</label>
+          <textarea
+            id={`${uid}-message`}
+            rows={2}
+            value={message}
+            placeholder={t('coord.alert.messageHint')}
+            onChange={(event) => setMessage(event.target.value)}
+          />
+        </div>
+
+        <div className="btn-row">
+          <button type="submit" className="btn" disabled={!canSend}>
+            {busy
+              ? t('coord.alert.sending')
+              : withAllocation && allocation
+                ? t('coord.alert.allocationSend')
+                : t('coord.alert.send')}
+          </button>
+        </div>
+
+        {failed && (
+          <div className="notice notice-crit" role="alert">
+            <p>{t('coord.alert.error')}</p>
+          </div>
+        )}
+
+        {result && (
+          <div className={`notice ${result.simulated ? 'notice-warn' : 'notice-ok'}`} role="status">
+            <p>
+              {result.simulated
+                ? t('coord.alert.simulated', {
+                    channel: t(`coord.alert.channel.${result.channel}`),
+                    severity: t(`coord.alert.severity.${result.severity}`),
+                    detail: result.detail,
+                  })
+                : t('coord.alert.sent', {
+                    channel: t(`coord.alert.channel.${result.channel}`),
+                    severity: t(`coord.alert.severity.${result.severity}`),
+                  })}
+            </p>
+            {result.allocation && (
+              <p>
+                {t('coord.alert.allocationSent', {
+                  name: farmerName,
+                  m3: f.m3(result.allocation.volume_m3),
+                  when: f.range(result.allocation.start, result.allocation.end),
+                })}
+              </p>
+            )}
+          </div>
+        )}
+      </form>
+    </details>
+  );
+}
+
+interface AllocationFieldProps {
+  uid: string;
+  ready: boolean;
+  allocation: Allocation | null;
+  checked: boolean;
+  onToggle: (next: boolean) => void;
+  summary: (allocation: Allocation) => string;
+}
+
+/**
+ * The allocation half of the alert: a single opt-in line with the volume and the
+ * window the API reported, or an explanation when the farmer has none yet.
+ */
+function AllocationField({ uid, ready, allocation, checked, onToggle, summary }: AllocationFieldProps) {
+  const { t } = useI18n();
+
+  if (!ready) {
+    return (
+      <p className="field-hint" role="status">
+        {t('coord.alert.allocationUnavailable')}
+      </p>
+    );
+  }
+
+  if (!allocation) {
+    return (
+      <div className="field">
+        <span className="field-label">{t('coord.alert.allocationLabel')}</span>
+        <p className="field-hint">{t('coord.alert.allocationNone')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="field">
+      <span className="field-label">{t('coord.alert.allocationLabel')}</span>
+      <label className="choice choice-compact" htmlFor={`${uid}-allocation`}>
+        <input
+          id={`${uid}-allocation`}
+          type="checkbox"
+          checked={checked}
+          onChange={(event) => onToggle(event.target.checked)}
+        />
+        <span>
+          <strong>{t('coord.alert.allocationOn')}</strong>
+          <span className="muted small">{summary(allocation)}</span>
+        </span>
+      </label>
+      <p className="field-hint">{t('coord.alert.allocationHelp')}</p>
+    </div>
+  );
+}
