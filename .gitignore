@@ -32,5 +32,14 @@ playwright-report/
 **/.dev.vars
 
 # Third-party music bundled with the brag skill - not ours to redistribute.
-# Re-render with your own track (see showcase/brag-output/composition/hyperframes.json).
+# A fresh checkout omits this MP3, so the `bg-music` <audio> src in
+# showcase/brag-output/composition/index.html will 404 until a track is supplied.
+# To re-render with licensed music:
+#   1. Place your licensed track in
+#      showcase/brag-output/composition/assets/music/.
+#   2. Update the `bg-music` src in
+#      showcase/brag-output/composition/index.html to the new filename.
+#   3. For a music-free render, delete the <audio id="bg-music"> element from
+#      that file (the SFX elements are independent and may stay).
+# This pattern keeps the third-party track excluded from the repository.
 showcase/brag-output/composition/assets/music/*.mp3

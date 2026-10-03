@@ -1,5 +1,4 @@
 {
-  "$schema": "../docs/research/brag.md",
   "project": {
     "name": "Jadal",
     "tagline": "Canal water shared by volume, not by hours.",
@@ -25,19 +24,22 @@
     "outroPrompt": "LLMs propose · Core computes · Coordinator approves. Fair water, verified by ledger."
   },
   "branding": {
+    "$comment": "Palette matches the rendered composition (showcase/brag-output/composition/index.html). accentToken/waterToken are the canonical apps/web/src/styles.css design tokens the composition derives from.",
     "colors": {
-      "background": "#FFFCF5",
-      "surface": "#FFFFFF",
-      "text": "#1E1B16",
-      "muted": "#6E675C",
-      "accent": "#E8A100",
-      "water": "#3F7CA6",
-      "rule": "#ECE5D6"
+      "background": "#faf9f5",
+      "surface": "#ffffff",
+      "text": "#1f1e1d",
+      "muted": "#59564f",
+      "accent": "#873419",
+      "accentToken": "#c96442",
+      "water": "#245373",
+      "waterToken": "#4e7a96",
+      "rule": "#dedad0"
     },
     "fonts": {
-      "display": "Plus Jakarta Sans",
-      "body": "Plus Jakarta Sans",
-      "mono": "JetBrains Mono",
+      "display": "Source Serif 4",
+      "body": "IBM Plex Sans",
+      "mono": "IBM Plex Mono",
       "telugu": "Noto Sans Telugu"
     }
   },

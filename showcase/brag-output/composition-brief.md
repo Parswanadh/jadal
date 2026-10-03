@@ -11,7 +11,7 @@ Create a short, polished launch video for Jadal, demonstrating how physics-based
 - Duration: 20 seconds (15–25s window strictly maintained)
 
 ## Source Material
-- Project root: `/home/parshu/projects/cis/jadal-brag`
+- Repository root: all paths in this brief are repo-root-relative.
 - Primary files read: `README.md`, `HANDOFF.md`, `docs/presentation/jadal-deck.html`, `apps/web/src/styles.css`, `apps/web/src/api/mock.ts`, `packages/contracts/fixtures/demo-scenario.json`
 - Product name: Jadal (జదల్)
 - Tagline / strongest claim: "Canal water shared by volume, not by hours."
@@ -75,15 +75,15 @@ Contracted from `showcase/brag-output/brag-plan.md`:
 ## Audio
 - Audio role: Steady, warm corporate bed with restrained organic UI accents.
 - Audio arc: Quiet contemplative opening; crisp resolution on toggle; authoritative confirmation on ledger seal; warm fade to silence on closing emblem.
-- Music: `assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3` (117.36s, 109.96 BPM, volume 0.32, fade out 18.5s–20.0s).
-- Music cue guidance: Preset loaded from `happy-beats-business-moves-vol-12-by-ende-dot-app.music-cues.json`.
+- Music: `showcase/brag-output/composition/assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3` (117.36s, 109.96 BPM, volume 0.32, fade out 18.5s–20.0s). Third-party track — gitignored; replace with a licensed file of the same name (or update the `bg-music` src in `showcase/brag-output/composition/index.html`) before publishing.
+- Music cue guidance: Preset loaded from `showcase/brag-output/composition/assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.music-cues.json`.
   - Strong cue at 8.74s: lock green metric reveal (`// beat-locked: 8.74s`).
   - Strong cue at 13.11s: lock ledger audit stamp (`// beat-locked: 13.11s`).
   - Strong cue at 17.47s: lock hero brand payoff (`// beat-locked: 17.47s`).
-- SFX files (copied to `assets/sfx/`):
-  - `assets/sfx/impact/impactSoft_medium_001.ogg` at 0.2s (opening anchor)
-  - `assets/sfx/interface/switch_007.ogg` at 5.34s (mode toggle)
-  - `assets/sfx/impact/impactSoft_medium_004.ogg` at 13.11s (ledger seal)
-  - `assets/sfx/interface/bong_001.ogg` at 15.84s (brand chime)
+- SFX files (copied to `showcase/brag-output/composition/assets/sfx/`):
+  - `showcase/brag-output/composition/assets/sfx/impact/impactSoft_medium_001.ogg` at 0.2s (opening anchor)
+  - `showcase/brag-output/composition/assets/sfx/interface/switch_007.ogg` at 5.34s (mode toggle)
+  - `showcase/brag-output/composition/assets/sfx/impact/impactSoft_medium_004.ogg` at 13.11s (ledger seal)
+  - `showcase/brag-output/composition/assets/sfx/interface/bong_001.ogg` at 15.84s (brand chime)
 - Audio-reactive treatment: Subtle RMS shimmer on canal water path and accent badge card. No equalizers or waveform graphics.
 - Restraint rule: Audio serves the seriousness of water equity in agricultural communities.

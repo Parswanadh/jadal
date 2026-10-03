@@ -698,6 +698,18 @@
       </section>
 
       <!-- Audio Elements -->
+      <!--
+        LICENSING: the bundled track
+        "happy-beats-business-moves-vol-12-by-ende-dot-app.mp3" is a third-party
+        music file that is NOT licensed for redistribution. It is gitignored, so
+        a fresh checkout does not include it and this `src` will 404. Before
+        publishing or re-rendering:
+          1. Place a licensed replacement in
+             showcase/brag-output/composition/assets/music/.
+          2. Update the `src` below to the new filename.
+          3. For a music-free render, delete this <audio id="bg-music"> element
+             (the SFX elements further down are independent).
+      -->
       <audio
         id="bg-music"
         data-start="0"
