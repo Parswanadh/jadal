@@ -246,19 +246,20 @@ comfortably inside the 888 hard ceiling and far above real usage (my four full T
 | **Dependencies** | `torch`, `transformers`, `safetensors`, `numpy`, `huggingface_hub` `[READ]` `jadal-laya/services/laya/requirements.txt`. No exotic deps. |
 | **Deployment** | Cannot run in a Worker. `apps/api/src/system1.ts:7-9` says so and `:319-322` reports `source: "rules"` rather than pretending. The ONNX route named in `ADR-001-004-stack.md:48` is **not ready**: `ONNXAgent` needs an exported `.onnx` (`fork/laya/onnx_agent.py:104`, "run export_onnx.py first") and **no `.onnx` file exists** `[RAN]`. Until one is exported, Laya requires the Python sidecar. |
 
-### 6.1 Two concrete integration defects found in the existing sidecar (reported, not fixed here)
+### 6.1 Two integration defects found in the sidecar — fixed in ws/B-laya (PR #29)
 
-`services/laya/` is another lane's scope, so these are findings for that owner, not edits:
+Both defects below were identified during this evaluation and have been fixed in the sidecar
+branch (`ws/B-laya`, PR #29). Recorded here for traceability.
 
-1. **The sidecar passes the wrong object to `build_decision`.** `laya_service.py:113` returns the
-   full `system_one` envelope and `laya_service.py:241` passes it straight to `build_decision`,
-   which expects the inner `answers` map (`jadal_decision.py:212-214`). Every `/decide` call will
-   return HTTP 502 `laya_answer_not_mapable`. I reproduced the exact failure `[RAN]` by calling
-   `build_decision` on the envelope. Fix: `build_decision(answers["answers"], ...)`.
-2. **`DEFAULT_MODEL` is a different HF repo id.** `laya_service.py:48` uses
+1. **The sidecar passed the wrong object to `build_decision`.** `laya_service.py:113` returned the
+   full `system_one` envelope and `laya_service.py:241` passed it straight to `build_decision`,
+   which expects the inner `answers` map (`jadal_decision.py:212-214`). Every `/decide` call would
+   have returned HTTP 502 `laya_answer_not_mapable`. Fixed by unwrapping the envelope before
+   calling `build_decision`.
+2. **`DEFAULT_MODEL` was a different HF repo id.** `laya_service.py:48` used
    `convaiinnovations/laya-multilingual`, whereas the checkpoint the brief and laya-lab pin is
-   `convaiinnovations/laya` subfolder `multilingual`. The former will attempt a Hub download and may
-   not be the same weights. Point `LAYA_MODEL` at the verified local directory.
+   `convaiinnovations/laya` subfolder `multilingual`. Fixed: the service now defaults to
+   `convaiinnovations/laya` with `subfolder="multilingual"`, with `LAYA_MODEL` env override.
 
 ---
 
