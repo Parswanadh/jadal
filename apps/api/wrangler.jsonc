@@ -55,8 +55,8 @@
     }
   ],
   "vars": {
-    "ENVIRONMENT": "production",
-    "DEMO_MODE": "true",
+    "ENVIRONMENT": "demo",
+    "DEMO_MODE": "1",
     "REAL_TELEPHONY": "false"
   },
   "triggers": {
