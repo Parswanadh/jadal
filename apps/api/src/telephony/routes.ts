@@ -1,7 +1,8 @@
 import { Hono } from "hono";
-import type { Context } from "hono";
-import { deepgramStt, sarvamStt, sarvamTts } from "./speech";
-import { validateTwilioSignature } from "./signature";
+
+import { recordSpeechPath } from "./audio";
+import { registerInboundRoutes } from "./inbound";
+import { sarvamTts, transcribe } from "./speech";
 import {
   PROMPT_TE,
   callTwiml,
@@ -11,12 +12,11 @@ import {
   recordTwiml,
   replayTwiml,
   thankYouTwiml,
+  type SpokenTwimlPart,
 } from "./twiml";
-import { DEFAULT_MOUNT, basicAuth, messageAudio } from "./twilio";
-import type { ContactStatusValue, TelephonyDeps } from "./types";
-
-const XML = { "Content-Type": "text/xml; charset=utf-8" } as const;
-const xml = (body: string, status = 200) => new Response(body, { status, headers: XML });
+import { DEFAULT_MOUNT, messageAudio } from "./twilio";
+import type { ContactStatusValue, SpeechPath, SttEngine, TelephonyDeps } from "./types";
+import { fetchTwilioRecording, guardTwilioRequest, isTwilioHost, twimlResponse } from "./webhook";
 
 /** Twilio CallStatus -> Contact status. Anything unlisted is ignored. */
 export const CALL_STATUS_MAP: Record<string, ContactStatusValue> = {
@@ -33,50 +33,97 @@ export const CALL_STATUS_MAP: Record<string, ContactStatusValue> = {
 };
 
 const PROMPT_CACHE_KEY = "telephony:prompt:te:v1";
-const RECORDING_ATTEMPTS = 3;
+
+/**
+ * ADR-005's engine order for the **outbound** recording path: Sarvam `saaras` first, Deepgram `nova-3`
+ * fallback. The inbound answer path reverses it (task 3); both orders are named constants so neither is
+ * a hidden default.
+ */
+export const OUTBOUND_STT_ORDER: readonly SttEngine[] = ["sarvam", "deepgram"];
 
 export function createTelephonyRoutes(deps: TelephonyDeps): Hono {
   const app = new Hono();
   const mount = deps.mountPath ?? DEFAULT_MOUNT;
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
 
-  /**
-   * Validates X-Twilio-Signature and returns the form params (empty for GET), or a Response to send back.
-   * The URL signed is rebuilt from PUBLIC_BASE_URL so tunnels and proxies cannot change it.
-   */
-  async function guard(c: Context): Promise<URLSearchParams | Response> {
-    const raw = c.req.method === "POST" ? await c.req.text() : "";
-    const params = new URLSearchParams(raw);
-    if (deps.env.SKIP_TWILIO_SIGNATURE === "1") return params;
-    const token = deps.env.TWILIO_AUTH_TOKEN;
-    const base = deps.env.PUBLIC_BASE_URL;
-    if (!token || !base) return new Response("telephony not configured", { status: 403 });
-    const u = new URL(c.req.url);
-    const fullUrl = `${base.replace(/\/+$/, "")}${u.pathname}${u.search}`;
-    const ok = await validateTwilioSignature(token, c.req.header("X-Twilio-Signature"), fullUrl, params.entries());
-    return ok ? params : new Response("invalid signature", { status: 403 });
-  }
-
   const urlsFor = (contactId: string) => callUrls(deps.env.PUBLIC_BASE_URL ?? "", mount, contactId);
+
+  /**
+   * The prompt audio, cached under the exact key `/audio/:contactId/prompt` serves.
+   *
+   * Shared by the route and by the TwiML handler's pre-synthesis so a call synthesises the prompt at
+   * most once, and so the handler can tell whether `<Play>` is honest.
+   */
+  async function promptAudio(): Promise<ArrayBuffer> {
+    let audio = await deps.cache.get(PROMPT_CACHE_KEY);
+    if (!audio) {
+      audio = await sarvamTts(deps.fetch, deps.env.SARVAM_API_KEY as string, PROMPT_TE, deps.env.SARVAM_TTS_SPEAKER);
+      await deps.cache.put(PROMPT_CACHE_KEY, audio);
+    }
+    return audio;
+  }
 
   // 2. TwiML for the call: message, one-digit gather, replay once.
   app.on(["GET", "POST"], "/twiml/:contactId", async (c) => {
-    const g = await guard(c);
+    const g = await guardTwilioRequest(deps, c);
     if (g instanceof Response) return g;
     const contactId = c.req.param("contactId");
-    if (!(await deps.getContact(contactId))) return xml(hangupTwiml(), 404);
+    if (!(await deps.getContact(contactId))) return twimlResponse(hangupTwiml(), { status: 404 });
     const replay = c.req.query("replay") === "1";
     const urls = urlsFor(contactId);
-    if (deps.env.SARVAM_API_KEY) return xml(callTwiml({ urls, replay }));
-    // No Sarvam key: let Twilio read the Telugu text itself rather than going silent.
     const message = await deps.getMessage(contactId);
-    return xml(callTwiml({ urls, replay, sayFallback: { message, prompt: PROMPT_TE } }));
+
+    // Pre-synthesise before choosing the verb. `<Play>` is emitted only for audio that really exists;
+    // a Sarvam failure degrades to `<Say>` and is recorded, instead of a `<Play>` URL that 502s and
+    // leaves the farmer listening to silence (task 5).
+    let messagePart: SpokenTwimlPart = { say: message };
+    let messagePath: SpeechPath = "say";
+    let messageReason: string | undefined = "no SARVAM_API_KEY";
+    let promptPart: SpokenTwimlPart = { say: PROMPT_TE };
+    let promptPath: SpeechPath = "say";
+    let promptReason: string | undefined = "no SARVAM_API_KEY";
+
+    if (deps.env.SARVAM_API_KEY) {
+      try {
+        await messageAudio(deps, contactId, message);
+        messagePart = { play: urls.audio };
+        messagePath = "sarvam";
+        messageReason = undefined;
+      } catch (error) {
+        messageReason = error instanceof Error ? error.message : String(error);
+      }
+      try {
+        await promptAudio();
+        promptPart = { play: urls.promptAudio };
+        promptPath = "sarvam";
+        promptReason = undefined;
+      } catch (error) {
+        promptReason = error instanceof Error ? error.message : String(error);
+      }
+    }
+
+    await recordSpeechPath(deps, {
+      phase: "confirmation",
+      path: messagePath,
+      text: message,
+      ...(messageReason === undefined ? {} : { reason: messageReason }),
+      contactId,
+    });
+    await recordSpeechPath(deps, {
+      phase: "prompt",
+      path: promptPath,
+      text: PROMPT_TE,
+      ...(promptReason === undefined ? {} : { reason: promptReason }),
+      contactId,
+    });
+
+    const body = callTwiml({ urls, replay, message: messagePart, prompt: promptPart });
+    return twimlResponse(body, { speechPath: messagePath === "sarvam" && promptPath === "sarvam" ? "sarvam" : "say" });
   });
 
   // 3. Telugu audio. Twilio does not sign <Play> fetches, so this route is unsigned; it serves only the call text.
   app.get("/audio/:contactId", async (c) => {
-    const key = deps.env.SARVAM_API_KEY;
-    if (!key) return c.text("tts not configured", 503);
+    if (!deps.env.SARVAM_API_KEY) return c.text("tts not configured", 503);
     const contactId = c.req.param("contactId");
     try {
       const text = await deps.getMessage(contactId);
@@ -88,14 +135,9 @@ export function createTelephonyRoutes(deps: TelephonyDeps): Hono {
   });
 
   app.get("/audio/:contactId/prompt", async (c) => {
-    const key = deps.env.SARVAM_API_KEY;
-    if (!key) return c.text("tts not configured", 503);
+    if (!deps.env.SARVAM_API_KEY) return c.text("tts not configured", 503);
     try {
-      let audio = await deps.cache.get(PROMPT_CACHE_KEY);
-      if (!audio) {
-        audio = await sarvamTts(deps.fetch, key, PROMPT_TE, deps.env.SARVAM_TTS_SPEAKER);
-        await deps.cache.put(PROMPT_CACHE_KEY, audio);
-      }
+      const audio = await promptAudio();
       return new Response(audio, { headers: { "Content-Type": "audio/wav", "Cache-Control": "public, max-age=86400" } });
     } catch {
       return c.text("tts failed", 502);
@@ -104,125 +146,90 @@ export function createTelephonyRoutes(deps: TelephonyDeps): Hono {
 
   // 4. DTMF result.
   app.post("/gather/:contactId", async (c) => {
-    const g = await guard(c);
+    const g = await guardTwilioRequest(deps, c);
     if (g instanceof Response) return g;
     const contactId = c.req.param("contactId");
     const urls = urlsFor(contactId);
     const digits = (g.get("Digits") ?? "").trim();
     if (digits === "1") {
       await deps.recordAck(contactId, true, "dtmf:1");
-      return xml(thankYouTwiml());
+      return twimlResponse(thankYouTwiml());
     }
-    if (digits === "2") return xml(recordTwiml(urls));
+    if (digits === "2") return twimlResponse(recordTwiml(urls));
     // Anything else: replay once, then hang up (no replay loop).
-    return xml(c.req.query("replay") === "1" ? hangupTwiml() : replayTwiml(urls));
+    return twimlResponse(c.req.query("replay") === "1" ? hangupTwiml() : replayTwiml(urls));
   });
 
   // 5. Recording -> STT -> System 1 -> optional request.
   app.post("/recording/:contactId", async (c) => {
-    const g = await guard(c);
+    const g = await guardTwilioRequest(deps, c);
     if (g instanceof Response) return g;
     const contactId = c.req.param("contactId");
     const contact = await deps.getContact(contactId);
-    if (!contact) return xml(hangupTwiml(), 404);
+    if (!contact) return twimlResponse(hangupTwiml(), { status: 404 });
 
     const recordingUrl = g.get("RecordingUrl");
-    if (!recordingUrl || !isTwilioHost(recordingUrl)) return xml(thankYouTwiml());
+    if (!recordingUrl || !isTwilioHost(recordingUrl)) return twimlResponse(thankYouTwiml());
 
-    const wav = await fetchRecording(recordingUrl);
-    let transcript = "";
-    let engine: "sarvam" | "deepgram" | undefined;
-    if (wav) {
-      const sarvamKey = deps.env.SARVAM_API_KEY;
-      if (sarvamKey) {
-        try {
-          transcript = await sarvamStt(deps.fetch, sarvamKey, wav);
-          if (transcript) engine = "sarvam";
-        } catch {
-          transcript = "";
-        }
-      }
-      const dgKey = deps.env.DEEPGRAM_API_KEY;
-      if (!transcript && dgKey) {
-        try {
-          transcript = await deepgramStt(deps.fetch, dgKey, wav);
-          if (transcript) engine = "deepgram";
-        } catch {
-          transcript = "";
-        }
-      }
-    }
+    const wav = await fetchTwilioRecording(deps, recordingUrl, sleep);
+    const outcome =
+      wav === null
+        ? ({ ok: false, reason: "recording could not be downloaded" } as const)
+        : await transcribe(deps.fetch, deps.env, wav, OUTBOUND_STT_ORDER);
 
-    if (!transcript || !engine) {
+    if (!outcome.ok) {
       // The farmer pressed 2 (urgent). Never drop that signal because speech recognition failed.
+      await recordSpeechPath(deps, { phase: "transcript", path: "keyword", reason: outcome.reason, contactId });
       await deps.raiseRequest({
         farmerId: contact.farmer_id,
         type: "urgent",
         reason: "Urgent request by keypad (2); the voice recording could not be transcribed.",
         channel: "voice",
       });
-      return xml(thankYouTwiml());
+      return twimlResponse(thankYouTwiml());
     }
 
-    await deps.onTranscript?.(contactId, transcript, engine);
-    const result = await deps.classify(transcript);
+    await recordSpeechPath(deps, {
+      phase: "transcript",
+      path: outcome.engine,
+      text: outcome.transcript,
+      contactId,
+    });
+    await deps.onTranscript?.(contactId, outcome.transcript, outcome.engine);
+    const result = await deps.classify(outcome.transcript);
     if (result.intent === "urgent_request" || result.intent === "buffer_request") {
       await deps.raiseRequest({
         farmerId: contact.farmer_id,
         type: result.intent === "urgent_request" ? "urgent" : "buffer",
-        reason: transcript,
+        reason: outcome.transcript,
         channel: "voice",
       });
     }
-    return xml(thankYouTwiml());
+    return twimlResponse(thankYouTwiml());
   });
-
-  async function fetchRecording(recordingUrl: string): Promise<ArrayBuffer | null> {
-    const sid = deps.env.TWILIO_ACCOUNT_SID;
-    const token = deps.env.TWILIO_AUTH_TOKEN;
-    const headers: Record<string, string> = sid && token ? { Authorization: basicAuth(sid, token) } : {};
-    const target = recordingUrl.endsWith(".wav") ? recordingUrl : `${recordingUrl}.wav`;
-    for (let attempt = 1; attempt <= RECORDING_ATTEMPTS; attempt++) {
-      try {
-        const res = await deps.fetch(target, { headers });
-        if (res.ok) return await res.arrayBuffer();
-      } catch {
-        /* retry */
-      }
-      if (attempt < RECORDING_ATTEMPTS) await sleep(500 * attempt);
-    }
-    return null;
-  }
 
   // 6. Call progress -> contact status so the escalation ladder can retry.
   app.post("/status/:contactId", async (c) => {
-    const g = await guard(c);
+    const g = await guardTwilioRequest(deps, c);
     if (g instanceof Response) return g;
     const contactId = c.req.param("contactId");
     const callStatus = (g.get("CallStatus") ?? "").toLowerCase();
     const mapped = CALL_STATUS_MAP[callStatus];
-    if (!mapped) return xml(emptyTwiml());
+    if (!mapped) return twimlResponse(emptyTwiml());
     const contact = await deps.getContact(contactId);
     // A confirmed or escalated contact must not be overwritten by late call-progress events.
-    if (contact && (contact.status === "acknowledged" || contact.status === "escalated")) return xml(emptyTwiml());
+    if (contact && (contact.status === "acknowledged" || contact.status === "escalated")) return twimlResponse(emptyTwiml());
     const duration = g.get("CallDuration");
     await deps.updateContactStatus(contactId, mapped, {
       callStatus,
       callSid: g.get("CallSid") ?? undefined,
       durationSec: duration ? Number(duration) : undefined,
     });
-    return xml(emptyTwiml());
+    return twimlResponse(emptyTwiml());
   });
 
-  return app;
-}
+  // 7. Inbound: the farmer called us. Answer, speak Telugu, understand the reply.
+  registerInboundRoutes(app, deps);
 
-/** Only fetch recordings from Twilio itself, so the account credentials are never sent elsewhere. */
-function isTwilioHost(url: string): boolean {
-  try {
-    const u = new URL(url);
-    return u.protocol === "https:" && (u.hostname === "api.twilio.com" || u.hostname.endsWith(".twilio.com"));
-  } catch {
-    return false;
-  }
+  return app;
 }

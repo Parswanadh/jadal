@@ -45,19 +45,40 @@ export function callUrls(base: string, mountPath: string, contactId: string): Ca
 export interface CallTwimlOptions {
   urls: CallUrls;
   replay: boolean;
-  /** When set, speak this text with <Say> instead of playing Sarvam audio (no Sarvam key). */
+  /** Per-part audio decision: `<Play>` when Sarvam really produced audio, `<Say>` when it did not. */
+  message?: SpokenTwimlPart;
+  prompt?: SpokenTwimlPart;
+  /** Legacy shorthand: speak both parts with `<Say>`. Retained for the no-key path and old callers. */
   sayFallback?: { message: string; prompt: string };
 }
 
+/** One spoken part of a call: real audio to play, or the text Twilio reads instead. */
+export interface SpokenTwimlPart {
+  /** `<Play>` URL; set only when the audio was actually synthesised. */
+  readonly play?: string;
+  /** `<Say language="te-IN">` text; set when audio was not available. */
+  readonly say?: string;
+}
+
+/** Render one spoken part. `play` wins when both are set, because it is the real audio. */
+export function renderSpokenPart(part: SpokenTwimlPart): string {
+  if (part.play !== undefined) return `<Play>${escapeXml(part.play)}</Play>`;
+  return `<Say language="te-IN">${escapeXml(part.say ?? "")}</Say>`;
+}
+
+/** The speech path a TwiML body encodes: `sarvam` only when every part is real audio. */
+export function spokenPath(...parts: readonly SpokenTwimlPart[]): "sarvam" | "say" {
+  return parts.every((part) => part.play !== undefined) ? "sarvam" : "say";
+}
+
 /** Message, then a one-digit Gather holding the prompt, then replay once (the replay pass hangs up instead). */
-export function callTwiml({ urls, replay, sayFallback }: CallTwimlOptions): string {
-  const say = (t: string) => `<Say language="te-IN">${escapeXml(t)}</Say>`;
-  const message = sayFallback ? say(sayFallback.message) : `<Play>${escapeXml(urls.audio)}</Play>`;
-  const prompt = sayFallback ? say(sayFallback.prompt) : `<Play>${escapeXml(urls.promptAudio)}</Play>`;
+export function callTwiml({ urls, replay, message, prompt, sayFallback }: CallTwimlOptions): string {
+  const messagePart = message ?? (sayFallback ? { say: sayFallback.message } : { play: urls.audio });
+  const promptPart = prompt ?? (sayFallback ? { say: sayFallback.prompt } : { play: urls.promptAudio });
   const action = replay ? urls.gatherReplay : urls.gather;
   const tail = replay ? "<Hangup/>" : `<Redirect method="POST">${escapeXml(urls.twimlReplay)}</Redirect>`;
   return wrap(
-    `${message}<Gather input="dtmf" numDigits="1" timeout="8" action="${escapeXml(action)}" method="POST">${prompt}</Gather>${tail}`,
+    `${renderSpokenPart(messagePart)}<Gather input="dtmf" numDigits="1" timeout="8" action="${escapeXml(action)}" method="POST">${renderSpokenPart(promptPart)}</Gather>${tail}`,
   );
 }
 
@@ -79,4 +100,71 @@ export function hangupTwiml(): string {
 
 export function emptyTwiml(): string {
   return wrap("");
+}
+
+/* ------------------------------------------------------------------ inbound answer */
+
+/**
+ * URLs for the inbound (farmer-called-us) flow.
+ *
+ * Unlike {@link callUrls} these are not keyed by contact id: an inbound caller is identified by their
+ * phone number, not by an outreach contact, so the phrases are the same for everyone and the audio
+ * routes take the phrase name. `greeting` accepts an optional `?name=` so a resolved caller hears
+ * their own name without a per-caller URL existing anywhere else.
+ */
+export interface InboundUrls {
+  readonly respond: string;
+  readonly listen: string;
+  readonly recording: string;
+  readonly recordingUrgent: string;
+}
+
+export function inboundUrls(base: string, mountPath: string): InboundUrls {
+  const root = `${base.replace(/\/+$/, "")}${mountPath}`;
+  return {
+    respond: `${root}/inbound/respond`,
+    listen: `${root}/inbound/listen`,
+    recording: `${root}/inbound/recording`,
+    recordingUrgent: `${root}/inbound/recording?urgent=1`,
+  };
+}
+
+export interface InboundTwimlOptions {
+  readonly urls: InboundUrls;
+  readonly greeting: SpokenTwimlPart;
+  readonly prompt: SpokenTwimlPart;
+  /** Seconds to wait for a keypress before falling through to the recording step. */
+  readonly gatherTimeoutSec?: number;
+}
+
+/**
+ * Answer an inbound call: greet, then a one-digit DTMF `<Gather>` that also holds the prompt, then
+ * fall through to {@link listenTwiml}.
+ *
+ * `input="dtmf"` only, deliberately: the farmer's spoken reply is captured by `<Record>` and
+ * transcribed by Sarvam/Deepgram, so the transcript always has a named engine behind it. Twilio's own
+ * `input="speech"` recogniser is not used (see `docs/VOICE.md`). A farmer who speaks instead of
+ * pressing a key simply falls through to the recording step after `gatherTimeoutSec`.
+ */
+export function inboundTwiml({ urls, greeting, prompt, gatherTimeoutSec = 5 }: InboundTwimlOptions): string {
+  return wrap(
+    `${renderSpokenPart(greeting)}<Gather input="dtmf" numDigits="1" timeout="${gatherTimeoutSec}" action="${escapeXml(urls.respond)}" method="POST">${renderSpokenPart(prompt)}</Gather><Redirect method="POST">${escapeXml(urls.listen)}</Redirect>`,
+  );
+}
+
+/** The cue, then `<Record>` — the step that actually listens to the farmer's free speech. */
+export function listenTwiml(urls: InboundUrls, cue: SpokenTwimlPart): string {
+  return wrap(
+    `${renderSpokenPart(cue)}<Record maxLength="30" playBeep="true" action="${escapeXml(urls.recording)}" method="POST"/>`,
+  );
+}
+
+/** `<Record>` for the DTMF-2 urgent path; `action` carries `?urgent=1` so the keypad signal survives. */
+export function inboundRecordTwiml(action: string): string {
+  return wrap(`<Record maxLength="30" playBeep="true" action="${escapeXml(action)}" method="POST"/>`);
+}
+
+/** Say one thing and hang up — the inbound confirmations and honest failures. */
+export function speakAndHangupTwiml(part: SpokenTwimlPart): string {
+  return wrap(`${renderSpokenPart(part)}<Hangup/>`);
 }

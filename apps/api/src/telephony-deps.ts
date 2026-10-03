@@ -26,14 +26,14 @@ import type { Contact, System1Result } from "@jadal/contracts";
 
 import { now } from "./db/clock";
 import { newId } from "./db/id";
-import { getContact, getFarmer } from "./db/repo";
+import { getContact, getFarmer, listFarmers } from "./db/repo";
 import { appendEvent } from "./db/store";
 import { DEMO_CANAL_ID } from "./demo";
 import type { Env } from "./env";
 import { providerEnv } from "./http";
 import { raiseRequest } from "./requests";
 import { classify, extractVolumeM3 } from "./system1";
-import type { AudioCache, RaiseRequestInput, StatusDetail, TelephonyDeps, TelephonyEnv } from "./telephony";
+import type { AudioCache, InboundCaller, RaiseRequestInput, StatusDetail, TelephonyDeps, TelephonyEnv } from "./telephony";
 import { placeCall, type PlaceCallInput, type PlaceCallResult } from "./telephony";
 
 /**
@@ -214,6 +214,30 @@ export function buildTelephonyDeps(env: Env): TelephonyDeps {
       const record = await getContact(env, contactId);
       if (record === null) return;
       await updateContact(env, { ...plainContact(record), transcript });
+    },
+
+    /**
+     * Attribute an inbound call to a farmer by their phone number.
+     *
+     * Matches on the last 10 digits so that `+91 83417 17162`, `08341717162` and `8341717162`
+     * all resolve to the same farmer — Twilio's `From` and the seeded `Farmer.phone` are not
+     * guaranteed to use the same country-code formatting.
+     *
+     * Returns `null` for an unknown number rather than throwing: the inbound flow then greets the
+     * caller and says plainly that the number is not on the roster, instead of guessing a farmer.
+     */
+    async resolveCaller(phone: string): Promise<InboundCaller | null> {
+      const digits = phone.replace(/\D/g, "").slice(-10);
+      if (digits.length === 0) return null;
+      const farmers = await listFarmers(env);
+      const hit = farmers.find((f) => f.farmer.phone.replace(/\D/g, "").endsWith(digits));
+      if (hit === undefined) return null;
+      return { farmerId: hit.farmer.id, farmerName: hit.farmer.name };
+    },
+
+    /** Record which speech path served each phase, so a fallback is visible in the logs. */
+    async onSpeechPath(detail): Promise<void> {
+      console.log("[voice]", JSON.stringify(detail));
     },
   };
 }
