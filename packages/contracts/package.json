@@ -16,7 +16,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "echo \"No tests for contracts yet\"",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit"
   },
@@ -24,6 +24,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.7"
   }
 }

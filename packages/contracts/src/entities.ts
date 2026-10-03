@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+// Naming convention boundary. Entity field names are snake_case because they are the wire/DB
+// vocabulary: each key here maps 1:1 to a projection column (see apps/api/src/db/schema.sql.ts) and
+// is what `JSON.stringify` puts on the HTTP response. TypeScript-only identifiers — schema names,
+// type aliases, functions, locals — are camelCase (`CropPlan`, `cropEngine`, `weekStart`). Never
+// camelCase a contract field to "look JS-y": the row mapper and the API client both read the
+// snake_case key, so renaming it silently drops the value.
+//
 // Units are encoded in field names: _m3 (cubic metres), _m3s (m³/s), _m (metres), _ha (hectares),
 // _mm (millimetres of water depth), _h (hours). Timestamps are ISO-8601 strings in UTC.
 

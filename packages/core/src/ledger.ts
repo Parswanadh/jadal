@@ -122,6 +122,14 @@ function round6(val: number): number {
   return Math.round(val * 1e6) / 1e6;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
 export const ledger = {
   /**
    * Pure: turn one event into its double entries.
@@ -261,16 +269,16 @@ export const ledger = {
         if (e.decision === "approve" && e.volume_m3 > 0) {
           const isBuffer =
             e.request_type === "buffer" ||
-            (e as any).request?.type === "buffer" ||
-            (e as any).requestType === "buffer" ||
+            asString(asRecord(e.request)?.type) === "buffer" ||
+            asString(e.requestType) === "buffer" ||
             /buffer/i.test(e.note ?? "") ||
             /buffer/i.test(e.request_id) ||
-            (e as any).from === "buffer";
+            asString(e.from) === "buffer";
 
           const farmerId =
             e.farmer_id ??
-            (e as any).farmerId ??
-            (e as any).request?.farmer_id ??
+            asString(e.farmerId) ??
+            asString(asRecord(e.request)?.farmer_id) ??
             (e.actor?.kind === "farmer" ? e.actor.id : undefined) ??
             (e.request_id.match(/(?:req[-_])?(f\d+|farmer\d+)/i)?.[1]) ??
             "unknown";

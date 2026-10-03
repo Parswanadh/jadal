@@ -39,9 +39,8 @@ export default function RegistrationForm({ api, outlets }: { api: FarmerApi; out
 
   async function onSubmit(ev: FormEvent) {
     ev.preventDefault();
-    const input = { name, phone, outlet_id: outletId, plot_area_ha: Number(plotArea), crops };
+    const input = { name, phone, outlet_id: outletId, soil, plot_area_ha: Number(plotArea), crops };
     const errs = validateRegistration(input, todayIso());
-    if (soil.length === 0) errs.push("register.errSoil");
     setErrors(errs);
     setSentName(null);
     if (errs.length > 0) return;

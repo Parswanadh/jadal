@@ -55,6 +55,4 @@ export function formatElapsed(totalSecs: number): string {
   return `${mm}:${ss}`;
 }
 
-export function stepByNumber(n: number): DemoStep | undefined {
-  return DEMO_STEPS.find((s) => s.step === n);
-}
+

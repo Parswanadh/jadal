@@ -105,7 +105,10 @@ export async function placeCall(
   } catch (e) {
     return { simulated: false, ok: false, error: e instanceof Error ? e.message : String(e) };
   }
-  const data = (await res.json().catch(() => ({}))) as { sid?: string; status?: string; message?: string };
+  const data = (await res.json().catch((err) => {
+    console.error("twilio: failed to parse response JSON:", err);
+    return {};
+  })) as { sid?: string; status?: string; message?: string };
   if (!res.ok || !data.sid) {
     return { simulated: false, ok: false, httpStatus: res.status, error: data.message ?? `twilio ${res.status}` };
   }

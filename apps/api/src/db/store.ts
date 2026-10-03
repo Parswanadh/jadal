@@ -310,6 +310,16 @@ export interface ReadEventsOptions {
   canalId?: string;
 }
 
+const SAFE_WHERE_PATTERN = /^[a-z_]+ *(?:=|>|<|>=|<=|IN) *\(?(?:\?| *)*\)?$/i;
+
+function assertSafeWhere(clauses: readonly string[]): void {
+  for (const clause of clauses) {
+    if (!SAFE_WHERE_PATTERN.test(clause)) {
+      throw new Error(`unsafe WHERE clause: ${JSON.stringify(clause)}`);
+    }
+  }
+}
+
 /**
  * Events in `seq` order, oldest first. The demo and the `/api/events` route both render this list
  * forwards, so "newest last" is the natural reading.
@@ -322,6 +332,7 @@ export async function readEvents(env: DbEnv, options: ReadEventsOptions = {}): P
     where.push(`type IN (${options.types.map(() => "?").join(", ")})`);
     bindings.push(...options.types);
   }
+  assertSafeWhere(where);
   if (options.sinceSeq !== undefined) {
     where.push("seq > ?");
     bindings.push(options.sinceSeq);

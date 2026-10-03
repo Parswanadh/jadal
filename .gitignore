@@ -43,3 +43,4 @@ playwright-report/
 #      that file (the SFX elements are independent and may stay).
 # This pattern keeps the third-party track excluded from the repository.
 showcase/brag-output/composition/assets/music/*.mp3
+.claude/worktrees/

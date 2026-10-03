@@ -112,7 +112,10 @@ export class UrgentRequestWorkflow extends WorkflowEntrypoint<CampaignEnv, Urgen
         type: "contact.acknowledged",
         timeout: "1 hour",
       })
-      .catch(() => null);
+      .catch((err) => {
+        console.error("workflow: await-acknowledgement failed:", err);
+        return null;
+      });
 
     let finalId = firstId;
     if (ack === null) {

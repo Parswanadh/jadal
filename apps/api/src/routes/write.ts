@@ -22,6 +22,7 @@ import type {
   Entitlement,
   Farmer,
   JadalEvent,
+  Outlet,
   Plot,
   WaterRequest,
 } from "@jadal/contracts";
@@ -40,6 +41,7 @@ import {
   listEntitlements,
   listOutlets,
 } from "../db/repo";
+import type { RosterRecord } from "../db/repo";
 import { appendEvent, planAppend } from "../db/store";
 import { DEMO_CANAL_ID, DEMO_SEASON_SUPPLY_M3 } from "../demo";
 import type { Env } from "../env";
@@ -137,6 +139,82 @@ async function appendDecision(
   }
 
   await env.DB.batch(statements.map((statement) => env.DB.prepare(statement.sql).bind(...statement.bindings)));
+}
+
+/** The release window and outlet lookup a roster's notification messages are rendered against. */
+interface RosterContactContext {
+  readonly window: Awaited<ReturnType<typeof getReleaseWindow>>;
+  readonly outlets: ReadonlyMap<string, Outlet>;
+}
+
+/**
+ * Tell one farmer that they have a turn in the approved roster.
+ *
+ * The contact is recorded as `queued` and the message id is handed to the outbound queue, which the
+ * campaign runner drains. Returns `false` when the farmer has since been removed, so the caller's
+ * `contacts_queued` count only reflects messages actually queued.
+ */
+async function queueRosterContact(
+  env: Env,
+  roster: RosterRecord,
+  farmerId: string,
+  context: RosterContactContext,
+  at: string,
+): Promise<boolean> {
+  const farmer = await getFarmer(env, farmerId);
+  if (farmer === null) return false;
+
+  const turn = roster.turns.find((candidate) => candidate.farmer_id === farmerId);
+  const outlet = turn === undefined ? undefined : context.outlets.get(turn.outlet_id);
+  const message = templateForPurpose("roster_change", {
+    farmerName: farmer.farmer.name,
+    windowStart: context.window?.start,
+    windowEnd: context.window?.end,
+    outletName: outlet?.name,
+    chainageM: outlet?.chainage_m,
+    allocatedM3: turn?.planned_volume_m3,
+  });
+
+  const contact: Contact = {
+    id: newId("contact"),
+    farmer_id: farmerId,
+    channel: farmer.farmer.preferred_channels[0] ?? "voice",
+    purpose: "roster_change",
+    status: "queued",
+    attempt: 1,
+    message_te: message.te,
+    message_en: message.en,
+    at,
+  };
+
+  await appendEvent(env, {
+    id: newId("evt"),
+    at,
+    canal_id: DEMO_CANAL_ID,
+    actor: AGENT_CALLER_ACTOR,
+    type: "contact.updated",
+    contact,
+  });
+  await env.OUTBOUND.send({ contact_id: contact.id, attempt: 1 });
+  return true;
+}
+
+/**
+ * Notify every farmer with a turn in the approved roster, once each, and return the count queued.
+ *
+ * The window and outlet lookup is built once here rather than per farmer, so approving a roster with
+ * N distinct farmers costs one release-window read and one outlet read, not 2N.
+ */
+async function queueRosterContacts(env: Env, roster: RosterRecord, at: string): Promise<number> {
+  const window = await getReleaseWindow(env, roster.release_window_id);
+  const outlets = new Map((await listOutlets(env, DEMO_CANAL_ID)).map((outlet) => [outlet.id, outlet]));
+  const context: RosterContactContext = { window, outlets };
+
+  let contactsQueued = 0;
+  for (const farmerId of new Set(roster.turns.map((turn) => turn.farmer_id))) {
+    if (await queueRosterContact(env, roster, farmerId, context, at)) contactsQueued += 1;
+  }
+  return contactsQueued;
 }
 
 /** Register every `POST` route on `app`. */
@@ -307,51 +385,9 @@ export function registerWriteRoutes(app: Hono<{ Bindings: Env }>): void {
       roster_id: rosterId,
     });
 
-    // Every farmer with a turn in the approved roster must be told the turn exists. The contact is
-    // recorded as `queued` and the message id is handed to the outbound queue, which the campaign
-    // runner drains; `contacts_queued` is the count the coordinator sees before acknowledgements tick in.
-    const window = await getReleaseWindow(c.env, roster.release_window_id);
-    const outlets = new Map((await listOutlets(c.env, DEMO_CANAL_ID)).map((outlet) => [outlet.id, outlet]));
-
-    let contactsQueued = 0;
-    for (const farmerId of new Set(roster.turns.map((turn) => turn.farmer_id))) {
-      const farmer = await getFarmer(c.env, farmerId);
-      if (farmer === null) continue;
-
-      const turn = roster.turns.find((candidate) => candidate.farmer_id === farmerId);
-      const outlet = turn === undefined ? undefined : outlets.get(turn.outlet_id);
-      const message = templateForPurpose("roster_change", {
-        farmerName: farmer.farmer.name,
-        windowStart: window?.start,
-        windowEnd: window?.end,
-        outletName: outlet?.name,
-        chainageM: outlet?.chainage_m,
-        allocatedM3: turn?.planned_volume_m3,
-      });
-
-      const contact: Contact = {
-        id: newId("contact"),
-        farmer_id: farmerId,
-        channel: farmer.farmer.preferred_channels[0] ?? "voice",
-        purpose: "roster_change",
-        status: "queued",
-        attempt: 1,
-        message_te: message.te,
-        message_en: message.en,
-        at,
-      };
-
-      await appendEvent(c.env, {
-        id: newId("evt"),
-        at,
-        canal_id: DEMO_CANAL_ID,
-        actor: AGENT_CALLER_ACTOR,
-        type: "contact.updated",
-        contact,
-      });
-      await c.env.OUTBOUND.send({ contact_id: contact.id, attempt: 1 });
-      contactsQueued += 1;
-    }
+    // Every farmer with a turn in the approved roster must be told the turn exists; `contacts_queued`
+    // is the count the coordinator sees before acknowledgements tick in.
+    const contactsQueued = await queueRosterContacts(c.env, roster, at);
 
     return c.json(parseResponse(routes.approveRoster.response, { ok: true, contacts_queued: contactsQueued }));
   });

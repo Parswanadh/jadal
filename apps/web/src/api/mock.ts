@@ -497,7 +497,7 @@ function recordDecisionContact(
   });
 }
 
-export function mockBalances() {
+function mockBalances() {
   const farmers = scenario.farmers.map((f) => ({
     farmer_id: f.id,
     name: f.name,
