@@ -265,7 +265,16 @@ CREATE TABLE IF NOT EXISTS weather_day (
   tmax_c    REAL,
   tmin_c    REAL,
   PRIMARY KEY (canal_id, date)
-);`;
+);
+
+-- ---------------------------------------------------------------------------
+-- Schema version
+-- ---------------------------------------------------------------------------
+-- \`schema_version\` is created in 0001_init.sql; every later migration appends its own row so
+-- \`SELECT MAX(version)\` reports the actually-applied schema. Without this row the version stays
+-- stale at 1 after 0002 is applied.
+INSERT OR IGNORE INTO schema_version (version) VALUES (2);
+`;
 
 /** Every migration in lexical order, exactly as the harness and `wrangler` apply them. */
 export const MIGRATION_SQL = [INIT_SCHEMA_SQL, JADAL_SCHEMA_SQL].join("\n");
