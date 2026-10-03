@@ -32,7 +32,7 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 import { runEscalation, type CampaignEnv } from "./escalation";
 
-export { WorkflowEntrypoint, WorkflowEvent, WorkflowStep };
+export { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep };
 
 /* ------------------------------------------------------------------ urgent request */
 

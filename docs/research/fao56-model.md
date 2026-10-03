@@ -340,6 +340,16 @@ We simulate a single mid-season week (7 days) for two adjacent $1.0\text{ ha}$ p
 
 ### 5.2 Plot 1: Groundnut (1.0 ha, Upland Furrow Irrigation)
 
+> **Parameter divergence (audit F-01).** The worked example below is computed from a
+> climate-adjusted $K_{c,mid}$ of 1.15 and a mid-season $Z_r$ of 0.80 m. The **shipped**
+> `packages/core/src/data/crop-params.json` groundnut row carries the **FAO-56 Table 6.2 verified**
+> values instead — $K_{c,mid}$ **1.05** (not 1.15) and $Z_r$ max **1.00 m** (not 0.80 m) — and the
+> engine applies no climate adjustment unless the caller supplies wind and humidity (Eq. 6.18/6.21,
+> see F-04). Fed the shipped row, the engine therefore returns **417.69 m³**, not 462.12 m³
+> (a 44.43 m³ / 10.6% shortfall). The 462.12 figure is reproducible only with the hand-typed
+> coefficients above; the divergence is pinned by `packages/core/src/models.audit.test.ts` (F-01).
+> The shipped table is correct against the source; this example's inputs are the unverified ones.
+
 #### 1. Soil & Root Parameters
 * **Soil Texture:** Red sandy clay loam (*Chalka* soil).
 * **Moisture Retention:** $\theta_{\text{FC}} = 0.28\text{ m}^3\text{ m}^{-3}$, $\theta_{\text{WP}} = 0.15\text{ m}^3\text{ m}^{-3}$.

@@ -445,10 +445,8 @@ describe("ledger property-based tests (seeded PRNG)", () => {
       const seasonSupply = 100000 + Math.floor(prng() * 100000);
 
       // Entitlements summing to less than seasonSupply
-      let remainingSupply = seasonSupply;
       const entitlements = farmerIds.map((fId) => {
         const quota = Math.floor(prng() * 10000) + 2000;
-        remainingSupply -= quota;
         return { farmer_id: fId, volume_m3: quota };
       });
 

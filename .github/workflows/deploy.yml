@@ -74,18 +74,8 @@ jobs:
       - name: Build All Packages and Apps
         run: pnpm build
 
-      - name: Apply D1 Database Migrations (Remote)
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: 'apps/api'
-          command: d1 migrations apply jadal-db --remote
-
-      - name: Deploy Worker and Static Assets
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: 'apps/api'
-          command: deploy
+      - name: Apply Migrations and Deploy Worker & Static Assets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm run deploy

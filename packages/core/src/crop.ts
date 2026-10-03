@@ -123,7 +123,7 @@ export function adjustKcForClimate(
   }
   // `(h/3)^0.3` is only meaningful for a positive height; the source bounds h to 0.1-10 m.
   const h = Math.min(10, Math.max(0.1, maxHeight_m));
-  const adjustment = (0.04 * (u2_ms - 2) - 0.004 * (rhMin_pct - 45)) * Math.pow(h / 3, 0.3);
+  const adjustment = (0.04 * (u2_ms - 2) - 0.004 * (rhMin_pct - 45)) * (h / 3) ** 0.3;
   return kcTab + adjustment;
 }
 

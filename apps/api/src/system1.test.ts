@@ -11,7 +11,7 @@
  * result would pass while the real call fails.
  */
 
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   JEV_DEFAULT_TIMEOUT_MS,
@@ -43,6 +43,7 @@ import {
   resolveProviderChain,
   type ProviderEnv,
 } from "./system1";
+import { recordSpendUsd, resetSpendTracker, spentUsd } from "./agents/llm";
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -750,5 +751,34 @@ describe("classify", () => {
       throw new Error("boom");
     });
     await expect(classify(broken, "నీళ్లు లేవు")).resolves.toEqual(classifyByRules("నీళ్లు లేవు"));
+  });
+});
+
+/* ------------------------------------------------------------------ OpenRouter spend limit */
+
+describe("OpenRouter spend limit", () => {
+  beforeEach(() => resetSpendTracker());
+
+  it("falls back to rules without calling Jev once the limit is reached", async () => {
+    const env = stubEnv(() => json(JEV_OK), {
+      SYSTEM1_PROVIDER: "jev",
+      OPENROUTER_SPEND_LIMIT_USD: "1",
+    });
+    recordSpendUsd(1);
+
+    const outcome = await classifyDetailed(env, "నీళ్లు లేవు");
+
+    expect(env.calls).toHaveLength(0);
+    expect(outcome.source).toBe("rules");
+    expect(outcome.fallback?.reason).toBe("spend_limit");
+  });
+
+  it("records the cost Jev reports against the cumulative tracker", async () => {
+    const env = stubEnv(() => json(JEV_OK), { SYSTEM1_PROVIDER: "jev" });
+
+    const outcome = await classifyDetailed(env, "నీళ్లు లేవు");
+
+    expect(outcome.source).toBe("jev");
+    expect(spentUsd()).toBeCloseTo(JEV_OK.usage.cost);
   });
 });

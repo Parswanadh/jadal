@@ -8,11 +8,12 @@
     "dev:live": "wrangler dev --local --port 8788 --ip 127.0.0.1 --assets ./test/live-assets --compatibility-date 2026-07-29 --var DEMO_MODE:1 --var ENVIRONMENT:development --var SKIP_TWILIO_SIGNATURE:1",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "lint": "tsc --noEmit",
+    "lint": "biome lint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "migrate:local": "wrangler d1 migrations apply jadal-db --local",
-    "deploy": "wrangler deploy"
+    "migrate:remote": "wrangler d1 migrations apply jadal-db --remote",
+    "deploy": "pnpm migrate:remote && wrangler deploy"
   },
   "dependencies": {
     "@jadal/contracts": "workspace:*",

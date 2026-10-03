@@ -40,7 +40,7 @@
 
 import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { join } from "node:path";
 
 import { describeKey, loadKey } from "./key-file.mjs";
 
@@ -48,7 +48,6 @@ const DEFAULT_CLOUD_URL = "https://app.befailproof.ai";
 const INTROSPECT_PATH = "/v1/auth/introspect";
 /** `/enforcement/v1/jev` appended to the Cloud origin — see `jevCloudBaseUrl` in the CLI. */
 const JEV_CLOUD_BASE_PATH = "/enforcement/v1/jev";
-const SCHEMA_VERSION = 1;
 
 function parseArgs(argv) {
   const out = { apply: false, url: DEFAULT_CLOUD_URL, keyFile: null, machineId: null };

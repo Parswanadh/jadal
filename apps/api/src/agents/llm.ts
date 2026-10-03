@@ -49,9 +49,7 @@ const TEMPERATURE = 0.1;
  * object serves both the app and the tests. `body` is `string`, not `unknown`, because that is
  * assignable to both this interface and the DOM `BodyInit`.
  */
-export interface AgentFetch {
-  (input: string, init?: { method?: string; body?: string; headers?: Record<string, string>; signal?: AbortSignal }): Promise<Response>;
-}
+export type AgentFetch = (input: string, init?: { method?: string; body?: string; headers?: Record<string, string>; signal?: AbortSignal }) => Promise<Response>
 
 /**
  * The bindings the agents read.
@@ -69,6 +67,8 @@ export interface AgentEnv {
   OPENROUTER_API_KEY?: string;
   AI_GATEWAY_URL?: string;
   OPENROUTER_MODEL?: string;
+  /** Maximum OpenRouter spend in USD, as a string. Unset/blank => no limit. See `isOverSpendLimit`. */
+  OPENROUTER_SPEND_LIMIT_USD?: string;
 }
 
 export type ChatRole = "system" | "user" | "assistant" | "tool";
@@ -103,6 +103,77 @@ export interface ChatRequest {
 }
 
 const FALLBACK: ChatResult = { content: null, toolCalls: [], source: "fallback" };
+
+/* ------------------------------------------------------------------ spend limit */
+
+/**
+ * USD per 1M tokens for the models Jadal may call. Only the default model is listed; an unknown slug
+ * is charged at a deliberately high fallback so an unpriced model is over-counted, never free.
+ */
+const MODEL_PRICES: Readonly<Record<string, { readonly inputPerM: number; readonly outputPerM: number }>> = {
+  "openai/gpt-4o-mini": { inputPerM: 0.15, outputPerM: 0.6 },
+};
+const DEFAULT_PRICE = { inputPerM: 1, outputPerM: 3 } as const;
+
+/**
+ * Cumulative OpenRouter spend this isolate has observed, in USD.
+ *
+ * Module-level on purpose: this is a coarse guard against a runaway demo, not a billing ledger. A
+ * Worker runs many isolates and recycles them, so each isolate counts only what it saw; the hard
+ * stop remains the account limit on OpenRouter itself. A durable counter would need D1 or KV.
+ */
+let cumulativeSpendUsd = 0;
+
+/** The configured limit in USD, or `null` when unset, blank or unparseable (i.e. no limit). */
+export function spendLimitUsd(env: Pick<AgentEnv, "OPENROUTER_SPEND_LIMIT_USD">): number | null {
+  const raw = env.OPENROUTER_SPEND_LIMIT_USD?.trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+/** Cumulative spend this isolate has recorded, in USD. */
+export function spentUsd(): number {
+  return cumulativeSpendUsd;
+}
+
+/** Add to the cumulative spend. Only finite, positive amounts count; anything else is ignored. */
+export function recordSpendUsd(usd: number): void {
+  if (Number.isFinite(usd) && usd > 0) cumulativeSpendUsd += usd;
+}
+
+/** Reset the counter. Exported for tests. */
+export function resetSpendTracker(): void {
+  cumulativeSpendUsd = 0;
+}
+
+/** True once cumulative spend has reached the configured limit. `false` when no limit is set. */
+export function isOverSpendLimit(env: Pick<AgentEnv, "OPENROUTER_SPEND_LIMIT_USD">): boolean {
+  const limit = spendLimitUsd(env);
+  return limit !== null && cumulativeSpendUsd >= limit;
+}
+
+function tokenCount(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+/**
+ * Cost of one call from a provider `usage` object, in USD.
+ *
+ * Prefers a `cost` the provider reported (Jev's Decisions API returns one); otherwise estimates from
+ * the token counts, accepting both the chat (`prompt_tokens`/`completion_tokens`) and Decisions
+ * (`input_tokens`/`output_tokens`) spellings. A missing or malformed usage counts as 0.
+ */
+export function estimateCostUsd(model: string, usage: unknown): number {
+  const record = asRecord(usage);
+  if (record === null) return 0;
+  const reported = record["cost"];
+  if (typeof reported === "number" && Number.isFinite(reported) && reported >= 0) return reported;
+  const inputTokens = tokenCount(record["prompt_tokens"] ?? record["input_tokens"]);
+  const outputTokens = tokenCount(record["completion_tokens"] ?? record["output_tokens"]);
+  const price = MODEL_PRICES[model] ?? DEFAULT_PRICE;
+  return (inputTokens * price.inputPerM + outputTokens * price.outputPerM) / 1_000_000;
+}
 
 /** `null` for both "no key configured" and "runtime has no fetch to use". */
 function endpoint(env: AgentEnv): { url: string; key: string } | null {
@@ -214,6 +285,9 @@ export function parseChatResponse(payload: unknown): ChatResult | null {
 export async function chat(env: AgentEnv, req: ChatRequest): Promise<ChatResult> {
   const target = endpoint(env);
   if (target === null) return { ...FALLBACK };
+  // The spend limit short-circuits before the provider is reached, so a capped deployment makes no
+  // call at all and the caller takes its deterministic path.
+  if (isOverSpendLimit(env)) return { ...FALLBACK };
 
   const model = env.OPENROUTER_MODEL ?? DEFAULT_MODEL;
   const body = JSON.stringify(requestBody(req, model));
@@ -226,7 +300,9 @@ export async function chat(env: AgentEnv, req: ChatRequest): Promise<ChatResult>
       signal: AbortSignal.timeout(CHAT_TIMEOUT_MS),
     });
     if (!response.ok) return { ...FALLBACK };
-    const parsed = parseChatResponse(await response.json());
+    const payload = await response.json();
+    recordSpendUsd(estimateCostUsd(model, asRecord(payload)?.["usage"]));
+    const parsed = parseChatResponse(payload);
     return parsed ?? { ...FALLBACK };
   } catch {
     // Network failure, DNS, TLS, abort on timeout, or a body that is not JSON. All are fallbacks.

@@ -157,8 +157,10 @@ export const ledger = {
    *  * `season.approved` where entitlements EXCEED `season_supply_m3` produces a negative
    *    remainder and a correspondingly negative `canal_supply` balance rather than an error; the
    *    over-allocation surfaces in `checkConservation`, not here.
-   *  * `rain.replanned` does NOT check `saved_m3` against the sum of `by_farmer_m3`. The two can
-   *    disagree and nothing detects it — see `docs/research/model-audit.md` F-08.
+    *  * `rain.replanned` reconciles `saved_m3` against the per-farmer sum: the unattributed
+    *    remainder is booked `canal_supply -> buffer` so the ledger accounts for the full declared
+    *    saving and a mismatch surfaces in `checkConservation` rather than vanishing silently.
+    *    See `docs/research/model-audit.md` F-08.
    *
    * ASSUMED: the `request.decided` branch infers the request type from up to five different
    * shapes (`request_type`, an embedded `request.type`, `requestType`, the note text, the request
@@ -250,9 +252,11 @@ export const ledger = {
       case "rain.replanned": {
         const e = event as RainReplannedEvent;
         const farmerIds = Object.keys(e.by_farmer_m3 || {}).sort();
+        let attributed = 0;
         for (const fId of farmerIds) {
           const vol = e.by_farmer_m3[fId];
           if (vol !== undefined && vol > 0) {
+            attributed += vol;
             rawEntries.push({
               from: `farmer:${fId}:quota`,
               to: "buffer",
@@ -260,6 +264,20 @@ export const ledger = {
               reason: "rain replanned: reduced need moved to buffer",
             });
           }
+        }
+        // Reconcile the declared total against the per-farmer attribution. The event's
+        // `saved_m3` is the authoritative figure for how much water the re-plan conserved; the
+        // per-farmer split may attribute less (or none) of it. Book the unattributed remainder
+        // from the canal supply to the buffer so the ledger accounts for the FULL saved volume
+        // and a mismatch surfaces in `checkConservation` rather than vanishing silently.
+        const remainder = round6(e.saved_m3 - attributed);
+        if (remainder > 0) {
+          rawEntries.push({
+            from: "canal_supply",
+            to: "buffer",
+            volume_m3: remainder,
+            reason: "rain replanned: unattributed savings to buffer",
+          });
         }
         break;
       }

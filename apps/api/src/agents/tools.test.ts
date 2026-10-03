@@ -150,7 +150,7 @@ describe("tool results", () => {
     const env = await seeded();
     await seedApprovedRequest(env, "f2");
     const before = await getEventCount(env);
-    const outcome = await runTool(env, "place_call", { farmer_id: "f2", purpose: "night release warning", message_te: "జడల్", message_en: "Jadal" });
+    const outcome = await runTool(env, "place_call", { farmer_id: "f2", purpose: "release_warning", message_te: "జడల్", message_en: "Jadal" });
 
     expect(await getEventCount(env)).toBe(before + 1);
     expect(env.OUTBOUND.sent).toHaveLength(1);

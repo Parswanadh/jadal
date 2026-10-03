@@ -23,8 +23,17 @@ export type RegistrationFormInput = {
   outlet_id: string;
   soil: string;
   plot_area_ha: number;
+  lat: number;
+  lon: number;
+  irrigation_method: string;
   crops: CropRowInput[];
 };
+
+export const IRRIGATION_METHODS = [
+  { value: "furrow", efficiency: 0.65 },
+  { value: "sprinkler", efficiency: 0.75 },
+  { value: "drip", efficiency: 0.90 },
+] as const;
 
 const SHARE_TOTAL_MAX = 100;
 
@@ -54,6 +63,13 @@ export function registrationSchema(todayIso: string) {
       plot_area_ha: z
         .number()
         .refine((value) => Number.isFinite(value) && value > 0, { message: "register.errArea" }),
+      lat: z
+        .number()
+        .refine((value) => Number.isFinite(value) && value >= -90 && value <= 90, { message: "register.errLat" }),
+      lon: z
+        .number()
+        .refine((value) => Number.isFinite(value) && value >= -180 && value <= 180, { message: "register.errLon" }),
+      irrigation_method: z.string().min(1, { message: "register.errIrrigationMethod" }),
       crops: z.array(cropRowSchema),
     })
     .superRefine((input, ctx) => {

@@ -10,13 +10,17 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "lint": "pnpm -r lint",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
     "e2e": "playwright test -c tests/e2e/playwright.config.ts",
     "e2e:live": "E2E_LIVE=1 playwright test -c tests/e2e/playwright.config.ts --project=live",
     "dev": "pnpm -r --parallel dev",
-    "deploy": "pnpm --filter api deploy"
+    "deploy": "pnpm --filter api run deploy"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
     "@playwright/test": "^1.63.0",
     "typescript": "^5.8.2"
   }

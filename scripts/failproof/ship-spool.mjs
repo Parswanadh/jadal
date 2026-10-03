@@ -27,7 +27,7 @@
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 
 import { describeKey, loadKey } from "./key-file.mjs";
 

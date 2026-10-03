@@ -83,6 +83,7 @@
  */
 
 import { System1Intent, System1Result } from "@jadal/contracts";
+import { estimateCostUsd, isOverSpendLimit, recordSpendUsd } from "./agents/llm";
 import { classifyByRules } from "./system1.rules";
 
 /**
@@ -123,6 +124,12 @@ export interface ProviderEnv {
   JEV_MODEL?: string;
   /** Deadline for one Jev call, in milliseconds as a string. Default {@link JEV_DEFAULT_TIMEOUT_MS}. */
   JEV_TIMEOUT_MS?: string;
+  /**
+   * Maximum OpenRouter spend in USD, as a string. Unset/blank => no limit. When the cumulative spend
+   * reaches this value, Jev is skipped and the chain falls through to the rules. Shared with the
+   * System-2 prose client (`src/agents/llm.ts`).
+   */
+  OPENROUTER_SPEND_LIMIT_USD?: string;
 }
 
 /* ------------------------------------------------------------------ provider selection */
@@ -696,6 +703,7 @@ async function callWithTimeout(
 /** Why a provider did not answer. `source` plus this reason is the audit trail. */
 export type FallbackReason =
   | "not_configured"
+  | "spend_limit"
   | "transport_error"
   | "timeout"
   | "http_error"
@@ -715,6 +723,7 @@ async function finishProviderCall(
   provider: "laya" | "jev",
   response: Response,
   parse: (payload: unknown) => JevDecision | null,
+  onPayload?: (payload: unknown) => void,
 ): Promise<ProviderAttemptResult> {
   if (!response.ok) {
     return {
@@ -731,6 +740,7 @@ async function finishProviderCall(
     return { ok: false, reason: "malformed_json" };
   }
 
+  onPayload?.(payload);
   const decision = parse(payload);
   if (decision === null) return { ok: false, reason: "out_of_schema" };
 
@@ -791,6 +801,8 @@ async function callLaya(env: ProviderEnv, text: string, opts: ClassifyOptions): 
  */
 async function callJev(env: ProviderEnv, text: string, opts: ClassifyOptions): Promise<ProviderAttemptResult> {
   if (!providerConfigured("jev", env)) return { ok: false, reason: "not_configured" };
+  // Skip the paid call entirely once the shared budget is spent; the chain falls to the rules floor.
+  if (isOverSpendLimit(env)) return { ok: false, reason: "spend_limit" };
   const key = env.OPENROUTER_API_KEY?.trim() ?? "";
 
   const model = firstNonBlank(opts.model, env.JEV_MODEL) ?? JEV_MODEL;
@@ -810,7 +822,9 @@ async function callJev(env: ProviderEnv, text: string, opts: ClassifyOptions): P
     return { ok: false, reason: isTimeoutError(error) ? "timeout" : "transport_error" };
   }
 
-  return finishProviderCall("jev", response, parseJevDecision);
+  return finishProviderCall("jev", response, parseJevDecision, (payload) => {
+    recordSpendUsd(estimateCostUsd(model, isRecord(payload) ? payload["usage"] : undefined));
+  });
 }
 
 /* ------------------------------------------------------------------ public API */

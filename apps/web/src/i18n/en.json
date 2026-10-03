@@ -272,7 +272,22 @@
     "errCrop": "Choose a crop in every row.",
     "errSowing": "Enter a sowing date that is not in the future.",
     "errShare": "Each share must be between 1 and 100.",
-    "errShareSum": "The shares add up to more than 100%."
+    "errShareSum": "The shares add up to more than 100%.",
+    "lat": "Latitude",
+    "lon": "Longitude",
+    "gpsCapture": "Use my location",
+    "gpsLoading": "Getting location…",
+    "gpsError": "Could not get your location. Please enter coordinates manually.",
+    "gpsUnsupported": "Your browser does not support geolocation. Please enter coordinates manually.",
+    "irrigationMethod": "Irrigation method",
+    "irrigationMethods": {
+      "furrow": "Furrow (65%)",
+      "sprinkler": "Sprinkler (75%)",
+      "drip": "Drip (90%)"
+    },
+    "errLat": "Enter a valid latitude (-90 to 90).",
+    "errLon": "Enter a valid longitude (-180 to 180).",
+    "errIrrigationMethod": "Choose your irrigation method."
   },
   "ask": {
     "title": "Ask for extra water",

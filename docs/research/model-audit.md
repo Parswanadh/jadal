@@ -29,14 +29,13 @@ claim in it that I refuted recorded in place.
 
 | ID | Model | Finding | Verdict |
 | :--- | :--- | :--- | :--- |
-| F-01 | crop | **The documented groundnut worked example (462.12 m³) is not produced by the shipped parameter table (417.69 m³), and the test that asserts it passes hand-typed parameters that exist nowhere in the codebase.** The rice example does hold. | **REFUTED (as a claim about the code)** |
-| F-02 | hydraulics | Seepage uses an exponential decay; both documents that *specify* Jadal seepage cite the **Moritz** linear form. | Open |
-| F-03 | hydraulics | Overrun losses are computed per-outlet from head discharge and not deducted in sequence, so the total can exceed what the canal carries. | Open |
-| F-04 | crop | FAO-56 Eq. 6.18/6.21 ($K_c$ climate adjustment) had **no implementation at all**. | **Fixed**, but opt-in |
-| F-05 | crop | Paddy $P_{eff}$ applies no weir-crest cap; rice `bounds` is `null`. | Open |
-| F-06 | crop | Upland $P_{eff}$ applies no root-zone-deficit cap (the core carries no $D_r$ state). | Open |
-| F-07 | ledger | Urgent approval emitted a `quota → quota` self-transfer the DB CHECK rejects. | **Fixed** |
-| F-08 | ledger | `rain.replanned` never reconciles `saved_m3` against `by_farmer_m3`. | Open |
+| F-01 | crop | **The documented groundnut worked example (462.12 m³) is not produced by the shipped parameter table (417.69 m³), and the test that asserts it passes hand-typed parameters that exist nowhere in the codebase.** The rice example does hold. | **REFUTED (as a claim about the code)** → **Fixed** (2026-10-03): docs corrected, test uses shipped row |
+| F-02 | hydraulics | Seepage uses an exponential decay; both documents that *specify* Jadal seepage cite the **Moritz** linear form. | **Documented** (2026-10-03): decision to keep exponential |
+| F-03 | hydraulics | Overrun losses are computed per-outlet from head discharge and not deducted in sequence, so the total can exceed what the canal carries. | **Fixed** (2026-10-03): sequential deduction |
+| F-04 | crop | FAO-56 Eq. 6.18/6.21 ($K_c$ climate adjustment) had **no implementation at all**. | **Fixed**, but opt-in → **Documented** (2026-10-03): cannot be automatic |
+| F-05 | crop | Paddy $P_{eff}$ applies no weir-crest cap; rice `bounds` is `null`. | **Documented** (2026-10-03): needs ponded-depth state |
+| F-06 | crop | Upland $P_{eff}$ applies no root-zone-deficit cap (the core carries no $D_r$ state). | **Documented** (2026-10-03): needs $D_r$ state |
+| F-08 | ledger | `rain.replanned` never reconciles `saved_m3` against `by_farmer_m3`. | **Fixed** (2026-10-03): reconciliation added |
 | F-09 | policy | `canGrantBuffer` returned `{ok: true}` for a `NaN` volume. | **Fixed** |
 | F-10 | hydraulics | A zero or adverse bed slope produced `NaN` velocity. | **Fixed** |
 | F-11 | roster | `equal_hours` delivered the entire window while `needMet` reported 100% for everyone. | **Fixed / documented** |
@@ -536,22 +535,27 @@ sweep over every type-detection shape asserting `from !== to`.
 
 ---
 
-## 11. What remains open
+## 11. Remediation (2026-10-03) and what remains open
 
-Findings I did **not** fix, and why:
+### Fixed in this remediation
 
-| ID | Why it is still open |
+| ID | Fix |
 | :--- | :--- |
-| F-01 | Fixing it means choosing between a documented example and a sourced table value. That is an owner decision, not a code change; the brief forbids adjusting the claim. |
-| F-02 | Replacing exponential with Moritz seepage would invalidate every published worked value in `architecture.html`. It needs a decision, not a patch. |
-| F-03 | Requires a sequential water balance across outlets — a model change, and it would change `overrunImpact`'s published signature semantics. |
-| F-04 | **Partial.** Blocked on `WeatherDay` gaining humidity/wind fields; `packages/contracts` is immutable in this lane. |
-| F-05, F-06 | Both need state the core deliberately does not carry ($D_r$, ponded depth). Adding it changes the `CropEngine` contract. |
-| F-08 | Would require rejecting an event the contract permits; needs a contracts decision. |
+| F-01 | **Docs corrected** (`fao56-model.md` §5.2 now records that the shipped table uses the verified $K_{c,mid}$ 1.05 and $Z_r$ max 1.00 m, and that 462.12 m³ is reproducible only with the unverified inputs). **`crop.test.ts` groundnut test now uses the shipped `crop-params.json` row** and asserts 417.69 m³, so it exercises the production parameter path instead of hand-typed coefficients. |
+| F-02 | **Decision documented** (`models.md` §4.2): keep the exponential seepage form. Replacing it with the Moritz linear form would invalidate every published worked value in `architecture.html`. |
+| F-03 | **`overrunImpact` now deducts losses in sequence** (head to tail). The overrun diverts $Q(x_{overrun}) \cdot \text{overrun\_h} \cdot 3600$ — the total water the canal carries past the overrunning outlet — and each downstream outlet's loss is capped by the remaining budget, so the sum can no longer exceed what the canal carries. |
+| F-08 | **`rain.replanned` now reconciles `saved_m3` against `by_farmer_m3`.** The per-farmer entries are booked as before, then the unattributed remainder (`saved_m3` − Σ `by_farmer_m3`) is booked `canal_supply → buffer`, so the ledger accounts for the full declared saving and a mismatch surfaces in `checkConservation`. |
+
+### Documented limitations (no code fix possible without a contract change)
+
+| ID | Why it remains a documented limitation |
+| :--- | :--- |
+| F-04 | The $K_c$ climate adjustment **cannot be automatic**: `WeatherDay` carries no RHmin/wind field and `packages/contracts` is immutable in this lane. It stays opt-in via `wind_u2_ms` / `rh_min_pct`. |
+| F-05 | The paddy weir-crest cap needs ponded-depth state ($h_{water}$) that is not on the `WeatherDay` contract. A caller holding that state must apply the cap itself. |
+| F-06 | The upland $P_{eff}$ cap needs day-to-day root-zone-deficit state ($D_r$) that the core deliberately does not carry. Adding it would change the `CropEngine` contract. |
 | F-16 | In `apps/api`, explicitly out of scope. Reported with proposed fixes. |
 
-No contract change was required for anything I fixed, so nothing needed to be escalated under the
-"stop and report" rule.
+No contract change was required for anything fixed in this remediation.
 
 ---
 

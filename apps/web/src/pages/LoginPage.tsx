@@ -20,7 +20,7 @@ export default function LoginPage() {
   // Where the visitor was headed, when the guard sent them here.
   const from = (location.state as { from?: string } | null)?.from ?? null;
   const landing = (forRole: Role): string =>
-    from && from.startsWith(`/${forRole}`) ? from : ROLE_HOME[forRole];
+    from?.startsWith(`/${forRole}`) ? from : ROLE_HOME[forRole];
 
   // Already signed in: never show the form again. This also completes the
   // sign-in below, so the intended screen (with its query) is not lost.

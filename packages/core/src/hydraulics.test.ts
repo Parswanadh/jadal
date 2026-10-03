@@ -14,7 +14,7 @@ describe("Hydraulics (A3)", () => {
       // v = (1 / 0.025) * (0.35)^(2/3) * (0.0004)^(1/2)
       // v = 40 * 0.49664419284 * 0.02 = 0.397315354 m/s
       const v = hydraulics.velocity_ms(seedCanal);
-      const expectedV = (1 / 0.025) * Math.pow(0.35, 2 / 3) * Math.sqrt(0.0004);
+      const expectedV = (1 / 0.025) * 0.35 ** (2 / 3) * Math.sqrt(0.0004);
       expect(v).toBeCloseTo(expectedV, 7);
       expect(v).toBeCloseTo(0.39731535, 6);
     });
@@ -112,13 +112,21 @@ describe("Hydraulics (A3)", () => {
       expect(impacts).toHaveLength(7);
       expect(impacts.map(i => i.outlet_id)).toEqual(["o2", "o3", "o4", "o5", "o6", "o7", "o8"]);
 
-      // Each downstream outlet loses its own outlet flow * overrun_h * 3600
+      // Losses are deducted in sequence (head to tail): the overrun diverts Q(o1) for overrun_h
+      // hours, and each downstream outlet's loss is capped by the remaining budget, so the total
+      // never exceeds the water the canal carries past the overrunning outlet.
+      const qOverrun =
+        headDischarge * Math.exp(-seedCanal.seepage_k_per_m * seedOutlets[0]!.chainage_m);
+      let remaining = qOverrun * overrunHours * 3600;
       for (const impact of impacts) {
         const outlet = seedOutlets.find(o => o.id === impact.outlet_id)!;
         const q_outlet = headDischarge * Math.exp(-seedCanal.seepage_k_per_m * outlet.chainage_m);
-        const expectedLostM3 = q_outlet * overrunHours * 3600;
+        const expectedLostM3 = Math.min(q_outlet * overrunHours * 3600, remaining);
+        remaining -= expectedLostM3;
         expect(impact.lost_m3).toBeCloseTo(expectedLostM3, 6);
       }
+      const total = impacts.reduce((sum, i) => sum + i.lost_m3, 0);
+      expect(total).toBeCloseTo(qOverrun * overrunHours * 3600, 6);
     });
 
     it("returns empty array when tail outlet overruns (no downstream outlets)", () => {
@@ -155,6 +163,35 @@ describe("Hydraulics (A3)", () => {
         headDischarge_m3s: headDischarge,
       });
       expect(impacts).toEqual([]);
+    });
+
+    it("F-03: deducts overrun losses in sequence so the total cannot exceed what the canal carries", () => {
+      // Three outlets: the overrunning one at 300 m and two downstream at 600 m and 900 m.
+      // The overrun diverts Q(300) for overrun_h hours; that volume is ALL the water the canal
+      // carries past the overrunning outlet during the overrun, so the sum of the per-outlet
+      // losses must never exceed it. The old per-outlet-independent computation summed to more.
+      const outlets = [
+        { id: "x", canal_id: "c1", name: "X", chainage_m: 300 },
+        { id: "y1", canal_id: "c1", name: "Y1", chainage_m: 600 },
+        { id: "y2", canal_id: "c1", name: "Y2", chainage_m: 900 },
+      ];
+      const impact = hydraulics.overrunImpact({
+        canal: seedCanal,
+        outlets,
+        overrunOutletId: "x",
+        overrun_h: 1,
+        headDischarge_m3s: headDischarge,
+      });
+
+      const qX = headDischarge * Math.exp(-seedCanal.seepage_k_per_m * 300);
+      const total = impact.reduce((sum, i) => sum + i.lost_m3, 0);
+      // The total is capped at the water the canal carries past the overrunning outlet.
+      expect(total).toBeCloseTo(qX * 3600, 6);
+      // Sequential deduction: the first downstream outlet absorbs its full loss (it fits under
+      // the cap), the second gets only the remainder.
+      const qY1 = headDischarge * Math.exp(-seedCanal.seepage_k_per_m * 600);
+      expect(impact[0]!.lost_m3).toBeCloseTo(Math.min(qY1 * 3600, qX * 3600), 6);
+      expect(impact[1]!.lost_m3).toBeCloseTo(Math.max(0, qX * 3600 - qY1 * 3600), 6);
     });
   });
 });

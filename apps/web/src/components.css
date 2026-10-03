@@ -139,26 +139,37 @@
 /* ---------- Empty states and inline confirmation ---------- */
 
 .empty-state {
-  padding: 2rem 1.5rem;
+  padding: 2.5rem 1.5rem;
   text-align: center;
   background: var(--surface);
   border: 1px dashed var(--rule);
   border-radius: var(--radius-lg);
+  transition: border-color var(--transition-base);
+}
+
+.empty-state:hover {
+  border-color: var(--muted);
 }
 
 .empty-title {
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.5rem;
   font-weight: 600;
+  font-size: var(--text-lg);
 }
 
 .empty-body {
   margin: 0 auto;
   max-width: 34rem;
   color: var(--muted);
+  line-height: 1.6;
 }
 
 .empty-action {
-  margin-top: 1rem;
+  margin-top: 1.25rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .confirm-inline {
@@ -323,11 +334,58 @@
 .field textarea {
   width: 100%;
   min-height: 2.75rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.field input:hover,
+.field select:hover,
+.field textarea:hover {
+  border-color: var(--muted);
+}
+
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 
 .field textarea {
   min-height: 5.5rem;
   resize: vertical;
+}
+
+/* Inline validation error state */
+.field.has-error input,
+.field.has-error select,
+.field.has-error textarea {
+  border-color: var(--critical);
+  background: var(--critical-subtle);
+}
+
+.field.has-error input:focus-visible,
+.field.has-error select:focus-visible,
+.field.has-error textarea:focus-visible {
+  outline-color: var(--critical);
+  border-color: var(--critical);
+  box-shadow: 0 0 0 3px var(--critical-subtle);
+}
+
+.field-error-text {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  font-size: var(--text-sm);
+  color: var(--critical);
+  animation: fadeSlideIn 0.15s ease both;
+}
+
+.field-error-text::before {
+  content: "⚠";
+  font-size: 0.85rem;
 }
 
 .field-grid {

@@ -105,7 +105,7 @@ function CanalVisualView({ data }: { data: CanalVisualData }) {
             {[0.25, 0.5, 0.75].map((frac) => {
               const x = PAD_X + frac * (SVG_W - PAD_X * 2);
               return (
-                <text key={frac} x={x} y={CENTER_Y + 4} className="canal-flow-arrow" aria-hidden="true">
+                <text key={frac} x={x} y={CENTER_Y + 4} className="canal-flow-arrow">
                   ›
                 </text>
               );

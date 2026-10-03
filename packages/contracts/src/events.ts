@@ -1,5 +1,17 @@
 import { z } from "zod";
-import { Id, IsoTime, Farmer, Plot, CropPlan, Entitlement, Roster, WaterRequest, Contact, ReleaseWindow } from "./entities";
+import {
+  Id,
+  IsoTime,
+  Farmer,
+  Plot,
+  CropPlan,
+  Entitlement,
+  Roster,
+  WaterRequest,
+  Contact,
+  ReleaseWindow,
+  RequestType,
+} from "./entities";
 
 // Append-only event log. The ledger, the audit trail and demo replay are all derived from these events.
 // Every event carries who caused it: a person (coordinator/farmer), an agent, or the system clock.
@@ -42,6 +54,10 @@ export const JadalEvent = z.discriminatedUnion("type", [
     ...base,
     type: z.literal("request.decided"),
     request_id: Id,
+    /** The request row's owner, so a pure event→entries fold can debit the right quota. */
+    farmer_id: Id.optional(),
+    /** The request row's type, so the fold knows whether the movement is urgent or buffer. */
+    request_type: RequestType.optional(),
     decision: z.enum(["approve", "reject"]),
     volume_m3: z.number(),
     note: z.string().optional(),

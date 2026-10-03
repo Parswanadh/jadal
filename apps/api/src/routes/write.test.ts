@@ -18,7 +18,7 @@ import { routes } from "@jadal/contracts";
 
 import { createApp } from "../app";
 import { call, createEnv, expectStatus, type FetchRoutes, type TestEnv } from "../../test/harness";
-import { demoScenario, demoWeather, seedScenario, seedWeather } from "../../test/fixtures";
+import { demoScenario, demoWeather, seedScenario, seedWeather, type SeedResult } from "../../test/fixtures";
 
 function app(): Hono<{ Bindings: TestEnv }> {
   return createApp() as unknown as Hono<{ Bindings: TestEnv }>;
@@ -368,6 +368,118 @@ describe("POST /api/canal/harvest", () => {
 
     expectStatus(res, 404);
     apiError(res.body);
+  });
+});
+
+describe("POST /api/canal/release-week", () => {
+  /** A seeded env plus the seed result, so a test can target the seeded week and a farmer with quota. */
+  async function seeded(): Promise<{ env: TestEnv; seed: SeedResult }> {
+    const env = createEnv();
+    const scenario = demoScenario();
+    const weather = demoWeather();
+    const seed = await seedScenario(env, scenario, weather);
+    await seedWeather(env, weather, scenario.canal.id);
+    return { env, seed };
+  }
+
+  /** The first farmer with a positive quota — guaranteed an approved entitlement for the seeded week. */
+  async function farmerWithQuota(app0: Hono<{ Bindings: TestEnv }>, env: TestEnv): Promise<string> {
+    const before = routes.ledger.response.parse((await call(app0, "GET", routes.ledger.path, { env })).body);
+    const farmerId = before.balances.farmers.find((entry) => entry.quota_m3 > 0)?.farmer_id;
+    if (farmerId === undefined) throw new Error("seed produced no farmer with quota");
+    return farmerId;
+  }
+
+  it("releases the week's entitlement to the buffer and logs week.released_to_buffer", async () => {
+    const { env, seed } = await seeded();
+    const app0 = app();
+    const farmerId = await farmerWithQuota(app0, env);
+
+    const before = routes.ledger.response.parse((await call(app0, "GET", routes.ledger.path, { env })).body);
+    const quotaBefore = before.balances.farmers.find((entry) => entry.farmer_id === farmerId)?.quota_m3 ?? 0;
+    const bufferBefore = before.balances.buffer_m3;
+
+    const res = await call(app0, "POST", "/api/canal/release-week", {
+      env,
+      body: { farmer_id: farmerId, week_start: seed.week_start },
+    });
+
+    expectStatus(res, 200);
+    const body = res.body as {
+      ok: boolean;
+      farmer_id: string;
+      week_start: string;
+      volume_m3: number;
+      buffer_m3: number;
+    };
+    expect(body.ok).toBe(true);
+    expect(body.farmer_id).toBe(farmerId);
+    expect(body.week_start).toBe(seed.week_start);
+    // With no deliveries yet, the week's entitlement is the farmer's whole quota.
+    expect(body.volume_m3).toBeCloseTo(quotaBefore, 6);
+    expect(body.buffer_m3).toBeCloseTo(bufferBefore + body.volume_m3, 6);
+
+    // The farmer's quota falls by exactly the released volume; conservation still holds.
+    const after = routes.ledger.response.parse((await call(app0, "GET", routes.ledger.path, { env })).body);
+    const quotaAfter = after.balances.farmers.find((entry) => entry.farmer_id === farmerId)?.quota_m3 ?? 0;
+    expect(quotaAfter).toBeCloseTo(quotaBefore - body.volume_m3, 6);
+    expect(after.balances.conservation_ok).toBe(true);
+
+    // The event is in the log with the released volume.
+    const events = routes.events.response.parse((await call(app0, "GET", routes.events.path, { env })).body);
+    const released = events.find((event) => event.type === "week.released_to_buffer");
+    expect(released).toBeDefined();
+    if (released?.type === "week.released_to_buffer") {
+      expect(released.farmer_id).toBe(farmerId);
+      expect(released.week_start).toBe(seed.week_start);
+      expect(released.volume_m3).toBeCloseTo(body.volume_m3, 6);
+    }
+  });
+
+  it("defaults to the current week when week_start is omitted", async () => {
+    const { env, seed } = await seeded();
+    const app0 = app();
+    const farmerId = await farmerWithQuota(app0, env);
+
+    const res = await call(app0, "POST", "/api/canal/release-week", { env, body: { farmer_id: farmerId } });
+
+    expectStatus(res, 200);
+    const body = res.body as { week_start: string; volume_m3: number };
+    expect(body.week_start).toBe(seed.week_start);
+    expect(body.volume_m3).toBeGreaterThan(0);
+  });
+
+  it("404s for an unknown farmer", async () => {
+    const { env } = await seeded();
+    const res = await call(app(), "POST", "/api/canal/release-week", {
+      env,
+      body: { farmer_id: "nope", week_start: "2026-09-14" },
+    });
+
+    expectStatus(res, 404);
+    apiError(res.body);
+  });
+
+  it("400s on a malformed week_start", async () => {
+    const { env } = await seeded();
+    const res = await call(app(), "POST", "/api/canal/release-week", {
+      env,
+      body: { farmer_id: "f1", week_start: "14-09-2026" },
+    });
+
+    expectStatus(res, 400);
+    apiError(res.body);
+  });
+
+  it("400s when the farmer has no approved entitlement for that week", async () => {
+    const { env } = await seeded();
+    const res = await call(app(), "POST", "/api/canal/release-week", {
+      env,
+      body: { farmer_id: "f1", week_start: "2026-09-21" },
+    });
+
+    expectStatus(res, 400);
+    expect(apiError(res.body).code).toBe("nothing_to_release");
   });
 });
 

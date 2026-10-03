@@ -6,6 +6,23 @@ This document tracks every pending/unfinished feature found by systematic analys
 
 ---
 
+## 0. Completed (verified 2026-10-03)
+
+Since this list was generated at `e46a290`, the following items have landed and been verified. Item
+numbers below keep their original numbering.
+
+- **1.3 Failproof observability middleware wiring** — `app.use("*", failproofMiddleware())` in
+  `createApp()` (`apps/api/src/app.ts`); `FAILPROOF_API_KEY`/`FAILPROOF_TRACE` declared in `env.ts`
+  and documented in `.dev.vars.example`. Inert until an HTTP sink is supplied (deliberate).
+- **1.11 `OPENROUTER_MODEL` env var** — declared on the Worker `Env` (`apps/api/src/env.ts`) and
+  documented in `.dev.vars.example`.
+- **OpenRouter spend-limit enforcement** — `OPENROUTER_SPEND_LIMIT_USD` (default `5` in
+  `.dev.vars.example`) is now enforced. `apps/api/src/agents/llm.ts` tracks cumulative estimated
+  spend and short-circuits `chat()`; `apps/api/src/system1.ts` skips the paid Jev call and falls back
+  to the rules with reason `spend_limit` once the limit is reached. Covered by 13 new tests.
+
+---
+
 ## Priority Legend
 
 - **HIGH** — Blocks core functionality, safety, or deploy
@@ -36,6 +53,7 @@ This document tracks every pending/unfinished feature found by systematic analys
 - **Problem:** Middleware is fully implemented but never registered. `FAILPROOF_API_KEY` and `FAILPROOF_TRACE` env vars are undeclared.
 - **Impact:** Production request tracing is unavailable.
 - **Fix:** Add 2 lines in `app.ts` (import + `app.use`), declare env vars in `env.ts` and `.dev.vars.example`.
+- **Status:** ✅ DONE (2026-10-03) — see §0.
 
 ### 1.4 Durable Workflow Triggering
 - **Priority:** HIGH
@@ -88,6 +106,7 @@ This document tracks every pending/unfinished feature found by systematic analys
 - **Source:** `apps/api/src/agents/llm.ts:40,71,218`
 - **Problem:** `OPENROUTER_MODEL` is read by code but absent from canonical `Env` and `.dev.vars.example`.
 - **Fix:** Declare `OPENROUTER_MODEL?: string` on Worker `Env` and document it.
+- **Status:** ✅ DONE (2026-10-03) — see §0.
 
 ### 1.12 Queue Consumer Retry/DLQ Config
 - **Priority:** MEDIUM

@@ -65,6 +65,8 @@ export const Farmer = z.object({
   language: Language,
   preferred_channels: z.array(Channel).min(1),
   has_smartphone: z.boolean(),
+  /** Used to pick the Telugu honorific; omitted means the caller falls back to a neutral form. */
+  gender: z.enum(["male", "female", "other"]).optional(),
 });
 export type Farmer = z.infer<typeof Farmer>;
 
@@ -125,6 +127,10 @@ export const WeatherDay = z.object({
   rain_mm: z.number().nonnegative(),
   tmax_c: z.number().optional(),
   tmin_c: z.number().optional(),
+  /** Minimum relative humidity, percent. Optional: older records only carry temperature. */
+  rh_min: z.number().optional(),
+  /** Wind speed at 2 m, metres per second. Optional for the same reason. */
+  wind_ms: z.number().optional(),
 });
 export type WeatherDay = z.infer<typeof WeatherDay>;
 
@@ -172,6 +178,8 @@ export const Roster = z.object({
   canal_id: Id,
   release_window_id: Id,
   status: RosterStatus,
+  /** Scheduling rule the roster was built with; omitted means the default equal_water. */
+  mode: z.enum(["equal_water", "equal_hours"]).optional(),
   turns: z.array(Turn),
   /** Volume that could not be scheduled inside the window, by farmer. */
   shortfall_m3: z.record(Id, z.number()),
@@ -237,16 +245,24 @@ export type LedgerEntry = z.infer<typeof LedgerEntry>;
 
 export const ContactStatus = z.enum(["queued", "sent", "delivered", "acknowledged", "failed", "escalated"]);
 
+/** Why a contact was made. Shared with the `place_call` tool so both agree on the vocabulary. */
+export const ContactPurpose = z.enum(["roster_change", "release_warning", "request_update", "reminder"]);
+export type ContactPurpose = z.infer<typeof ContactPurpose>;
+
 export const Contact = z.object({
   id: Id,
   farmer_id: Id,
   channel: Channel,
-  purpose: z.enum(["roster_change", "release_warning", "request_update", "reminder"]),
+  purpose: ContactPurpose,
   status: ContactStatus,
   attempt: z.number().int().positive(),
   message_te: z.string(),
   message_en: z.string(),
   at: IsoTime,
   transcript: z.string().optional(),
+  /** True when no real telephony call was placed (demo/mock); the UI must not imply a real send. */
+  simulated: z.boolean().optional(),
+  /** Twilio CallSid when a real call was placed. */
+  call_sid: z.string().optional(),
 });
 export type Contact = z.infer<typeof Contact>;

@@ -11,7 +11,7 @@
 //                          -> calls the real backend over HTTP.
 
 import { ApiError, routes } from "@jadal/contracts";
-import { z } from "zod";
+import type { z } from "zod";
 import type { ZodTypeAny } from "zod";
 import {
   alertResponseSchema,

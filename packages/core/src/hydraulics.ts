@@ -74,7 +74,7 @@ export function manningVelocity(
   if (manning_n <= 0 || hydraulic_radius_m < 0 || bed_slope <= 0) {
     return 0;
   }
-  return (1 / manning_n) * Math.pow(hydraulic_radius_m, 2 / 3) * Math.sqrt(bed_slope);
+  return (1 / manning_n) * hydraulic_radius_m ** (2 / 3) * Math.sqrt(bed_slope);
 }
 
 export const hydraulics = {
@@ -158,9 +158,11 @@ export const hydraulics = {
    *    so it is not charged. Two outlets at the same chainage therefore do not affect each other.
    *  * The overrunning outlet itself never appears in the result.
    *
-   * NOTE: this returns each downstream outlet's loss independently; it does not reduce the flow
-   * available to later outlets in sequence, so the sum can exceed what the canal actually carries
-   * if the overrun is longer than the window. See `docs/research/model-audit.md` F-03.
+   * NOTE: the losses are deducted IN SEQUENCE (head to tail). The overrun diverts
+   * `Q(x_overrun) . overrun_h . 3600` — that volume is all the water the canal carries past the
+   * overrunning outlet during the overrun, so it is the total that can be lost downstream. Each
+   * downstream outlet's loss is capped by the remaining budget, so the sum can never exceed what
+   * the canal actually carries. See `docs/research/model-audit.md` F-03.
    */
   overrunImpact(input: {
     canal: Canal;
@@ -180,9 +182,17 @@ export const hydraulics = {
 
     const safeOverrunHours = Number.isFinite(input.overrun_h) ? Math.max(0, input.overrun_h) : 0;
 
+    // The overrun diverts Q(x_overrun) for overrun_h hours; that volume is the total water the
+    // canal carries past the overrunning outlet during the overrun, and therefore the maximum
+    // that can be lost downstream. Deduct it in sequence (head to tail) so the per-outlet losses
+    // sum to at most this figure rather than each being computed independently from head discharge.
+    const overrunFlow = input.headDischarge_m3s * Math.exp(-input.canal.seepage_k_per_m * overrunOutlet.chainage_m);
+    let remaining = overrunFlow * safeOverrunHours * 3600;
+
     return downstreamOutlets.map(outlet => {
       const flow_m3s = input.headDischarge_m3s * Math.exp(-input.canal.seepage_k_per_m * outlet.chainage_m);
-      const lost_m3 = flow_m3s * safeOverrunHours * 3600;
+      const lost_m3 = Math.min(flow_m3s * safeOverrunHours * 3600, remaining);
+      remaining -= lost_m3;
       return {
         outlet_id: outlet.id,
         lost_m3,

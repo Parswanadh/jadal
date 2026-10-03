@@ -17,7 +17,7 @@
  */
 
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { z, ZodError } from "zod";
+import { type z, ZodError } from "zod";
 
 import type { Env } from "./env";
 import { isStoreError } from "./db/store";

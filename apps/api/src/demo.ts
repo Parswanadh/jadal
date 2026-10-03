@@ -31,7 +31,7 @@
 import {
   Canal,
   CropPlan,
-  Entitlement,
+  type Entitlement,
   Farmer,
   Outlet,
   Plot,

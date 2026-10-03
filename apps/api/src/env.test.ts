@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { Hono } from "hono";
+import type { Hono } from "hono";
 import { routes } from "@jadal/contracts";
 
 import { call, createEnv, type TestEnv } from "../test/harness";

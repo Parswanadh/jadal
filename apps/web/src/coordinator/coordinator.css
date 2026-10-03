@@ -23,6 +23,10 @@
 .coord .req-ask {
   font-size: var(--text-lg);
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .coord .req-reason {
@@ -106,6 +110,13 @@
   background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: var(--radius-lg);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
+}
+
+.coord .stat-grid li:hover {
+  border-color: var(--muted);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .coord .stat-grid span {

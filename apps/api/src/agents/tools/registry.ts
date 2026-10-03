@@ -22,7 +22,7 @@
  * a `contact.updated` event — there is no direct projection write.
  */
 
-import { AgentName, Contact, CropPlan, toolSpecs } from "@jadal/contracts";
+import { type AgentName, Contact, type CropPlan, toolSpecs } from "@jadal/contracts";
 import type { CropParams, Plot, WeatherDay } from "@jadal/contracts";
 import type { Db } from "../../db/store";
 import type { AgentEnv } from "../llm";
@@ -61,7 +61,7 @@ export type ToolName = keyof typeof toolSpecs;
 export const TOOL_NAMES = Object.keys(toolSpecs) as ToolName[];
 
 export function isToolName(name: string): name is ToolName {
-  return Object.prototype.hasOwnProperty.call(toolSpecs, name);
+  return  Object.hasOwn(toolSpecs, name);
 }
 
 /**
@@ -79,6 +79,7 @@ export interface ToolEnv {
   readonly OPENROUTER_API_KEY?: string;
   readonly AI_GATEWAY_URL?: string;
   readonly OPENROUTER_MODEL?: string;
+  readonly OPENROUTER_SPEND_LIMIT_USD?: string;
   readonly SARVAM_API_KEY?: string;
   readonly JEV_MODEL?: string;
   readonly META_WHATSAPP_TOKEN?: string;
@@ -100,6 +101,7 @@ export function toAgentEnv(env: ToolEnv): AgentEnv {
     OPENROUTER_API_KEY: env.OPENROUTER_API_KEY,
     AI_GATEWAY_URL: env.AI_GATEWAY_URL,
     OPENROUTER_MODEL: env.OPENROUTER_MODEL,
+    OPENROUTER_SPEND_LIMIT_USD: env.OPENROUTER_SPEND_LIMIT_USD,
   };
 }
 

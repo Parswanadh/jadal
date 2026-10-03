@@ -25,7 +25,8 @@ a Failproof session and scored by a Failproof **Jev** eval.
 | Enforcement | **none** — `failproofai policies` reports `0 on · NOT ENFORCING` |
 | Traced session | **verified in Cloud** — 16 events for the compliant run, 12 for the control, read back with `GET /v1/events` |
 | Jev eval | **question verified against real sessions** (yes / no, see §6); *authoring the eval itself is dashboard-only* |
-| `failproofaid` daemon service | **not installed** — `failproofai config` aborts: it installs a root-owned systemd unit first and `sudo` needs a password here |
+| `failproofaid` daemon service | **not installed** — `failproofai config` aborts: it installs a root-owned systemd unit first and `sudo` needs a password here (manual steps in §7) |
+| Production request middleware | **registered** — `app.use("*", failproofMiddleware())` in `createApp()` (`apps/api/src/app.ts`); env vars declared in `env.ts` and documented in `.dev.vars.example`. Inert with the default no-op sink until an HTTP sink is supplied (§8) |
 
 ### What did not work, exactly
 
@@ -68,7 +69,7 @@ Everything new lives in three places, none of which is a file another lane owns.
 apps/api/src/observability/
   failproof.ts                     dependency-free Failproof event emitter (no node:*, no I/O)
   spool.ts                         Node-only JSONL spool sink (the SDK's exact on-disk format)
-  hono-middleware.ts               the production hook — NOT registered; see §8
+  hono-middleware.ts               the production hook — registered in createApp(); see §8
   urgent-water-flow.trace.test.ts  the traced end-to-end flow (2 tests)
 scripts/failproof/
   key-file.mjs                     reads the key from .dev.vars, never prints it
@@ -264,6 +265,28 @@ Failproof key, no network call, and no spool write.
 
 ## 7. Running the daemon by hand (optional)
 
+### Manual setup — what `failproofai config` would do, in order
+
+`failproofai config` installs the daemon as its **first** step and needs root for exactly that one
+step. With `sudo` available the supported path is simply:
+
+```bash
+failproofai config                              # installs failproofaid@<user>.service + harness hooks
+systemctl status failproofaid@parshu.service    # confirm the unit is active
+```
+
+Without root (the state on this machine) the two things `config` would have done are reproducible
+by hand, and both are already scripted:
+
+1. **Credentials + Cloud Jev** — `node scripts/failproof/configure-cloud.mjs --apply` writes
+   `~/.failproofai/credentials.json`, `jev.json` and `config.json` in the CLI's own shapes; verify
+   with `failproofai jev status` / `failproofai jev test` (§3).
+2. **Ship sessions without the daemon** — `node scripts/failproof/ship-spool.mjs` uploads the spool
+   to `POST /v1/events`; `node scripts/failproof/verify-session.mjs <session-id>` reads it back.
+3. **Or run the daemon in the foreground** (no root), as below.
+
+Re-run `failproofai config` with `sudo` if the systemd service and harness hooks are wanted later.
+
 `failproofaid` runs in the foreground as a normal user, so it can be started without root. It needs
 its working directory to be the CLI package, or its worker cannot resolve `dist/worker.mjs`:
 
@@ -283,33 +306,25 @@ unit, finds no unit, and clears the flag. That is the same root cause as §1, an
 `ship-spool.mjs` exists. Treat the hand-started daemon as a diagnostic, not as the supported
 transport.
 
-## 8. Hooks needed in files this lane does not own
+## 8. Hooks in the Worker (applied)
 
-Nothing below has been changed. Each is the whole change needed.
+The three hooks below were the whole change needed. All three are now in `main`; the emitter and the
+middleware were written to be inert until a sink is supplied, so registering them changes nothing
+observable.
 
-1. **`apps/api/src/env.ts`** — declare the bindings so the Worker can read them:
+1. **`apps/api/src/env.ts`** — `FAILPROOF_API_KEY?: string` and `FAILPROOF_TRACE?: string` are
+   declared on the Worker `Env` (the "Failproof observability" block).
+2. **`apps/api/src/app.ts`** — `failproofMiddleware()` is registered with `app.use("*", …)` before
+   the route registrations.
+3. **`apps/api/.dev.vars.example`** — `FAILPROOF_API_KEY=` and `FAILPROOF_TRACE=` are documented as
+   optional, with an empty value keeping the app fully offline.
 
-   ```ts
-   FAILPROOF_API_KEY?: string;
-   FAILPROOF_TRACE?: string;
-   ```
-
-2. **`apps/api/src/app.ts`** — register the middleware (two lines: one import, one `use`):
-
-   ```ts
-   import { failproofMiddleware } from "./observability/hono-middleware";
-   // inside createApp(), before the route registrations:
-   app.use("*", failproofMiddleware());
-   ```
-
-   With the default no-op sink this is inert. To make it emit from a Worker, pass an HTTP sink that
-   POSTs NDJSON to `https://app.befailproof.ai/v1/events` with `Authorization: Bearer
-   ${env.FAILPROOF_API_KEY}` — the same request `ship-spool.mjs` makes by hand. That sink is
-   deliberately not written here: it needs (1) first, and the live demo must not start making
-   outbound calls because a key happens to be in `.dev.vars`.
-
-3. **`apps/api/src/.dev.vars.example`** — add `FAILPROOF_API_KEY=` and `FAILPROOF_TRACE=` with a
-   comment that both are optional and that an empty value keeps the app fully offline.
+**Still deliberately unwritten: the HTTP sink.** With the default `noopSink` the middleware is inert
+— it costs one object allocation per request and emits nothing. To make a Worker actually ship
+events, pass a sink that POSTs NDJSON to `https://app.befailproof.ai/v1/events` with
+`Authorization: Bearer ${env.FAILPROOF_API_KEY}` — the same request `ship-spool.mjs` makes by hand.
+That sink is not written on purpose: the live demo must not start making outbound calls because a key
+happens to be present in `.dev.vars`.
 
 ## 9. Evidence
 

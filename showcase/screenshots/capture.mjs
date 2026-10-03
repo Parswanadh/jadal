@@ -62,7 +62,7 @@ for (const route of config.routes) {
     await page.screenshot({ path: file, fullPage: route.fullPage ?? false });
     console.log(`[screenshots] ok  ${route.path} [${route.viewport}] -> ${file}`);
   } catch (err) {
-    failures.push({ route: route.name, url, error: String(err && err.message ? err.message : err) });
+    failures.push({ route: route.name, url, error: String(err?.message ?? err) });
     console.error(`[screenshots] FAIL ${url}: ${failures[failures.length - 1].error}`);
   } finally {
     await page.close();

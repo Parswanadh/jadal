@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ContactPurpose } from "./entities";
 
 // Agent tool contracts. Every tool is a thin wrapper over packages/core or the database.
 // LLM agents may only change state through tools; tools marked `gated` create a proposal that
@@ -22,7 +23,7 @@ export const toolSpecs = {
     gated: true,
     input: z.object({ request_id: z.string(), decision: z.enum(["approve", "reject", "partial"]), volume_m3: z.number(), rationale: z.string() }),
   },
-  place_call: { agent: ["caller"], gated: true, input: z.object({ farmer_id: z.string(), purpose: z.string(), message_te: z.string(), message_en: z.string() }) },
+  place_call: { agent: ["caller"], gated: true, input: z.object({ farmer_id: z.string(), purpose: ContactPurpose, message_te: z.string(), message_en: z.string() }) },
   send_whatsapp: { agent: ["caller"], gated: false, input: z.object({ farmer_id: z.string(), message_te: z.string(), message_en: z.string() }) },
   record_ack: { agent: ["caller"], gated: false, input: z.object({ contact_id: z.string(), acknowledged: z.boolean(), transcript: z.string() }) },
   ledger_invariants: { agent: ["auditor"], gated: false, input: z.object({}) },

@@ -99,6 +99,20 @@ export const routes = {
   events: { method: "GET", path: "/api/events", response: z.array(JadalEvent) },
   contacts: { method: "GET", path: "/api/contacts", response: z.array(Contact) },
 
+  /** Coordinator-initiated manual alert to one farmer; `simulated` is false only on a real send. */
+  alerts: {
+    method: "POST",
+    path: "/api/alerts",
+    body: z.object({
+      farmer_id: Id,
+      channel: z.enum(["call", "sms", "whatsapp"]),
+      severity: z.enum(["info", "warning", "urgent", "emergency"]),
+      message: z.string().optional(),
+      allocation: z.object({ volume_m3: z.number().nonnegative(), start: z.string(), end: z.string() }).optional(),
+    }),
+    response: z.object({ ok: z.literal(true), contact_id: Id, simulated: z.boolean(), detail: z.string() }),
+  },
+
   /** Simulated phone: the browser phone posts the farmer's reply (audio as base64 or typed text). */
   phoneReply: {
     method: "POST",

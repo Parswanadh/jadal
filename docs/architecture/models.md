@@ -131,6 +131,10 @@ $$K_c = K_{c(Tab)} + \left[0.04(u_2 - 2) - 0.004(\text{RH}_{min} - 45)\right]\le
   `WeatherDay` has neither field — so **in production this adjustment never fires**. It is exposed
   as two optional arguments (`wind_u2_ms`, `rh_min_pct`) that callers may supply; when omitted the
   tabulated value is used and no adjustment is claimed. See audit F-04.
+- **Decision (2026-10-03):** the adjustment **cannot be made automatic**. `WeatherDay` carries no
+  humidity or wind field, and `packages/contracts` is immutable in this lane, so there is no data
+  path to trigger it without a contract change. It stays opt-in via the two optional arguments; a
+  caller that holds RHmin/u2 (e.g. a richer weather fetch) can supply them per week.
 
 ### 3.4 Effective rainfall $P_{eff}$
 
@@ -147,7 +151,11 @@ $$P_{eff} = \begin{cases} 0 & P \le 3\ \text{mm} \\ 0.8\,(P - 3) & P > 3\ \text{
 - **Missing step:** `fao56-model.md` §2.4 step 3 caps $P_{eff}$ by the current root-zone deficit
   $(D_{r,t-1} + \text{ET}_{c,t})$, discarding the excess as deep percolation. The core carries **no
   day-to-day $D_r$ state**, so this cap is **not applied** and rain on already-wet soil is
-  over-credited. Recorded as audit **F-06**, open.
+  over-credited. Recorded as audit **F-06**.
+- **Decision (2026-10-03):** the cap **cannot be applied without a contract change**. The core
+  carries no day-to-day $D_r$ state, and adding a per-day root-zone water balance would change the
+  `CropEngine` contract (`packages/contracts` is immutable in this lane). Documented as a limitation;
+  a caller that tracks $D_r$ can apply the cap itself.
 
 **Lowland paddy** — project rule:
 
@@ -157,7 +165,10 @@ $$P_{eff} = P \quad\text{(the full storm)}$$
   with $H_{weir} \approx 80$–100 mm. The ponded depth $h_{water}$ is not on the `WeatherDay`
   contract, so the crest cap **cannot** be applied and the whole storm is credited where the doc's
   own worked example happens to satisfy the cap anyway (storage 65 mm > 15 mm storm).
-- **ASSUMED.** Audit **F-05**, open. A caller holding ponded-depth state must cap it itself.
+- **ASSUMED.** Audit **F-05**. A caller holding ponded-depth state must cap it itself.
+- **Decision (2026-10-03):** the cap **cannot be applied without a contract change**. The ponded
+  depth $h_{water}$ is not on the `WeatherDay` contract, and `packages/contracts` is immutable in
+  this lane. Documented as a limitation; a caller that tracks ponded depth can apply the cap itself.
 
 ### 3.5 Root-zone water balance: TAW, RAW, p
 
@@ -287,11 +298,15 @@ $$Q(x) = Q_0\,e^{-k x}\quad[\text{m}^3\,\text{s}^{-1}] \qquad
 - **Units:** $k$ in m⁻¹, $x$ in m → $kx$ dimensionless. The `3600` converts s to h.
 - **$\ell(x)$ is exactly $1 - Q(x)/Q_0$**, so the flow and loss figures are consistent by
   construction rather than independently computed.
-- **Source divergence (open, audit F-02):** both research documents that *specify* Jadal's seepage
+- **Source divergence (audit F-02):** both research documents that *specify* Jadal's seepage
   name the **Moritz** formula $S = C\sqrt{Q}\,L$ — a *linear* loss in $x$, not exponential. The
   architecture document adopts the exponential instead, and the published worked values in
   `docs/architecture/architecture.html:2588` were computed from it, so it is what the system
   actually implements. **The exponential form is ASSUMED relative to the cited Moritz source.**
+- **Decision (2026-10-03):** keep the exponential form. Replacing it with the Moritz linear form
+  would invalidate every published worked value in `architecture.html` and change the demo canal's
+  hydraulics (velocity, lag, loss fractions). The exponential is retained as an ASSUMED empirical
+  form; the divergence from the cited Moritz source is recorded here so a reviewer can disagree.
 - **Constant:** $k = 0.00012\ \text{m}^{-1}$ → **ASSUMED** project calibration for the demo canal.
 - **Boundaries:** $x = 0$ → $Q = Q_0$, lag 0, loss 0. $k = 0$ (lined canal) → constant $Q$, zero
   loss, but travel time still elapses. $v = 0$ → lag reported as **0 rather than Infinity**.
@@ -505,14 +520,14 @@ Full detail, with the exact commands and observed output for everything that was
 
 | ID | Model | Finding | Status |
 | :--- | :--- | :--- | :--- |
-| F-01 | crop | Documented groundnut example (462.12 m³) is not produced by the shipped parameter table (417.69 m³); the passing test uses hand-typed params | **Open** — documented, not "fixed" |
-| F-02 | hydraulics | Exponential seepage decay diverges from the cited Moritz linear form | **Open** |
-| F-03 | hydraulics | Overrun losses computed per-outlet, not deducted in sequence | **Open** |
-| F-04 | crop | Eq. 6.18/6.21 Kc climate adjustment had no implementation; now implemented but opt-in (contract carries no RH/wind) | **Fixed / limited** |
-| F-05 | crop | Paddy $P_{eff}$ has no weir-crest cap; rice `bounds` is `null` | **Open** |
-| F-06 | crop | Upland $P_{eff}$ has no root-zone-deficit cap (no $D_r$ state) | **Open** |
+| F-01 | crop | Documented groundnut example (462.12 m³) is not produced by the shipped parameter table (417.69 m³); the passing test uses hand-typed params | **Fixed** — docs corrected (`fao56-model.md` §5.2); test now uses the shipped row |
+| F-02 | hydraulics | Exponential seepage decay diverges from the cited Moritz linear form | **Documented** — decision: keep exponential (see §4.2) |
+| F-03 | hydraulics | Overrun losses computed per-outlet, not deducted in sequence | **Fixed** — `overrunImpact` now deducts in sequence (see §4.3) |
+| F-04 | crop | Eq. 6.18/6.21 Kc climate adjustment had no implementation; now implemented but opt-in (contract carries no RH/wind) | **Fixed / limited** — cannot be automatic; see §3.3 |
+| F-05 | crop | Paddy $P_{eff}$ has no weir-crest cap; rice `bounds` is `null` | **Documented** — needs ponded-depth state not on the contract; see §3.4 |
+| F-06 | crop | Upland $P_{eff}$ has no root-zone-deficit cap (no $D_r$ state) | **Documented** — needs $D_r$ state not on the contract; see §3.4 |
 | F-07 | ledger | Urgent approval emitted a `quota → quota` self-transfer rejected by the DB CHECK | **Fixed** |
-| F-08 | ledger | `rain.replanned` never reconciles `saved_m3` against `by_farmer_m3` | **Open** |
+| F-08 | ledger | `rain.replanned` never reconciles `saved_m3` against `by_farmer_m3` | **Fixed** — reconciliation added (see §6.3) |
 | F-09 | policy | `canGrantBuffer` approved a `NaN` volume | **Fixed** |
 | F-10 | hydraulics | Zero/adverse bed slope produced `NaN` velocity | **Fixed** |
 | F-11 | roster | `equal_hours` delivered the whole window while reporting 100% need met | **Fixed / documented** |

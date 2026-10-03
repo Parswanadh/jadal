@@ -868,10 +868,273 @@ progress {
   }
 }
 
+/* ---------- Micro-interactions and transitions ---------- */
+
+:root {
+  --transition-fast: 0.12s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.35s ease;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.08);
+}
+
+:root[data-theme="dark"] {
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.2);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.25);
+  --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.3);
+}
+
+/* Card hover: subtle lift */
+.card {
+  transition: box-shadow var(--transition-base), border-color var(--transition-base), transform var(--transition-base);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Button press feedback */
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Smooth focus ring animation */
+:focus-visible {
+  transition: outline-color var(--transition-fast);
+}
+
+/* Tab panel entrance */
+[role="tabpanel"] > * {
+  animation: fadeSlideIn 0.25s ease both;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Notice entrance */
+.notice {
+  animation: noticeIn 0.2s ease both;
+}
+
+@keyframes noticeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Skeleton loading shimmer */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-alt);
+  border-radius: var(--radius-sm);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.4), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+:root[data-theme="dark"] .skeleton::after {
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.08), transparent);
+}
+
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+/* Empty state icon */
+.empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-size: 1.25rem;
+}
+
+/* Form field validation states */
+.field-invalid input,
+.field-invalid select,
+.field-invalid textarea {
+  border-color: var(--critical);
+  background: var(--critical-subtle);
+}
+
+.field-invalid input:focus-visible,
+.field-invalid select:focus-visible,
+.field-invalid textarea:focus-visible {
+  outline-color: var(--critical);
+  border-color: var(--critical);
+}
+
+.field-error-text {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  font-size: var(--text-sm);
+  color: var(--critical);
+}
+
+.field-error-text::before {
+  content: "⚠";
+  font-size: 0.85rem;
+}
+
+/* Button loading spinner */
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.btn-loading::after {
+  content: "";
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  color: var(--on-accent);
+}
+
+.btn-loading:not(.btn-primary)::after {
+  color: var(--ink);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Progress bar fill animation */
+.bar::-webkit-progress-value {
+  transition: width 0.4s ease;
+}
+
+.bar::-moz-progress-bar {
+  transition: width 0.4s ease;
+}
+
+/* Disclosure chevron */
+.disclosure > summary::after {
+  content: "›";
+  margin-left: auto;
+  font-size: 1.1rem;
+  color: var(--muted);
+  transition: transform var(--transition-fast);
+  transform: rotate(90deg);
+}
+
+.disclosure:not([open]) > summary::after {
+  transform: rotate(0deg);
+}
+
+/* Segmented control press */
+.segment:active {
+  transform: scale(0.96);
+}
+
+/* Choice card hover */
+.choice {
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.choice:hover {
+  border-color: var(--muted);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Table row hover */
+.table tbody tr {
+  transition: background-color var(--transition-fast);
+}
+
+.table tbody tr:hover {
+  background: var(--surface-alt);
+}
+
+/* Screen card hover */
+.screen-card {
+  transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
+}
+
+.screen-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Flow step hover */
+.flow-step {
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.flow-step:hover {
+  border-color: var(--muted);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Nav link hover underline animation */
+.nav-link {
+  position: relative;
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0.75rem;
+  right: 0.75rem;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transition: transform var(--transition-fast);
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+  transform: scaleX(1);
+}
+
+.nav-link.active::after {
+  bottom: -1px;
+}
+
+/* Reduced motion: disable all animations and transitions */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     transition: none !important;
     animation: none !important;
+  }
+
+  .skeleton::after {
+    display: none;
   }
 }
 

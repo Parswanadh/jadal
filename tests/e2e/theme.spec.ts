@@ -1,4 +1,4 @@
-import { expect, settle, test } from './support/app';
+import { expect, test } from './support/app';
 import en from '../../apps/web/src/i18n/en.json';
 
 /** Requirement 3: the theme toggle switches the app to dark (and back). */

@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Hono } from "hono";
+import type { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { ShimDatabase, type ShimStatement } from "./d1-shim";
 
@@ -135,7 +135,7 @@ export async function call<T = unknown>(
     options.env as never,
   );
   const text = await res.text();
-  let body: unknown = undefined;
+  let body: unknown ;
   if (text.length > 0) {
     try {
       body = JSON.parse(text);

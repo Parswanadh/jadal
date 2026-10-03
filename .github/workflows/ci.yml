@@ -42,3 +42,33 @@ jobs:
 
       - name: Build All Packages and Apps
         run: pnpm build
+
+  laya-tests:
+    name: Laya Sidecar Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run Laya Unit Tests
+        run: cd services/laya && python -m unittest test_jadal_decision test_service_http
+
+  laya-syntax:
+    name: Laya Sidecar Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check Python Syntax
+        run: python -m py_compile services/laya/*.py

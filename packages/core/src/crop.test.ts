@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { CropParams, CropPlan, Plot, WeatherDay } from '@jadal/contracts';
 import { cropEngine, SOIL_AVAILABLE_WATER } from './crop';
+import { cropParams } from './index';
 
 describe('cropEngine (Task A2)', () => {
   const sampleParams: CropParams = {
@@ -64,11 +65,12 @@ describe('cropEngine (Task A2)', () => {
   });
 
   describe('weeklyNeed - FAO-56 section 5 worked examples', () => {
-    it('reproduces Groundnut worked example (§5.2) within 0.5 m3', () => {
-      // Exact inputs from fao56-model.md §5.1 and §5.2:
-      // Area = 1.0 ha, Furrow Ea = 0.65, sandy_loam (theta_FC - theta_WP = 0.13)
-      // Mid-season week: ET0 = 5.0 mm/day, Day 3 rain = 15.0 mm (others 0)
-      // Groundnut: Zr = 0.80 m, p_base = 0.50, Kc_mid = 1.1325
+    it('reproduces the SHIPPED groundnut parameters: 417.69 m3 (not the documented 462.12)', () => {
+      // Uses the SHIPPED crop-params.json groundnut row (FAO-56 Table 6.2 verified values:
+      // Kc_mid 1.05, Zr max 1.00 m, h 0.5 m), NOT the hand-typed climate-adjusted coefficients
+      // the fao56-model.md §5.2 worked example was computed from (Kc_mid 1.15 -> 1.1325, Zr 0.80).
+      // The shipped row is correct against the source; the documented 462.12 m3 is reproducible
+      // only with the unverified inputs. See docs/research/model-audit.md F-01.
       const plot: Plot = {
         id: 'plot-gn',
         farmer_id: 'farmer-1',
@@ -89,17 +91,7 @@ describe('cropEngine (Task A2)', () => {
         status: 'verified',
       };
 
-      const params: CropParams = {
-        crop: 'groundnut',
-        kc_ini: 0.4,
-        kc_mid: 1.1325, // Adjusted Kc,mid from §5.2
-        kc_end: 0.6,
-        stage_days: { ini: 25, dev: 35, mid: 45, late: 25 },
-        max_height_m: 0.4,
-        root_depth_m: { min: 0.5, max: 0.8 },
-        depletion_p: 0.5,
-        source: 'FAO-56 (2025) Table 6.2; fao56-model.md §5.2',
-      };
+      const params = (cropParams as readonly CropParams[]).find((p) => p.crop === 'groundnut')!;
 
       // 7-day weather in mid-season (e.g. Day 70 to 76 after sowing: 2026-07-10 to 2026-07-16)
       const weather: WeatherDay[] = [
@@ -123,34 +115,34 @@ describe('cropEngine (Task A2)', () => {
       expect(need.crop_plan_id).toBe('plan-gn');
       expect(need.week_start).toBe('2026-07-10');
       expect(need.stage).toBe('mid');
-      expect(need.kc).toBeCloseTo(1.1325, 4);
+      expect(need.kc).toBeCloseTo(1.05, 4);
 
-      // Weekly ETc: 7 * 5.0 * 1.1325 = 39.6375 mm
-      expect(need.etc_mm).toBeCloseTo(39.638, 2);
+      // Weekly ETc: 7 * 5.0 * 1.05 = 36.75 mm
+      expect(need.etc_mm).toBeCloseTo(36.75, 2);
 
       // Effective rain: 0.8 * (15 - 3) = 9.60 mm
       expect(need.effective_rain_mm).toBeCloseTo(9.6, 2);
 
-      // Net irrigation: 39.6375 - 9.60 = 30.0375 mm
-      expect(need.net_irrigation_mm).toBeCloseTo(30.038, 2);
+      // Net irrigation: 36.75 - 9.60 = 27.15 mm
+      expect(need.net_irrigation_mm).toBeCloseTo(27.15, 2);
 
-      // Gross irrigation: 30.0375 / 0.65 = 46.2115 mm
-      expect(need.gross_irrigation_mm).toBeCloseTo(46.212, 2);
+      // Gross irrigation: 27.15 / 0.65 = 41.769 mm
+      expect(need.gross_irrigation_mm).toBeCloseTo(41.769, 2);
 
-      // Target volume: 462.12 m3 within 0.5 m3
-      expect(Math.abs(need.volume_m3 - 462.12)).toBeLessThan(0.5);
+      // Shipped-table volume: 417.69 m3 (NOT the documented 462.12)
+      expect(Math.abs(need.volume_m3 - 417.69)).toBeLessThan(0.5);
 
       // Root-zone bounds for upland crop
       expect(need.bounds).not.toBeNull();
       if (need.bounds) {
-        // TAW = 1000 * 0.13 * 0.80 = 104.00 mm
-        expect(need.bounds.taw_mm).toBeCloseTo(104.0, 1);
-        // p_adj = 0.50 + 0.04 * (5 - 5.6625) = 0.4735 => RAW = 0.4735 * 104 = 49.24 mm
-        expect(need.bounds.raw_mm).toBeCloseTo(49.25, 1);
-        // Event refill: 10 * (49.25 / 0.65) * 1.0 = 757.69 m3
-        expect(Math.abs(need.bounds.event_refill_m3 - 757.69)).toBeLessThan(1.0);
-        // Event cap: 10 * (104.0 / 0.65) * 1.0 = 1600.00 m3
-        expect(Math.abs(need.bounds.event_cap_m3 - 1600.0)).toBeLessThan(1.0);
+        // TAW = 1000 * 0.13 * 1.00 = 130.00 mm
+        expect(need.bounds.taw_mm).toBeCloseTo(130.0, 1);
+        // p_adj = 0.50 + 0.04 * (5 - 5.25) = 0.49 => RAW = 0.49 * 130 = 63.70 mm
+        expect(need.bounds.raw_mm).toBeCloseTo(63.7, 1);
+        // Event refill: 10 * (63.70 / 0.65) * 1.0 = 980.0 m3
+        expect(Math.abs(need.bounds.event_refill_m3 - 980.0)).toBeLessThan(1.0);
+        // Event cap: 10 * (130.0 / 0.65) * 1.0 = 2000.0 m3
+        expect(Math.abs(need.bounds.event_cap_m3 - 2000.0)).toBeLessThan(1.0);
       }
     });
 

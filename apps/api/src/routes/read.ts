@@ -11,9 +11,9 @@
  */
 
 import type { Hono } from "hono";
-import { z } from "zod";
+import type { z } from "zod";
 
-import { JadalEvent, WaterRequest, routes } from "@jadal/contracts";
+import { type JadalEvent, type WaterRequest, routes } from "@jadal/contracts";
 
 import { ledger } from "../core-shim";
 import { audit } from "../agents/auditor";

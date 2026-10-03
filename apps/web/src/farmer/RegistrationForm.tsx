@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { CropName, SoilType } from "@jadal/contracts";
 import type { Outlet } from "@jadal/contracts";
 import { useI18n } from "../i18n/I18nContext";
 import { useFormat } from "../lib/useFormat";
 import type { FarmerApi, RegisterInput } from "./farmerApi";
-import { validateRegistration } from "./validate";
+import { validateRegistration, IRRIGATION_METHODS } from "./validate";
 import type { CropRowInput } from "./validate";
 
 const LANG_OPTIONS = ["te", "en"] as const;
@@ -17,6 +17,8 @@ function todayIso(): string {
 
 const EMPTY_CROP: CropRowInput = { crop: "", sowing_date: "", area_share_pct: 100 };
 
+type CropRow = CropRowInput & { id: number };
+
 export default function RegistrationForm({ api, outlets }: { api: FarmerApi; outlets: Outlet[] }) {
   const { t } = useI18n();
   const f = useFormat();
@@ -26,7 +28,13 @@ export default function RegistrationForm({ api, outlets }: { api: FarmerApi; out
   const [outletId, setOutletId] = useState("");
   const [plotArea, setPlotArea] = useState("");
   const [soil, setSoil] = useState<string>("");
-  const [crops, setCrops] = useState<CropRowInput[]>([EMPTY_CROP]);
+  const [lat, setLat] = useState("");
+  const [lon, setLon] = useState("");
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [irrigationMethod, setIrrigationMethod] = useState<string>("");
+  const [crops, setCrops] = useState<CropRow[]>([{ ...EMPTY_CROP, id: 0 }]);
+  const nextCropId = useRef(1);
   const [errors, setErrors] = useState<string[]>([]);
   const [sentName, setSentName] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -37,17 +45,38 @@ export default function RegistrationForm({ api, outlets }: { api: FarmerApi; out
     setCrops((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
 
+  function captureGps() {
+    if (!navigator.geolocation) {
+      setGpsError("register.gpsUnsupported");
+      return;
+    }
+    setGpsLoading(true);
+    setGpsError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(pos.coords.latitude.toFixed(6));
+        setLon(pos.coords.longitude.toFixed(6));
+        setGpsLoading(false);
+      },
+      () => {
+        setGpsError("register.gpsError");
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }
+
   async function onSubmit(ev: FormEvent) {
     ev.preventDefault();
-    const input = { name, phone, outlet_id: outletId, soil, plot_area_ha: Number(plotArea), crops };
+    const cropRows: CropRowInput[] = crops.map(({ crop, sowing_date, area_share_pct }) => ({ crop, sowing_date, area_share_pct }));
+    const input = { name, phone, outlet_id: outletId, soil, plot_area_ha: Number(plotArea), lat: Number(lat), lon: Number(lon), irrigation_method: irrigationMethod, crops: cropRows };
     const errs = validateRegistration(input, todayIso());
     setErrors(errs);
     setSentName(null);
     if (errs.length > 0) return;
     setSending(true);
     try {
-      // One plot per registration. Several crops share it through area
-      // fractions (percent converted to a 0-1 fraction for the contract).
+      const efficiency = IRRIGATION_METHODS.find((m) => m.value === irrigationMethod)?.efficiency ?? 0.65;
       const body: RegisterInput = {
         farmer: {
           name: name.trim(),
@@ -56,12 +85,12 @@ export default function RegistrationForm({ api, outlets }: { api: FarmerApi; out
           preferred_channels: ["voice"],
           has_smartphone: false,
         },
-        plots: [{ outlet_id: outletId, area_ha: Number(plotArea), soil: soil as RegisterInput["plots"][number]["soil"], lat: 0, lon: 0 }], // ASSUMED: portal has no GPS capture yet; coordinator records coordinates at verification.
+        plots: [{ outlet_id: outletId, area_ha: Number(plotArea), soil: soil as RegisterInput["plots"][number]["soil"], lat: Number(lat), lon: Number(lon) }],
         crop_plans: crops.map((row) => ({
           crop: row.crop as RegisterInput["crop_plans"][number]["crop"],
           sowing_date: row.sowing_date,
           area_fraction: row.area_share_pct / 100,
-          application_efficiency: 0.65, // ASSUMED portal default (furrow); coordinator corrects at verification.
+          application_efficiency: efficiency,
           plot_index: 0,
         })),
       };
@@ -72,7 +101,10 @@ export default function RegistrationForm({ api, outlets }: { api: FarmerApi; out
       setOutletId("");
       setPlotArea("");
       setSoil("");
-      setCrops([EMPTY_CROP]);
+      setLat("");
+      setLon("");
+      setIrrigationMethod("");
+      setCrops([{ ...EMPTY_CROP, id: nextCropId.current++ }]);
     } catch {
       setErrors(["common.loadError"]);
     } finally {
@@ -149,12 +181,38 @@ export default function RegistrationForm({ api, outlets }: { api: FarmerApi; out
                 ))}
               </select>
             </div>
+            <div className="field">
+              <label htmlFor="reg-lat">{t("register.lat")}</label>
+              <input id="reg-lat" value={lat} onChange={(e) => setLat(e.target.value)} inputMode="decimal" type="number" step="0.000001" min="-90" max="90" placeholder="0.000000" />
+            </div>
+            <div className="field">
+              <label htmlFor="reg-lon">{t("register.lon")}</label>
+              <input id="reg-lon" value={lon} onChange={(e) => setLon(e.target.value)} inputMode="decimal" type="number" step="0.000001" min="-180" max="180" placeholder="0.000000" />
+            </div>
+            <div className="field">
+              <label htmlFor="reg-irrigation">{t("register.irrigationMethod")}</label>
+              <select id="reg-irrigation" value={irrigationMethod} onChange={(e) => setIrrigationMethod(e.target.value)}>
+                <option value="">{t("register.choose")}</option>
+                {IRRIGATION_METHODS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {t(`register.irrigationMethods.${m.value}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="btn-row">
+            <button type="button" className="btn" onClick={captureGps} disabled={gpsLoading}>
+              {gpsLoading ? t("register.gpsLoading") : t("register.gpsCapture")}
+            </button>
+            {gpsError && <p className="small">{t(gpsError)}</p>}
           </div>
 
           <h3 className="form-section">{t("register.cropsTitle")}</h3>
           <p className="muted">{t("register.cropsHint")}</p>
           {crops.map((row, i) => (
-            <div className="crop-row" key={i}>
+            <div className="crop-row" key={row.id}>
               <div className="field-grid three">
                 <div className="field">
                   <label htmlFor={`reg-crop-${i}`}>{t("register.crop")}</label>
@@ -192,7 +250,7 @@ export default function RegistrationForm({ api, outlets }: { api: FarmerApi; out
           ))}
           <p className="small">{t("register.shareTotal", { n: shareTotal })}</p>
           <div className="btn-row form-actions">
-            <button type="button" className="btn" onClick={() => setCrops((prev) => [...prev, { crop: "", sowing_date: "", area_share_pct: 0 }])}>
+            <button type="button" className="btn" onClick={() => setCrops((prev) => [...prev, { ...EMPTY_CROP, area_share_pct: 0, id: nextCropId.current++ }])}>
               {t("register.addCrop")}
             </button>
             <button className="btn btn-primary btn-lg" type="submit" disabled={sending}>

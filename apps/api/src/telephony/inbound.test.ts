@@ -299,13 +299,13 @@ describe("inbound reply: STT -> System 1 -> raiseRequest -> speak", () => {
 
     // Recording downloaded from Twilio itself, with Basic auth.
     const dl = t.calls.find((c) => c.url.endsWith("RE1.wav"))!;
-    expect((dl.init?.headers as Record<string, string>).Authorization).toBe(`Basic ${btoa(`${SID}:${TOKEN}`)}`);
+    expect((dl.init!.headers as Record<string, string>).Authorization).toBe(`Basic ${btoa(`${SID}:${TOKEN}`)}`);
 
     // Deepgram first (task 3); Sarvam was not needed.
     const dg = t.calls.find((c) => c.url.startsWith("https://api.deepgram.com/v1/listen"))!;
     expect(dg.url).toContain("model=nova-3");
     expect(dg.url).toContain("language=te");
-    expect((dg.init?.headers as Record<string, string>).Authorization).toBe("Token dg-key");
+    expect((dg.init!.headers as Record<string, string>).Authorization).toBe("Token dg-key");
     expect(t.calls.some((c) => c.url.startsWith("https://api.sarvam.ai/speech-to-text"))).toBe(false);
 
     // The same classifier the typed flow uses.

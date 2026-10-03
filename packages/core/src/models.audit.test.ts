@@ -628,9 +628,9 @@ describe('F-08 - ledger conservation and self-transfers', () => {
     expect(ledger.checkConservation(entries, 100).diff_m3).toBe(0);
   });
 
-  it('F-08: rain.replanned does not reconcile saved_m3 against by_farmer_m3', () => {
-    // The event says 500 m3 was saved but only 200 m3 is attributed to farmers. Nothing rejects
-    // this, and the ledger books only the attributed part.
+  it('F-08: rain.replanned reconciles saved_m3 against by_farmer_m3', () => {
+    // The event says 500 m3 was saved but only 200 m3 is attributed to farmers. The ledger must
+    // book the full 500 m3: the 200 attributed to farmers plus the 300 unattributed remainder.
     const event = {
       id: 'r1',
       at: '2026-06-01T00:00:00Z',
@@ -638,6 +638,26 @@ describe('F-08 - ledger conservation and self-transfers', () => {
       actor: { kind: 'system' as const, id: 's' },
       type: 'rain.replanned' as const,
       saved_m3: 500,
+      by_farmer_m3: { f1: 100, f2: 100 },
+    };
+    const entries = ledger.entriesFor(event);
+    // 2 farmer entries + 1 remainder entry = 3 entries, total = 500 = saved_m3.
+    expect(entries).toHaveLength(3);
+    expect(entries.reduce((s, e) => s + e.volume_m3, 0)).toBe(500);
+    // The unattributed remainder is booked from the canal supply to the buffer.
+    const remainder = entries.find((e) => e.from === 'canal_supply');
+    expect(remainder).toBeDefined();
+    expect(remainder!.volume_m3).toBe(300);
+  });
+
+  it('F-08: a valid rain.replanned event (saved_m3 == sum) books only the farmer entries', () => {
+    const event = {
+      id: 'r1',
+      at: '2026-06-01T00:00:00Z',
+      canal_id: 'c1',
+      actor: { kind: 'system' as const, id: 's' },
+      type: 'rain.replanned' as const,
+      saved_m3: 200,
       by_farmer_m3: { f1: 100, f2: 100 },
     };
     const entries = ledger.entriesFor(event);

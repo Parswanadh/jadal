@@ -16,7 +16,6 @@ export interface Env {
   DB: D1Database;
   CACHE: KVNamespace;
   OUTBOUND: Queue;
-  ASSETS?: Fetcher;
   DEMO_MODE?: string;
   ENVIRONMENT?: string;
   AI_GATEWAY_URL?: string;
@@ -70,7 +69,6 @@ export interface Env {
   META_PHONE_NUMBER_ID?: string;
   REAL_TELEPHONY?: string;
   // --- Failproof observability
-  FAILPROOF_API_KEY?: string;
   FAILPROOF_TRACE?: string;
   // --- Durable Workflows (B7)
   URGENT_REQUEST_WORKFLOW?: Workflow;

@@ -280,14 +280,14 @@ describe("recording -> STT -> classify -> raiseRequest", () => {
     expect(await res.text()).toContain("<Hangup/>");
 
     const dl = t.calls.find((c) => c.url.endsWith("RE1.wav"))!;
-    expect((dl.init?.headers as Record<string, string>).Authorization).toBe(`Basic ${btoa(`${SID}:${TOKEN}`)}`);
+    expect((dl.init!.headers as Record<string, string>).Authorization).toBe(`Basic ${btoa(`${SID}:${TOKEN}`)}`);
 
     const stt = t.calls.find((c) => c.url === "https://api.sarvam.ai/speech-to-text")!;
     const form = stt.init?.body as FormData;
     expect(form.get("language_code")).toBe("te-IN");
     expect(form.get("model")).toMatch(/^saaras/);
     expect(form.get("file")).toBeInstanceOf(Blob);
-    expect((stt.init?.headers as Record<string, string>)["api-subscription-key"]).toBe("sarvam-key");
+    expect((stt.init!.headers as Record<string, string>)["api-subscription-key"]).toBe("sarvam-key");
 
     expect(t.classified).toEqual(["నాకు అత్యవసరంగా నీళ్లు కావాలి"]);
     expect(t.raised).toEqual([
@@ -321,7 +321,7 @@ describe("recording -> STT -> classify -> raiseRequest", () => {
     const dg = t.calls.find((c) => c.url.startsWith("https://api.deepgram.com/v1/listen"))!;
     expect(dg.url).toContain("model=nova-3");
     expect(dg.url).toContain("language=te");
-    expect((dg.init?.headers as Record<string, string>).Authorization).toBe("Token dg-key");
+    expect((dg.init!.headers as Record<string, string>).Authorization).toBe("Token dg-key");
     expect(t.classified).toEqual(["I need water urgently"]);
     expect(t.transcripts[0]![2]).toBe("deepgram");
     expect(t.raised).toHaveLength(1);
