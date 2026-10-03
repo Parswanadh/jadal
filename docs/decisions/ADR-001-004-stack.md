@@ -41,6 +41,11 @@ Date: 2026-10-01 · Status: Accepted · Decider: orchestrator (Claude Code), bas
 
 ## ADR-004 Model layering: System 1 + System 2
 
+> Amended by **ADR-006**: System 1 is now a provider chain (`SYSTEM1_PROVIDER`), Laya is the
+> preferred primary (local Telugu-capable sidecar), and Jev is reached on OpenRouter's typed
+> **Decisions API** with `typesafe/jev-1.13` — `typesafe/jev-router` is a chat-model router, not the
+> decision model. See `docs/decisions/ADR-006-system1-providers.md`.
+
 **Decision.**
 - **Deterministic core:** all water numbers.
 - **System 1** (fast, typed decisions):

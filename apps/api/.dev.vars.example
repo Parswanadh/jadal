@@ -19,8 +19,33 @@ ENVIRONMENT=development
 # https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_name>
 AI_GATEWAY_URL=
 
-# OpenRouter key. Powers Jev (System 1) and the System-2 agent prose. Unset => rules only.
+# --- System 1 (Jev / Laya / rules) ----------------------------------------------------------
+# Which System-1 decision provider to use: `laya`, `jev`, `rules` or `auto`.
+# Unset/blank => `auto`: Laya (local, Telugu-native) first, then Jev, then the Telugu keyword rules.
+# An unrecognised spelling degrades to `rules` (offline, no network). `rules` never touches the
+# network. Whatever runs, the decision carries source=laya|jev|rules, so a fallback is never silent.
+SYSTEM1_PROVIDER=
+
+# Local Laya sidecar base URL (lane L builds `services/laya`, `POST /decide`). Unset => Laya is
+# skipped in the chain. Example: http://127.0.0.1:8099/decide
+LAYA_ENDPOINT=
+
+# Deadline for one Laya call, in milliseconds. Unset => 4000. Values outside 100..15000 are clamped.
+LAYA_TIMEOUT_MS=
+
+# OpenRouter key. Powers Jev (System 1) and the System-2 agent prose. Unset => Jev is skipped.
 OPENROUTER_API_KEY=
+
+# Jev route slug on OpenRouter's typed Decisions API. Unset => `typesafe/jev-1.13`.
+# `~typesafe/jev-latest` floats to the newest Jev release; pin a version when urgency thresholds
+# were tuned against it. NOT `typesafe/jev-router`: that slug is an OpenRouter chat-model router
+# (it returns generated text), not a Decisions model, and the Decisions API rejects it.
+JEV_MODEL=
+
+# Deadline for one Jev Decisions call, in milliseconds. Unset => 4000. Values outside 250..15000 are
+# clamped. On timeout the classifier falls back to the next provider and reports source=jev only if
+# Jev actually answered.
+JEV_TIMEOUT_MS=
 
 # Sarvam AI key for Telugu speech-to-text (`saaras`) and text-to-speech (`bulbul`).
 # Unset => the simulated phone shows text and skips audio.
