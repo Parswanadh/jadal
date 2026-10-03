@@ -1,5 +1,12 @@
 /// <reference types="@cloudflare/workers-types" />
 
+// NOTE: the Worker *bindings and variables* type is `Env` in `./env.ts`. This file only declares the
+// Cloudflare runtime globals, because the repo has no `@cloudflare/workers-types` package to resolve.
+// The telephony variables B9 wires up live on `Env` there:
+//   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER, PUBLIC_BASE_URL, SARVAM_API_KEY,
+//   DEEPGRAM_API_KEY, SARVAM_TTS_SPEAKER, REAL_TELEPHONY, SKIP_TWILIO_SIGNATURE
+// Their local *names* (never values) are listed in `.dev.vars.example`.
+
 // Ambient Cloudflare Worker type fallback declarations
 declare global {
   interface D1Database {
@@ -13,10 +20,11 @@ declare global {
     bind(...values: unknown[]): D1PreparedStatement;
     first<T = unknown>(colName?: string): Promise<T | null>;
     run<T = unknown>(): Promise<D1Response<T>>;
-    // Rows directly, not the `D1Response` envelope. `db/store.ts`'s `DbStatement` and the test D1
-    // shim both read `.all()` as an array, so the fallback mirrors that contract. `run()` and
-    // `batch()` keep the envelope because the store reads their `success`/`meta`.
-    all<T = unknown>(): Promise<T[]>;
+    // The `D1Response` envelope, exactly as the real binding behaves:
+    // `const { results } = await stmt.all()`. Until B9 this fallback declared `Promise<T[]>`, which
+    // matched only the in-memory test shim; the first real `wrangler dev` boot then 500'd every read
+    // route with `rows.map is not a function`. Use `resultRows()` from `db/store.ts` to unwrap.
+    all<T = unknown>(): Promise<D1Response<T>>;
     raw<T = unknown>(): Promise<T[]>;
   }
 

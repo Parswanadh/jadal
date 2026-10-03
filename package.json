@@ -12,6 +12,7 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "e2e": "playwright test -c tests/e2e/playwright.config.ts",
+    "e2e:live": "E2E_LIVE=1 playwright test -c tests/e2e/playwright.config.ts --project=live",
     "dev": "pnpm -r --parallel dev",
     "deploy": "pnpm --filter api deploy"
   },

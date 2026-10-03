@@ -40,7 +40,8 @@ describe("isRealTelephony", () => {
   const credentials = {
     TWILIO_ACCOUNT_SID: "AC00000000000000000000000000000000",
     TWILIO_AUTH_TOKEN: "test-token",
-    TWILIO_FROM: "+10000000000",
+    TWILIO_FROM_NUMBER: "+10000000000",
+    PUBLIC_BASE_URL: "https://jadal.example.dev",
   };
 
   it("is off with no configuration", () => {
@@ -59,11 +60,17 @@ describe("isRealTelephony", () => {
       isRealTelephony({ REAL_TELEPHONY: "true", TWILIO_ACCOUNT_SID: "AC1", TWILIO_AUTH_TOKEN: "tok" }),
     ).toBe(false);
     expect(
-      isRealTelephony({ REAL_TELEPHONY: "true", TWILIO_ACCOUNT_SID: "AC1", TWILIO_FROM: "+10000000000" }),
+      isRealTelephony({ REAL_TELEPHONY: "true", TWILIO_ACCOUNT_SID: "AC1", TWILIO_FROM_NUMBER: "+10000000000" }),
     ).toBe(false);
     expect(
       isRealTelephony({ ...credentials, REAL_TELEPHONY: "true", TWILIO_ACCOUNT_SID: "  " }),
     ).toBe(false);
+  });
+
+  it("is off without a public base URL, because Twilio could not fetch the TwiML", () => {
+    const { PUBLIC_BASE_URL: _omitted, ...withoutBase } = credentials;
+    expect(isRealTelephony({ ...withoutBase, REAL_TELEPHONY: "true" })).toBe(false);
+    expect(isRealTelephony({ ...credentials, REAL_TELEPHONY: "true", PUBLIC_BASE_URL: "  " })).toBe(false);
   });
 
   it("is on only with the flag and the full credential set", () => {

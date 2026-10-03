@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Jadal API — live local run</title>
+  </head>
+  <body>
+    <!--
+      Placeholder for the ASSETS binding during `pnpm e2e:live`.
+
+      `apps/api/wrangler.jsonc` points `assets.directory` at `../web/dist`, which only exists after
+      `pnpm --filter web build`. The live suite tests the API (reset the demo, drive the telephony
+      webhooks), not the web shell, so `e2e:live` passes `--assets` at this directory instead. That
+      keeps the live run independent of the web lane's build state and of `apps/web/**`, which B9 does
+      not own.
+
+      The Worker still serves every `/api/*` path first (`run_worker_first`), so nothing here is
+      reachable from the suite.
+    -->
+    <p>Placeholder static asset for the Jadal API live local run. See apps/api/test/live-assets.</p>
+  </body>
+</html>

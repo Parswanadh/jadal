@@ -2,15 +2,57 @@ import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
 
 /**
- * End-to-end suite for apps/web in mock mode (VITE_MOCK=1).
+ * End-to-end suites for apps/web and the live API.
  *
- * The suite talks to the real dev server, so the app boots exactly as a
- * presenter would run it: `pnpm --filter web dev --port <PORT> --strictPort`.
+ * There are two projects and they need *different* servers, so which `webServer` entries start is
+ * chosen by `E2E_LIVE`:
+ *
+ *  - default (`pnpm e2e`): the `chromium` project drives apps/web in mock mode
+ *    (`VITE_MOCK=1 pnpm --filter web dev`). `live/**` is ignored here.
+ *  - `E2E_LIVE=1` (`pnpm e2e:live`): the `live` project talks to the real Hono Worker on
+ *    `127.0.0.1:8788` — real workerd, real local D1 — started by `pnpm --filter api dev:live`.
+ *    The web dev server is not started, because the live suite is an API suite and `apps/web` is
+ *    owned by another lane.
+ *
  * Chromium only, desktop 1440x900.
  */
 export const E2E_PORT = 5177;
 export const E2E_BASE_URL = `http://127.0.0.1:${E2E_PORT}`;
 export const E2E_VIEWPORT = { width: 1440, height: 900 } as const;
+
+/** The live Worker. Port 8788, not 8787: an unrelated `event-manage` wrangler holds 8787. */
+export const E2E_LIVE_PORT = 8788;
+export const E2E_LIVE_BASE_URL = `http://127.0.0.1:${E2E_LIVE_PORT}`;
+
+const LIVE = process.env.E2E_LIVE === '1';
+
+const webServers = LIVE
+  ? [
+      {
+        // `dev:live` runs `wrangler dev --local` with the local-only overrides the live suite needs:
+        // demo mode on (so `POST /api/demo/reset` is allowed), `SKIP_TWILIO_SIGNATURE=1` (so the
+        // Twilio webhooks can be replayed from the suite; local only, never deployed), and a
+        // compatibility date the installed workerd binary accepts.
+        command: 'pnpm --filter api dev:live',
+        cwd: path.resolve(__dirname, '../..'),
+        url: `${E2E_LIVE_BASE_URL}/api/health`,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+        stdout: 'pipe' as const,
+        stderr: 'pipe' as const,
+      },
+    ]
+  : [
+      {
+        command: `VITE_MOCK=1 pnpm --filter web dev --port ${E2E_PORT} --strictPort`,
+        cwd: path.resolve(__dirname, '../..'),
+        url: E2E_BASE_URL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+        stdout: 'pipe' as const,
+        stderr: 'pipe' as const,
+      },
+    ];
 
 export default defineConfig({
   testDir: '.',
@@ -30,16 +72,22 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      // `live/**` belongs to the other project; without this it would be collected here too.
+      testIgnore: 'live/**',
       use: { ...devices['Desktop Chrome'], viewport: E2E_VIEWPORT },
     },
+    // Declared only under `E2E_LIVE=1`, so a plain `pnpm e2e` runs the UI suite and nothing else —
+    // no `--project` flag needed on the existing script.
+    ...(LIVE
+      ? [
+          {
+            // API-only: no browser is launched, so this project runs light next to the UI suite.
+            name: 'live',
+            testMatch: 'live/**/*.spec.ts',
+            use: { baseURL: E2E_LIVE_BASE_URL },
+          },
+        ]
+      : []),
   ],
-  webServer: {
-    command: `VITE_MOCK=1 pnpm --filter web dev --port ${E2E_PORT} --strictPort`,
-    cwd: path.resolve(__dirname, '../..'),
-    url: E2E_BASE_URL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  },
+  webServer: webServers,
 });

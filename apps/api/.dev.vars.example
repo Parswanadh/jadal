@@ -26,10 +26,30 @@ OPENROUTER_API_KEY=
 # Unset => the simulated phone shows text and skips audio.
 SARVAM_API_KEY=
 
-# Twilio trial credentials. All three are required before real PSTN calls are attempted.
+# Optional Sarvam `bulbul` speaker voice. Unset => the module default (`shubh`).
+SARVAM_TTS_SPEAKER=
+
+# Optional Deepgram key. Only used as a speech-to-text fallback when Sarvam cannot transcribe
+# (`nova-3`, `language=te`).
+DEEPGRAM_API_KEY=
+
+# Twilio trial credentials. All four are required before real PSTN calls are attempted:
+# the account, the auth token, the caller ID and a public origin Twilio can reach for webhooks.
+# The caller ID is `TWILIO_FROM_NUMBER` (the name `src/telephony` reads), not `TWILIO_FROM`.
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
-TWILIO_FROM=
+TWILIO_FROM_NUMBER=
+
+# Optional live-demo redirect. The seeded farmers carry placeholder Mobiles that cannot receive a
+# real call, so set this to one or more real E.164 numbers (comma-separated) to route outbound
+# calls to a reachable handset instead. One recipient always maps to the same target. Unset =>
+# calls go to the farmer's own number. Only used when REAL_TELEPHONY=true.
+TWILIO_FORWARD_TO=
+
+# Public https origin for the Twilio webhooks, no trailing path. Locally this is a tunnel, e.g.
+# `cloudflared tunnel --url http://localhost:8788` printed as https://<name>.trycloudflare.com;
+# in production it is the deployed Worker origin. Must match the host Twilio signs, exactly.
+PUBLIC_BASE_URL=
 
 # Meta WhatsApp Cloud API credentials. Fallback is the in-app WhatsApp drawer.
 META_WHATSAPP_TOKEN=
@@ -38,3 +58,7 @@ META_PHONE_NUMBER_ID=
 # Explicit opt-in for real PSTN calls (`true`/`1`). Requires a full Twilio credential set above;
 # otherwise the simulated phone is used. Keep `false` in every demo.
 REAL_TELEPHONY=false
+
+# LOCAL TESTS ONLY: `1` disables X-Twilio-Signature validation so a webhook can be replayed with curl.
+# Never set this on a deployed Worker.
+# SKIP_TWILIO_SIGNATURE=1

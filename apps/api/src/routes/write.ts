@@ -43,8 +43,8 @@ import {
 import { appendEvent, planAppend } from "../db/store";
 import { DEMO_CANAL_ID, DEMO_SEASON_SUPPLY_M3 } from "../demo";
 import type { Env } from "../env";
-import { HttpError, badRequest, notFound, parseBody, parseResponse, providerEnv } from "../http";
-import { classify } from "../system1";
+import { HttpError, badRequest, notFound, parseBody, parseResponse } from "../http";
+import { raiseRequest } from "../requests";
 import { templateForPurpose } from "../voice/telugu";
 import { readRequestSnapshot } from "./read";
 
@@ -52,7 +52,6 @@ const COORDINATOR_ACTOR = { kind: "coordinator", id: "coordinator" } as const;
 const AGENT_NEED_ACTOR = { kind: "agent", id: "agent_need" } as const;
 const AGENT_SCHEDULER_ACTOR = { kind: "agent", id: "agent_scheduler" } as const;
 const AGENT_CALLER_ACTOR = { kind: "agent", id: "agent_caller" } as const;
-const SYSTEM1_ACTOR = { kind: "agent", id: "system1" } as const;
 
 /** Monday-aligned week start (`YYYY-MM-DD`) for an ISO instant, using the same rule the core uses. */
 function weekStartOf(iso: string): string {
@@ -359,49 +358,15 @@ export function registerWriteRoutes(app: Hono<{ Bindings: Env }>): void {
 
   app.post(routes.raiseRequest.path, async (c) => {
     const body = await parseBody(c, routes.raiseRequest.body);
-    const farmer = await getFarmer(c.env, body.farmer_id);
-    if (farmer === null) {
-      throw notFound("farmer_not_found", `no farmer ${body.farmer_id}`);
-    }
-
-    const at = await now(c.env);
-    const triage = await classify(providerEnv(c.env), body.reason);
-    const request: WaterRequest = {
-      id: newId("req"),
+    // The one raise-a-request path, shared with the telephony webhook's `raiseRequest` dep (B9).
+    const stored = await raiseRequest(c.env, {
       farmer_id: body.farmer_id,
-      ...(body.crop_plan_id === undefined ? {} : { crop_plan_id: body.crop_plan_id }),
       type: body.type,
       volume_m3: body.volume_m3,
       reason: body.reason,
       channel: body.channel,
-      status: "raised",
-      raised_at: at,
-      triage_score: triage.urgency,
-    };
-
-    await appendEvent(c.env, {
-      id: newId("evt"),
-      at,
-      canal_id: DEMO_CANAL_ID,
-      actor: { kind: "farmer", id: body.farmer_id },
-      type: "request.raised",
-      request,
+      ...(body.crop_plan_id === undefined ? {} : { crop_plan_id: body.crop_plan_id }),
     });
-    await appendEvent(c.env, {
-      id: newId("evt"),
-      at,
-      canal_id: DEMO_CANAL_ID,
-      actor: SYSTEM1_ACTOR,
-      type: "request.triaged",
-      request_id: request.id,
-      triage_score: triage.urgency,
-      intent: triage.intent,
-    });
-
-    const stored = (await readRequestSnapshot(c.env)).find((candidate) => candidate.id === request.id);
-    if (stored === undefined) {
-      throw new HttpError("internal_error", `request ${request.id} vanished after being raised`, 500);
-    }
     return c.json(parseResponse(routes.raiseRequest.response, stored));
   });
 

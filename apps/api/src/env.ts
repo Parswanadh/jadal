@@ -22,9 +22,25 @@ export interface Env {
   AI_GATEWAY_URL?: string;
   OPENROUTER_API_KEY?: string;
   SARVAM_API_KEY?: string;
+  // --- telephony (B8 module, mounted by B9). Names only; values live in `.dev.vars` or `wrangler
+  // secret put`. Real calls need the four Twilio/public-URL names together.
   TWILIO_ACCOUNT_SID?: string;
   TWILIO_AUTH_TOKEN?: string;
-  TWILIO_FROM?: string;
+  /** Caller ID, E.164. Named `TWILIO_FROM_NUMBER` because that is what `src/telephony` reads. */
+  TWILIO_FROM_NUMBER?: string;
+  /**
+   * Demo-only redirect of outbound call destinations: one or more E.164 numbers, comma-separated.
+   * Unset keeps production behaviour (dial the farmer's own number). See `forwardTarget`.
+   */
+  TWILIO_FORWARD_TO?: string;
+  /** Public https origin Twilio can reach for webhooks, e.g. a cloudflared tunnel or the deployed Worker. */
+  PUBLIC_BASE_URL?: string;
+  /** Optional: Deepgram `nova-3` STT fallback when Sarvam cannot transcribe. */
+  DEEPGRAM_API_KEY?: string;
+  /** Optional: Sarvam `bulbul` speaker for Telugu TTS (module default `shubh`). */
+  SARVAM_TTS_SPEAKER?: string;
+  /** "1" skips `X-Twilio-Signature` validation. LOCAL TESTS ONLY; never set on a deployed Worker. */
+  SKIP_TWILIO_SIGNATURE?: string;
   META_WHATSAPP_TOKEN?: string;
   META_PHONE_NUMBER_ID?: string;
   REAL_TELEPHONY?: string;
@@ -69,12 +85,20 @@ export function isDemo(env: Pick<Env, "DEMO_MODE">): boolean {
  * present. A half-configured deployment therefore keeps using the simulated phone instead of
  * failing a judge's call, which is the ADR-003 hard requirement. Callers that must never place a
  * real call during the demo should additionally require `!isDemo(env)`.
+ *
+ * This mirrors `realCallsEnabled` in `src/telephony/twilio.ts`, including `PUBLIC_BASE_URL`: without a
+ * public origin Twilio cannot fetch the TwiML, so a call placed without it would ring and then go
+ * silent. B9 aligned the two predicates — before, this one ignored the base URL and reported `true`
+ * for a deployment that could not actually complete a call.
  */
 export function isRealTelephony(
-  env: Pick<Env, "REAL_TELEPHONY" | "TWILIO_ACCOUNT_SID" | "TWILIO_AUTH_TOKEN" | "TWILIO_FROM">,
+  env: Pick<Env, "REAL_TELEPHONY" | "TWILIO_ACCOUNT_SID" | "TWILIO_AUTH_TOKEN" | "TWILIO_FROM_NUMBER" | "PUBLIC_BASE_URL">,
 ): boolean {
   if (parseFlag(env.REAL_TELEPHONY) !== true) return false;
   return (
-    hasText(env.TWILIO_ACCOUNT_SID) && hasText(env.TWILIO_AUTH_TOKEN) && hasText(env.TWILIO_FROM)
+    hasText(env.TWILIO_ACCOUNT_SID) &&
+    hasText(env.TWILIO_AUTH_TOKEN) &&
+    hasText(env.TWILIO_FROM_NUMBER) &&
+    hasText(env.PUBLIC_BASE_URL)
   );
 }

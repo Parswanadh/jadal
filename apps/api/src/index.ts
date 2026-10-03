@@ -23,12 +23,28 @@ import { now as clockNow } from "./db/clock";
 import { listOutlets, listReleaseWindows } from "./db/repo";
 import type { Env } from "./env";
 
-/** Re-export the Workflow classes as named exports so `wrangler.jsonc` `class_name` can bind them. */
-export * from "./campaigns/workflows";
+/**
+ * Re-export **only** the Workflow classes as named exports so `wrangler.jsonc` `class_name` can bind
+ * them.
+ *
+ * This used to be `export * from "./campaigns/workflows"`, which also published
+ * `DEFAULT_MAX_ATTEMPTS` (a number) and the local `WorkflowEntrypoint` stand-in as named exports of
+ * the Worker module. `workerd` reads every named export as a handler entry and refuses the whole
+ * script: `Incorrect type for map entry 'DEFAULT_MAX_ATTEMPTS': the provided value is not of type
+ * 'function or ExportedHandler'`. It starts fine under Vitest, so nothing caught it until the Worker
+ * was actually booted (B9). Listing the two classes explicitly keeps the export surface to handlers.
+ */
+export { CallCampaignWorkflow, UrgentRequestWorkflow } from "./campaigns/workflows";
 export * from "./env";
 
-/** The single nightly cron. 00:30 UTC is 06:00 IST, before the irrigation day starts. */
-export const NIGHTLY_CRON = "30 0 * * *";
+/**
+ * The single nightly cron. 00:30 UTC is 06:00 IST, before the irrigation day starts.
+ *
+ * Deliberately **not** exported: `workerd` reads every named export of the entry module as a handler
+ * entry, and a string is not one (`Incorrect type for map entry 'NIGHTLY_CRON'`). It is only read by
+ * the `scheduled` handler below.
+ */
+const NIGHTLY_CRON = "30 0 * * *";
 
 /**
  * Nightly rain re-plan: once per canal, defer upcoming turns when the forecast hits the trigger.

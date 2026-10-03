@@ -19,6 +19,7 @@ import { createEnv, createTestDb, type FetchRoutes, type TestEnv } from "../../t
 import { seedScenario } from "../../test/fixtures";
 import { now as clockNow } from "../db/clock";
 import { deterministicId } from "../db/id";
+import { getContact } from "../db/repo";
 import { appendEvent, readEvents } from "../db/store";
 import {
   RETRY_DELAY_MINUTES,
@@ -199,5 +200,142 @@ describe("runEscalation", () => {
     const env = await dbEnv();
     await seedScenario(env);
     expect(await runEscalation(env, "ct-missing")).toBeNull();
+  });
+});
+
+/**
+ * B9 step 2: the ladder places a real call on a voice rung.
+ *
+ * All three `placeCall` outcomes are covered here, and every one of them is driven through
+ * `createEnv`'s recording fetch — the harness throws on an unmocked URL, so a test that accidentally
+ * reached the network would fail rather than place a call. The credentials below are Twilio's public
+ * test values, not secrets, and no request leaves the process.
+ */
+describe("runEscalation -> placeCall (B9)", () => {
+  /** Twilio's documented test caller ID and a dummy token: safe to commit, never a real account. */
+  const TWILIO = {
+    TWILIO_ACCOUNT_SID: "ACtest123",
+    TWILIO_AUTH_TOKEN: "test-token-not-a-secret",
+    TWILIO_FROM_NUMBER: "+15005550006",
+    PUBLIC_BASE_URL: "https://jadal.example.dev",
+  } as const;
+
+  /** Append the rung the ladder will climb from. */
+  async function appendContact(env: TestEnv, at: string, contact: Contact): Promise<Contact> {
+    await appendEvent(env, {
+      id: deterministicId("evt", "contact.updated", contact.id),
+      at,
+      canal_id: "c1",
+      actor: { kind: "agent", id: "caller" },
+      type: "contact.updated",
+      contact,
+    });
+    return contact;
+  }
+
+  function voiceContact(id: string, farmerId: string, attempt: number, at: string): Contact {
+    return {
+      id,
+      farmer_id: farmerId,
+      channel: "voice",
+      purpose: "roster_change",
+      status: "sent",
+      attempt,
+      message_te: "జడల్: మీ నీటి వంతు మారింది.",
+      message_en: "Jadal: your turn has changed.",
+      at,
+    };
+  }
+
+  it("branch 1: without Twilio env the simulated phone is kept and nothing is fetched", async () => {
+    const env = await dbEnv();
+    await seedScenario(env);
+    const at = await clockNow(env);
+    await appendContact(env, at, voiceContact("ct-sim-1", "f1", 1, at));
+
+    const next = await runEscalation(env, "ct-sim-1");
+    expect(next).not.toBeNull();
+    // `{simulated: true}`: the rung is still queued for the browser phone, not marked sent.
+    expect(next?.status).toBe("queued");
+    expect(next?.attempt).toBe(2);
+    expect(env.calls).toHaveLength(0);
+    // The ladder still dispatches the rung, exactly as it did before B9.
+    expect(env.OUTBOUND.sent).toHaveLength(1);
+  });
+
+  it("branch 2: a Twilio-accepted call marks the contact sent", async () => {
+    const env = await dbEnv({ "api.twilio.com": { sid: "CA123", status: "queued" } });
+    Object.assign(env, TWILIO);
+    await seedScenario(env);
+    const at = await clockNow(env);
+    await appendContact(env, at, voiceContact("ct-ok-1", "f1", 1, at));
+
+    const next = await runEscalation(env, "ct-ok-1");
+    expect(next?.status).toBe("sent");
+    expect(next?.attempt).toBe(2);
+
+    const call = env.calls.find((entry) => entry.url.includes("api.twilio.com"));
+    expect(call).toBeDefined();
+    expect(call?.url).toBe("https://api.twilio.com/2010-04-01/Accounts/ACtest123/Calls.json");
+    const form = new URLSearchParams(call?.body as string);
+    expect(form.get("To")).toBe("+919000000001");
+    expect(form.get("From")).toBe("+15005550006");
+    expect(form.get("Url")).toBe(`https://jadal.example.dev/api/telephony/twiml/${next?.id}`);
+    expect(form.get("StatusCallback")).toBe(`https://jadal.example.dev/api/telephony/status/${next?.id}`);
+
+    // The status is in the event log, not just in the returned object.
+    const stored = await getContact(env, next?.id as string);
+    expect(stored?.status).toBe("sent");
+  });
+
+  it("branch 3: a Twilio rejection marks the contact failed, and the ladder retries then escalates", async () => {
+    const env = await dbEnv({
+      "api.twilio.com": new Response(JSON.stringify({ message: "Unverified number" }), { status: 400 }),
+    });
+    Object.assign(env, TWILIO);
+    await seedScenario(env);
+    const at = await clockNow(env);
+    // f5 is a feature phone: voice is the only channel it can be reached on, so every rung below is a
+    // voice call and the ladder must exhaust its retries before flagging the coordinator.
+    await appendContact(env, at, voiceContact("ct-fail-1", "f5", 1, at));
+
+    // Rung 2: the 15-minute voice retry. Twilio refuses it.
+    const second = await runEscalation(env, "ct-fail-1");
+    expect(second?.status).toBe("failed");
+    expect(second?.attempt).toBe(2);
+    expect(second?.channel).toBe("voice");
+
+    // Rung 3: the failed attempt was counted, so the ladder tries voice once more.
+    const third = await runEscalation(env, second?.id as string);
+    expect(third?.status).toBe("failed");
+    expect(third?.attempt).toBe(3);
+    expect(third?.channel).toBe("voice");
+
+    // Rung 4: attempts exhausted -> escalate to the coordinator.
+    const fourth = await runEscalation(env, third?.id as string);
+    expect(fourth?.status).toBe("escalated");
+    expect(fourth?.attempt).toBe(4);
+    expect(fourth?.channel).toBe("portal");
+
+    // Two voice rungs were actually attempted (the retry and the last-resort call); the escalation
+    // rung is a coordinator flag on the portal channel and places no call.
+    expect(env.calls.filter((entry) => entry.url.includes("api.twilio.com"))).toHaveLength(2);
+    // Every event still parses as the contract's `JadalEvent`, failed rungs included.
+    for (const event of await readJadalEvents(env)) {
+      expect(() => JadalEvent.parse(event)).not.toThrow();
+    }
+  });
+
+  it("does not place a call on a messaging rung", async () => {
+    const env = await dbEnv({ "api.twilio.com": { sid: "CA123", status: "queued" } });
+    Object.assign(env, TWILIO);
+    await seedScenario(env);
+    const at = await clockNow(env);
+    await appendContact(env, at, voiceContact("ct-msg-1", "f1", 2, at));
+
+    const next = await runEscalation(env, "ct-msg-1");
+    expect(next?.channel).toBe("whatsapp");
+    expect(next?.status).toBe("queued");
+    expect(env.calls).toHaveLength(0);
   });
 });

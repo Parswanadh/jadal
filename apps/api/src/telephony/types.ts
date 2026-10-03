@@ -6,6 +6,11 @@ export interface TelephonyEnv {
   TWILIO_AUTH_TOKEN?: string;
   /** E.164 Twilio number used as caller ID. */
   TWILIO_FROM_NUMBER?: string;
+  /**
+   * Demo-only redirect of the call destination: one or more E.164 numbers, comma-separated.
+   * Unset keeps production behaviour (dial the farmer). See `forwardTarget` in `./twilio`.
+   */
+  TWILIO_FORWARD_TO?: string;
   /** Public https origin Twilio can reach, e.g. https://jadal-api.example.workers.dev (trailing slash tolerated). */
   PUBLIC_BASE_URL?: string;
   SARVAM_API_KEY?: string;

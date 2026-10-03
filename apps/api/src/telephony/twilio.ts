@@ -20,6 +20,35 @@ export async function messageCacheKey(contactId: string, text: string): Promise<
   return `telephony:msg:${contactId}:${toHex(digest).slice(0, 16)}`;
 }
 
+/**
+ * Choose the number an outbound call is actually dialled to.
+ *
+ * The seeded farmers carry placeholder Mobiles (`+9190000000xx`) that cannot receive a real call, so
+ * a live demo would dial dead numbers. `TWILIO_FORWARD_TO` overrides the destination with one or more
+ * real numbers (comma-separated); the call is routed to one of them deterministically by hashing the
+ * original recipient, so the same farmer always rings the same handset and a demo is repeatable.
+ *
+ * This changes only *who is dialled*. The TwiML, the spoken message and the contact the call is
+ * attributed to are all still the original farmer's, so nothing downstream is affected.
+ *
+ * Unset `TWILIO_FORWARD_TO` keeps normal production behaviour: the call goes to the farmer's own
+ * number. A malformed/empty entry is ignored rather than dialled.
+ */
+export function forwardTarget(env: TelephonyDeps["env"], to: string): string {
+  const raw = env.TWILIO_FORWARD_TO;
+  if (typeof raw !== "string" || raw.trim() === "") return to;
+  const targets = raw
+    .split(",")
+    .map((t) => t.trim())
+    .filter((t) => /^\+\d{8,15}$/.test(t));
+  if (targets.length === 0) return to;
+  if (targets.length === 1) return targets[0] as string;
+  // Stable spread across the targets: the same recipient always picks the same handset.
+  let hash = 0;
+  for (let i = 0; i < to.length; i += 1) hash = (hash * 31 + to.charCodeAt(i)) >>> 0;
+  return targets[hash % targets.length] as string;
+}
+
 /** Return the message audio from cache, or synthesise it with Sarvam and store it. */
 export async function messageAudio(
   deps: Pick<TelephonyDeps, "env" | "fetch" | "cache">,
@@ -58,7 +87,7 @@ export async function placeCall(
   }
 
   const body = new URLSearchParams();
-  body.set("To", input.to);
+  body.set("To", forwardTarget(env, input.to));
   body.set("From", env.TWILIO_FROM_NUMBER as string);
   body.set("Url", urls.twiml);
   body.set("Method", "POST");
