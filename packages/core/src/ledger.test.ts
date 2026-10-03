@@ -227,7 +227,11 @@ describe("ledger.entriesFor", () => {
     });
   });
 
-  it("creates entry for request.decided approve urgent (no net volume change between accounts other than recorded reason)", () => {
+  it("emits NO entry for request.decided approve urgent (an urgent grant moves no water between accounts)", () => {
+    // An urgent grant re-phases the SAME farmer's own future quota, so there is no movement to
+    // book. This previously emitted `farmer:f1:quota -> farmer:f1:quota`, a self-transfer that
+    // nets to zero and violates the double-entry rule `from !== to` that the DB CHECK enforces.
+    // See docs/research/model-audit.md F-07.
     const event: JadalEvent = {
       id: "evt-dec-urg-1",
       at: "2026-09-26T14:00:00Z",
@@ -242,17 +246,37 @@ describe("ledger.entriesFor", () => {
       note: "urgent quota borrow",
     };
 
-    const entries = ledger.entriesFor(event);
-    expect(entries).toHaveLength(1);
-    expect(entries[0]).toEqual({
-      id: "evt-dec-urg-1:0",
-      at: "2026-09-26T14:00:00Z",
-      from: "farmer:f1:quota",
-      to: "farmer:f1:quota",
-      volume_m3: 180,
-      reason: "urgent quota borrow",
-      event_id: "evt-dec-urg-1",
-    });
+    expect(ledger.entriesFor(event)).toEqual([]);
+  });
+
+  it("never emits a self-transfer entry for any approved request.decided shape", () => {
+    // Regression guard for F-07: sweep every type-detection shape the branch supports and assert
+    // the invariant `from !== to` holds for whatever comes back.
+    const shapes: Record<string, unknown>[] = [
+      { request_type: "urgent", farmer_id: "f1" },
+      { request_type: "buffer", farmer_id: "f1" },
+      { requestType: "urgent", farmerId: "f1" },
+      { req: { type: "urgent", farmer_id: "f1" } },
+      { from: "buffer", farmer_id: "f1" },
+      { farmer_id: "f1", note: "buffer top-up" },
+    ];
+    for (const shape of shapes) {
+      const event = {
+        id: "e",
+        at: "2026-09-26T14:00:00Z",
+        canal_id: "c1",
+        actor: { kind: "coordinator", id: "c" },
+        type: "request.decided",
+        request_id: "req-1",
+        decision: "approve",
+        volume_m3: 180,
+        ...shape,
+      } as unknown as JadalEvent;
+      for (const entry of ledger.entriesFor(event)) {
+        expect(entry.from, `self-transfer for shape ${JSON.stringify(shape)}`).not.toBe(entry.to);
+        expect(entry.volume_m3).toBeGreaterThan(0);
+      }
+    }
   });
 
   it("returns empty array for rejected request.decided or non-water-moving events", () => {
