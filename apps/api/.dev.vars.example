@@ -39,6 +39,9 @@ OPENROUTER_API_KEY=
 # OpenRouter chat-model slug for the System-2 agent prose. Unset => `openai/gpt-4o-mini`.
 OPENROUTER_MODEL=
 
+# Maximum OpenRouter spend in USD. Unset => no limit. When reached, System-1 falls back to rules.
+OPENROUTER_SPEND_LIMIT_USD=5
+
 # Jev route slug on OpenRouter's typed Decisions API. Unset => `typesafe/jev-1.13`.
 # `~typesafe/jev-latest` floats to the newest Jev release; pin a version when urgency thresholds
 # were tuned against it. NOT `typesafe/jev-router`: that slug is an OpenRouter chat-model router

@@ -29,45 +29,10 @@
  * so a workflow is just the durable ordering of their calls.
  */
 
+import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 import { runEscalation, type CampaignEnv } from "./escalation";
 
-/* ------------------------------------------------------------------ runtime surface (local stand-ins) */
-
-/** The durable primitives one workflow run may use. Mirrors `cloudflare:workers`. */
-export interface WorkflowStep {
-  /** Run `callback` once and checkpoint its result under `stepName`. */
-  do<T>(stepName: string, callback: () => T | Promise<T>): Promise<T>;
-  /** Suspend for `duration` (for example `"15 minutes"`), durably. */
-  sleep(duration: string): Promise<void>;
-  /** Suspend until an event of the given type arrives, or `timeout` expires. */
-  waitForEvent<T>(
-    stepName: string,
-    options: { readonly type: string; readonly timeout?: string },
-  ): Promise<{ readonly payload: T }>;
-}
-
-/** The trigger payload handed to `run`. Mirrors `cloudflare:workers`. */
-export interface WorkflowEvent<Params> {
-  readonly payload: Params;
-  readonly timestamp: Date;
-  readonly instanceId: string;
-}
-
-/**
- * Stand-in for `cloudflare:workers`' `WorkflowEntrypoint`. The Worker runtime constructs subclasses
- * with the execution context and bindings; the class only has to hold them for `run`.
- */
-export abstract class WorkflowEntrypoint<Env = unknown, Params = unknown> {
-  protected readonly ctx: ExecutionContext;
-  protected readonly env: Env;
-
-  constructor(ctx: ExecutionContext, env: Env) {
-    this.ctx = ctx;
-    this.env = env;
-  }
-
-  abstract run(event: WorkflowEvent<Params>, step: WorkflowStep): Promise<unknown>;
-}
+export { WorkflowEntrypoint, WorkflowEvent, WorkflowStep };
 
 /* ------------------------------------------------------------------ urgent request */
 

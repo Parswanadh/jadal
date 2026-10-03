@@ -39,7 +39,6 @@
       {
         "queue": "jadal-outbound",
         "max_retries": 5,
-        "retry_delay_seconds": 30,
         "dead_letter_queue": "jadal-outbound-dlq"
       }
     ]

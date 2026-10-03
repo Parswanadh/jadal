@@ -34,6 +34,11 @@ export interface Env {
    */
   OPENROUTER_MODEL?: string;
   /**
+   * Maximum OpenRouter spend in USD. Unset => no limit. When the cumulative spend reaches this
+   * value, the System-1 provider chain and System-2 agent prose fall back to rules/templates.
+   */
+  OPENROUTER_SPEND_LIMIT_USD?: string;
+  /**
    * Jev route slug on OpenRouter's Decisions API. Unset => the module default `typesafe/jev-1.13`
    * (see `src/system1.ts`). `~typesafe/jev-latest` floats to the newest release; `typesafe/jev-router`
    * is a chat-model router and is NOT a valid Decisions model (ADR-006).
