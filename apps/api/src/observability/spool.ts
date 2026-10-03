@@ -33,7 +33,7 @@ let batchSeq = 0;
  * in the CLI's `src/hooks/fp-home.ts`. `FAILPROOFAI_HOME` MOVES the umbrella; it cannot take the
  * spool outside it, because the `custom-agents/events` segments are appended unconditionally.
  */
-export function resolveSpoolDir(home?: string): string {
+function resolveSpoolDir(home?: string): string {
   const override = home ?? process.env.FAILPROOFAI_HOME?.trim();
   const base = override !== undefined && override.length > 0 ? override : join(homedir(), ".failproofai");
   return join(base, "custom-agents", "events");

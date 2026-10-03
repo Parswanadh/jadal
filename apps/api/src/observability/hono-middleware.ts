@@ -9,9 +9,8 @@
  *     import { failproofMiddleware } from "./observability/hono-middleware";   // 1
  *     app.use("*", failproofMiddleware());                                     // 2
  *
- * plus, in `apps/api/src/env.ts`, declaring the two optional bindings the middleware reads:
+ * plus, in `apps/api/src/env.ts`, declaring the optional binding the middleware reads:
  *
- *     FAILPROOF_API_KEY?: string;
  *     FAILPROOF_TRACE?: string;
  *
  * ## Why a sink has to be supplied
@@ -34,11 +33,10 @@
 
 import type { MiddlewareHandler } from "hono";
 
-import { createFailproofTracer, noopSink, type FailproofSink, type FailproofTracer } from "./failproof";
+import { createFailproofTracer, globalFlag, noopSink, type FailproofSink, type FailproofTracer } from "./failproof";
 
 /** Reads only what it needs, so it stays structurally compatible with the Worker's `Env`. */
 export interface FailproofMiddlewareEnv {
-  FAILPROOF_API_KEY?: string;
   FAILPROOF_TRACE?: string;
   ENVIRONMENT?: string;
 }
@@ -93,10 +91,4 @@ export function failproofMiddleware(options: FailproofMiddlewareOptions = {}): M
       await tracer.flush();
     }
   };
-}
-
-/** `globalThis.process.env` when it exists (wrangler local), without importing `node:process`. */
-function globalFlag(name: string): boolean {
-  const holder = globalThis as unknown as { process?: { env?: Record<string, string | undefined> } };
-  return holder.process?.env?.[name] === "1";
 }

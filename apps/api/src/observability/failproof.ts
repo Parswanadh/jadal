@@ -57,52 +57,6 @@ export type FailproofEventType =
   | "human_pause"
   | "human_interrupt";
 
-/**
- * Field names the wire format owns. An extra that collides with one of these is refused rather
- * than allowed to overwrite a promoted column (the SDK's `DECLARED_FIELD_NAMES`, same set).
- */
-export const DECLARED_FIELD_NAMES: ReadonlySet<string> = new Set([
-  "timestamp",
-  "session_id",
-  "agent_id",
-  "type",
-  "environment",
-  "tool_name",
-  "tool_call_id",
-  "input",
-  "output",
-  "error",
-  "duration_ms",
-  "model",
-  "messages",
-  "system",
-  "tools",
-  "request_id",
-  "stop_reason",
-  "input_tokens",
-  "output_tokens",
-  "content",
-  "role",
-  "goal",
-  "parent_id",
-  "outcome",
-  "summary",
-  "pause_id",
-  "reason",
-  "user_id",
-  "hook_name",
-  "hook_id",
-  "trigger_event",
-  "error_type",
-  "message",
-  "traceback",
-  "input_id",
-  "prompt",
-  "options",
-  "response",
-  "at_step",
-]);
-
 /** Reserved outright: the identity block and the environment are the emitter's, not a caller's. */
 export const RESERVED_EXTRA_NAMES: ReadonlySet<string> = new Set([
   "timestamp",
@@ -111,9 +65,6 @@ export const RESERVED_EXTRA_NAMES: ReadonlySet<string> = new Set([
   "type",
   "environment",
 ]);
-
-/** Outcomes the server reads as a FAILED run. Anything else — including `"failure"` — is a success. */
-export const FAILED_OUTCOMES: ReadonlySet<string> = new Set(["failed", "error", "timeout", "rejected"]);
 
 /* ------------------------------------------------------------------ sink */
 
@@ -159,7 +110,7 @@ function clockState(): ClockState {
 }
 
 /** Microseconds since the epoch, strictly increasing within the process. */
-export function nowMicros(): number {
+function nowMicros(): number {
   const clock = clockState();
   const wall = Date.now() * 1000;
   const next = wall > clock.last || clock.last - wall > MAX_LEAD_MICROS ? wall : clock.last + 1;
@@ -168,7 +119,7 @@ export function nowMicros(): number {
 }
 
 /** `2026-09-23T12:34:56.123456Z` — six fractional digits, as the ingest parser expects. */
-export function formatMicros(micros: number): string {
+function formatMicros(micros: number): string {
   const ms = Math.floor(micros / 1000);
   const sub = String(micros - ms * 1000).padStart(3, "0");
   return `${new Date(ms).toISOString().slice(0, -1)}${sub}Z`;
@@ -192,10 +143,21 @@ const REDACTION_PATTERNS: readonly RegExp[] = [
   /\b(api[_-]?key|token|secret|password|authorization)\s*[=:]\s*["']?[A-Za-z0-9._~+/=-]{8,}/gi,
 ];
 
-/** Replace secret-shaped substrings with `[redacted]`. Non-strings pass through untouched. */
+/**
+ * Replace secret-shaped substrings with `[redacted]`. Non-strings pass through untouched.
+ *
+ * A keyed match (`password=…`, `api_key: …`) keeps its key so the trace still names what was
+ * removed; a bare token (a JWT, a `Bearer …` header, an `sk-…` key) is replaced whole. The secret
+ * itself must never survive the substitution.
+ */
 export function redactString(value: string): string {
   let out = value;
-  for (const pattern of REDACTION_PATTERNS) out = out.replace(pattern, (match) => `${match.split(/[=:]/)[0]}=[redacted]`);
+  for (const pattern of REDACTION_PATTERNS) {
+    out = out.replace(pattern, (match) => {
+      const separator = match.search(/[=:]/);
+      return separator === -1 ? "[redacted]" : `${match.slice(0, separator)}=[redacted]`;
+    });
+  }
   return out;
 }
 
@@ -722,7 +684,8 @@ function globalEnv(): Record<string, string | undefined> {
   return holder.process?.env ?? {};
 }
 
-function globalFlag(name: string): boolean {
+/** `true` when `process.env[name] === "1"`, for `FAILPROOF_ENABLED` and the middleware. */
+export function globalFlag(name: string): boolean {
   return globalEnv()[name] === "1";
 }
 
