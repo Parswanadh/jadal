@@ -1244,7 +1244,7 @@ def build_explorer_html(dataset, output_html_path):
         docs/research/fao56-book-reference.md §3 (17 rows), docs/research/fao56-crop-tables.md §2.1 (23 rows), docs/research/fao56-model.md §3 (9 rows).
       </p>
       <p class="coverage-detail">
-        <strong>Unparsed Scope:</strong> Tables 6.5 and later (wetlands, specialized ecosystems) and the general book text are not crop coefficient lists of this kind and are not parsed.
+        <strong>Unparsed Scope:</strong> Table 6.5 (Kc for wetland and riparian ecosystems) is a crop-coefficient list that is not parsed yet. Tables 6.6 to 6.9 are classification and climate tables (rainfall depth classes, Kc ini for flooded rice and wetlands by climate, monthly wind speed, RHmin versus RHmean) and are not parsed. The general book text is not parsed.
       </p>
       <p class="coverage-detail">
         <strong>Counting Methodology:</strong> We report distinct parameter rows (__BOOK_TABLES_COUNT__ book rows + __TRACKED_COUNT__ repo extract rows = __TOTAL_COUNT__ total rows), not distinct botanical species. Jadal ships 10 distinct crops across 11 rows in crop-params.json.

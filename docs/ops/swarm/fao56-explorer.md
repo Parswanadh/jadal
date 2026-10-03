@@ -489,3 +489,22 @@ ok: 16 slides | standard 7:24 (all slides 8:09) | architect 7:45 | words std 110
 2. **Book Prose and Local Calibrations:** The explorer ingests tabular coefficients only; it does not parse explanatory textbook prose or local stage length recommendations (which FAO-56 2025 delegates to local thermal degree-day tracking).
 3. **Pigeonpea / Redgram Sourcing:** Remains completely unsourced across the entire FAO-56 text.
 4. **Data Fix Decision:** The incorrect citation for chilli (`Table 6.2` instead of `Table 6.1`) and the `MEASURED` tag for flooded rice root depth are reported as findings for the repository owner; `crop-params.json` was deliberately left untouched per instructions.
+
+---
+
+## Third pass (orchestrator, after agy hit its quota)
+
+**What happened.** The third agy pass was cut off by a quota error (HTTP 429, "Individual quota reached") after one commit (the subtitle fix). It did not parse Table 6.5. The orchestrator finished the text corrections itself, which is a deviation from the "agy does the work" plan, because a known-false scope sentence was live in five files.
+
+**An orchestrator error, owned.** The second brief told agy that "Tables 6.5 and later are not crop-coefficient lists of this kind". That was written without checking and is wrong for Table 6.5. RAN against the book text (`FAO56-full.txt`): Table 6.5 (line 12511) is a Kc list for wetland and riparian ecosystems (Kc ini, mid, end, avg); Table 6.6 is rainfall depth classes; Table 6.7 is Kc ini for flooded rice and wetlands by climate; Table 6.8 is monthly wind speed; Table 6.9 is RHmin versus RHmean. agy repeated the false sentence on the explorer page.
+
+**Fixed (RAN, verified):** the explorer page, `build_explorer.py`, `script.json` (and so the speaker script, reader page and deck notes), `docs/EVALUATOR-BRIEF.md` and `docs/CASE-STUDY-PLAN.md` now say: Table 6.5 is a Kc list that is not parsed yet; Tables 6.6 to 6.9 are classification and climate tables and are not parsed; the general text is not parsed. `grep -rln "Tables 6.5 and later"` over `showcase/deck` and `docs` returns nothing. The regenerated dataset JSON is byte-identical (the generator is deterministic).
+
+**Independently verified by the orchestrator (not agy's claim), RAN:**
+- Row counts per table from the book text, counting lines with at least three two-decimal numbers inside each table's line span: 6.1 = 102, 6.2 = 70, 6.3 = 181, 6.4 = 23, equal to the dataset's counts.
+- For every parsed row, the row's non-null Kc values (ini, mid, end) appear as one consecutive run among the numbers on its cited source line: 6.1 102/102, 6.2 69/69 (plus one deliberately null guar-gum row), 6.3 181/181, 6.4 23/23. Table 6.3's header confirms its Kc columns come last, after ground cover and height.
+- Cross-validation against `crop-params.json`: Kc is equal for all nine comparable shipped crops. Two findings, reported and not fixed: (1) chilli is cited as Table 6.2 in the shipped file but the row is in Table 6.1 (values equal the book); (2) flooded-rice root depth is tagged MEASURED while the shipped maximum is 1.0 m and the book prints 0.50 m.
+
+**Not verified / not done:** Table 6.5 is not parsed (about 37 numeric lines in its span). The explorer's `line_range` can include an adjacent row for rows whose label wraps. Heights and root depths were verified only through the cross-validation of the eleven shipped crops, not for all 376 rows. The public tunnel URLs were not requested from here.
+
+**Also added (from commit 6159c6a, READ):** in live testing, raising an urgent request made a farmer's phone ring with a night-release warning before any decision existed (the commit cites Twilio's log). It was fixed in the web client only, with a regression test; the API route is unchanged and has no server-side authentication. This is now in the evaluator brief, the case study and the "what we caught" notes.

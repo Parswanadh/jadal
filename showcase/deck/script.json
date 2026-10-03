@@ -122,7 +122,7 @@
    "extra": [
     {
      "label": "If asked: what did you catch in your own work? (was a slide)",
-     "text": "We checked our own claims, and some failed. The handoff said the tail meets about 42 percent of its need. Core says otherwise: on the seed, planned need-met is 280.8 percent at the head and 205.5 at the tail, which is over-allocation, Gini 0.059, so we do not claim the 42. The fairness comparison read zero in the live path because need-met was capped at 100, and that is fixed. The urgency score was a constant 0.15 and now reports unscored. And a model's QA pass approved a video with invented ledger figures; a forty-line script found them, so for numbers we trust mechanical checks over model checks."
+     "text": "We checked our own claims, and some failed. The handoff said the tail meets about 42 percent of its need. Core says otherwise: on the seed, planned need-met is 280.8 percent at the head and 205.5 at the tail, which is over-allocation, Gini 0.059, so we do not claim the 42. The fairness comparison read zero in the live path because need-met was capped at 100, and that is fixed. The urgency score was a constant 0.15 and now reports unscored. And a model's QA pass approved a video with invented ledger figures; a forty-line script found them, so for numbers we trust mechanical checks over model checks. And in live testing, raising an urgent request made a farmer's phone ring with a night-release warning before any decision existed; Twilio's log showed calls to farmers on requests with no decision event. It is fixed in the web client with a regression test, and the API route still accepts such an alert from any caller, because the server has no authentication."
     },
     {
      "label": "If asked: what is still simulated or open? (was a slide)",
@@ -206,7 +206,7 @@
   },
   {
    "q": "What did you catch in your own work?",
-   "a": "We checked our own claims, and some failed. The handoff said the tail meets about 42 percent of its need. Core says otherwise: on the seed, planned need-met is 280.8 percent at the head and 205.5 at the tail, which is over-allocation, Gini 0.059, so we do not claim the 42. The fairness comparison read zero in the live path because need-met was capped at 100, and that is fixed. The urgency score was a constant 0.15 and now reports unscored. And a model's QA pass approved a video with invented ledger figures; a forty-line script found them, so for numbers we trust mechanical checks over model checks."
+   "a": "We checked our own claims, and some failed. The handoff said the tail meets about 42 percent of its need. Core says otherwise: on the seed, planned need-met is 280.8 percent at the head and 205.5 at the tail, which is over-allocation, Gini 0.059, so we do not claim the 42. The fairness comparison read zero in the live path because need-met was capped at 100, and that is fixed. The urgency score was a constant 0.15 and now reports unscored. And a model's QA pass approved a video with invented ledger figures; a forty-line script found them, so for numbers we trust mechanical checks over model checks. And in live testing, raising an urgent request made a farmer's phone ring with a night-release warning before any decision existed; Twilio's log showed calls to farmers on requests with no decision event. It is fixed in the web client with a regression test, and the API route still accepts such an alert from any caller, because the server has no authentication."
   },
   {
    "q": "What is still simulated or open?",
@@ -238,7 +238,7 @@
   },
   {
    "q": "Does the product ingest the whole book?",
-   "a": "No. The product's table holds ten crops in eleven rows in crop-params.json. The repo's crop explorer parses 376 crop parameter rows across four tables from local FAO-56 Rev.1 (2025): Table 6.1 (vegetables, 102 rows), Table 6.2 (field crops, 70 rows), Table 6.3 (fruit trees, shrubs and vines, 181 rows), Table 6.4 (grasses and grasslands, 23 rows); plus 49 rows across three repo research extracts (17 in fao56-book-reference.md, 23 in fao56-crop-tables.md, 9 in fao56-model.md), totaling 425 rows. Tables 6.5 and later and the general text are not parsed. The book covers far more than these tables and the product does not ingest the whole book."
+   "a": "No. The product's table holds ten crops in eleven rows in crop-params.json. The repo's crop explorer parses 376 crop parameter rows across four tables from local FAO-56 Rev.1 (2025): Table 6.1 (vegetables, 102 rows), Table 6.2 (field crops, 70 rows), Table 6.3 (fruit trees, shrubs and vines, 181 rows), Table 6.4 (grasses and grasslands, 23 rows); plus 49 rows across three repo research extracts (17 in fao56-book-reference.md, 23 in fao56-crop-tables.md, 9 in fao56-model.md), totaling 425 rows. Table 6.5 (Kc values for wetland and riparian ecosystems) is a Kc list that is not parsed yet; Tables 6.6 to 6.9 (rainfall classes, Kc ini for flooded rice by climate, wind speed and humidity) and the general book text are not parsed. The book covers far more than these tables and the product does not ingest the whole book."
   }
  ]
 }
