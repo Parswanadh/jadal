@@ -40,6 +40,12 @@ TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
 TWILIO_FROM_NUMBER=
 
+# Optional live-demo redirect. The seeded farmers carry placeholder Mobiles that cannot receive a
+# real call, so set this to one or more real E.164 numbers (comma-separated) to route outbound
+# calls to a reachable handset instead. One recipient always maps to the same target. Unset =>
+# calls go to the farmer's own number. Only used when REAL_TELEPHONY=true.
+TWILIO_FORWARD_TO=
+
 # Public https origin for the Twilio webhooks, no trailing path. Locally this is a tunnel, e.g.
 # `cloudflared tunnel --url http://localhost:8788` printed as https://<name>.trycloudflare.com;
 # in production it is the deployed Worker origin. Must match the host Twilio signs, exactly.

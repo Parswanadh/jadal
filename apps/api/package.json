@@ -25,6 +25,7 @@
     "@types/node": "^24",
     "typescript": "^5.8.2",
     "vitest": "^3.0.7",
-    "web": "workspace:*"
+    "web": "workspace:*",
+    "wrangler": "^4.114.0"
   }
 }

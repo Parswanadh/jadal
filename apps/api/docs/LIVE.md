@@ -8,6 +8,15 @@ Nothing here places a phone call. `REAL_TELEPHONY` stays `false` and no Twilio c
 (ADR-003). Real calls need a public HTTPS origin for Twilio's webhooks — see ADR-005 §"Webhooks in
 local development".
 
+## 0. Prerequisite: wrangler
+
+Every command below shells out to the `wrangler` CLI (`pnpm migrate:local`, `pnpm dev:live`,
+`pnpm deploy`). It is declared as a devDependency of `apps/api`, so `pnpm install` from the repo root
+puts it on the workspace path — no global install is required. If you prefer a global CLI, install a
+v4 release (`npm i -g wrangler@^4`) and make sure it is the same major version the lockfile pins;
+mixing a global v3 with this project's config will fail. This page was written against wrangler
+4.114.0.
+
 ## 1. API
 
 ```bash
@@ -55,3 +64,18 @@ webhooks (`twiml` → `gather` with DTMF `1`) so the acknowledgement is written 
 Its last test asserts that no contact was ever marked `sent` or `failed`, i.e. that nothing dialled.
 
 `pnpm e2e` (the UI suite) is unaffected: it ignores `live/**` and starts only the web dev server.
+
+## 4. `TWILIO_FORWARD_TO` (real calls only)
+
+The seeded farmers carry placeholder Mobiles (`+9190000000xx`) that cannot receive a real call, so a
+live demo that dials a farmer would ring a dead number. `TWILIO_FORWARD_TO` overrides the destination:
+set it to one or more real E.164 numbers, comma-separated, and outbound calls are routed to one of
+them. With more than one target the same recipient always maps to the same handset (a stable hash of
+the original number), so a demo is repeatable. Entries that are not `+` followed by 8–15 digits are
+ignored.
+
+Only *who is dialled* changes: the TwiML, the spoken message and the contact the call is attributed
+to still belong to the original farmer. Unset (the default) keeps normal production behaviour and
+dials the farmer's own number. It has no effect unless `REAL_TELEPHONY=true` with a full Twilio
+credential set, so leave it empty for the offline and simulated-phone paths. See
+`apps/api/.dev.vars.example` for the variable itself.
