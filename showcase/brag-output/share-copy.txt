@@ -1,0 +1,6 @@
+Canal water shared by volume, not by hours.
+
+On the Kondaveedu Minor canal, unlined seepage means downstream farms receive 29.4% less water per second under traditional warabandi. Jadal pairs an FAO-56 crop model with deterministic hydraulics, Telugu voice agents, and a double-entry volume ledger so tail-end farmers get fair water.
+
+Built with @jadal/core, React, and Cloudflare Workers for the IEEE-CIS Hackathon.
+https://github.com/Parswanadh/jadal
