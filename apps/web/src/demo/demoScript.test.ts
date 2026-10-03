@@ -6,6 +6,7 @@ import {
   DEMO_STEPS,
   SIM_CLOCK_START,
   formatElapsed,
+  stepByNumber,
   totalEstimatedSecs,
 } from "./demoScript";
 import {
@@ -58,6 +59,9 @@ describe("demo script", () => {
   it("helpers behave", () => {
     expect(formatElapsed(0)).toBe("0:00");
     expect(formatElapsed(95)).toBe("1:35");
+    expect(stepByNumber(1)?.actionId).toBe("compare");
+    expect(stepByNumber(6)?.actionId).toBe("audit");
+    expect(stepByNumber(99)).toBeUndefined();
   });
 });
 

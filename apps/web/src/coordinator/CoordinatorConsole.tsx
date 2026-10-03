@@ -175,7 +175,7 @@ export default function CoordinatorConsole() {
           <button key={k} type="button" role="tab" className="tab" aria-selected={tab === k} onClick={() => pick(k)}>
             {tabLabel(k)}
             {counts[k] > 0 && (
-              <span className="tab-badge">
+              <span className="tab-badge" aria-label={t("coord.pendingCount", { n: counts[k] })}>
                 {counts[k]}
               </span>
             )}

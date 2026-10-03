@@ -73,7 +73,13 @@
     "no": "No",
     "backHome": "Back to home",
     "notFoundTitle": "Page not found",
-    "notFoundBody": "This page does not exist. Use the menu above to continue."
+    "notFoundBody": "This page does not exist. Use the menu above to continue.",
+    "connect": {
+      "confirmStep": "{action}: step {step} of 2",
+      "confirmArmed": "1",
+      "confirmConfirm": "Step 2 of 2: choose an option below to finish.",
+      "confirmAsking": "Please confirm: {question}"
+    }
   },
   "fixture": {
     "reasonMaizeTasseling": "My maize is tasseling and the leaves are rolling in the heat.",
@@ -272,22 +278,7 @@
     "errCrop": "Choose a crop in every row.",
     "errSowing": "Enter a sowing date that is not in the future.",
     "errShare": "Each share must be between 1 and 100.",
-    "errShareSum": "The shares add up to more than 100%.",
-    "lat": "Latitude",
-    "lon": "Longitude",
-    "gpsCapture": "Use my location",
-    "gpsLoading": "Getting location…",
-    "gpsError": "Could not get your location. Please enter coordinates manually.",
-    "gpsUnsupported": "Your browser does not support geolocation. Please enter coordinates manually.",
-    "irrigationMethod": "Irrigation method",
-    "irrigationMethods": {
-      "furrow": "Furrow (65%)",
-      "sprinkler": "Sprinkler (75%)",
-      "drip": "Drip (90%)"
-    },
-    "errLat": "Enter a valid latitude (-90 to 90).",
-    "errLon": "Enter a valid longitude (-180 to 180).",
-    "errIrrigationMethod": "Choose your irrigation method."
+    "errShareSum": "The shares add up to more than 100%."
   },
   "ask": {
     "title": "Ask for extra water",
@@ -385,9 +376,11 @@
       },
       "grantLabel": "Water to give (m³)",
       "approve": "Approve {m3}",
+      "approveAction": "Approve",
       "approveQuestion": "Give {name} {m3}? It will be taken {source}.",
       "approveYes": "Yes, approve",
       "reject": "Say no",
+      "rejectAction": "Reject",
       "rejectQuestion": "Say no to {name}?",
       "rejectYes": "Yes, say no",
       "fromQuota": "out of their later turns",
@@ -399,7 +392,8 @@
       "dispatched": "The farmer was told by {channel}.",
       "notDispatched": "Recorded. Nothing has been sent to the farmer yet. Use Alert this farmer to tell them.",
       "refresh": "Check again",
-      "loading": "Checking for new requests…"
+      "loading": "Checking for new requests…",
+      "decideError": "That decision was not saved: {reason}"
     },
     "ent": {
       "title": "Weekly water shares",
@@ -543,12 +537,16 @@
       },
       "allocationLabel": "Tell them their allocation",
       "allocationHelp": "The farmer hears how much water they have and when to use it. Both come from the approved request and their turn.",
+      "allocationVolume": "Water to use (m³)",
+      "allocationWindow": "Use it between",
       "allocationNone": "No approved allocation for this farmer yet. Approve their request (or plan their turn) first.",
       "allocationOn": "Include the allocation in this alert",
       "allocationSummary": "{m3}, {when}",
       "allocationUnavailable": "Loading the allocation…",
       "allocationSend": "Send allocation",
-      "allocationSent": "Told {name} about {m3} to use {when}."
+      "allocationSent": "Told {name} about {m3} to use {when}.",
+      "dialled": "The call went to {number}.",
+      "dialledNone": "No call was placed, so no number was rung."
     }
   },
   "canal": {

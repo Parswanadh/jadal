@@ -11,7 +11,7 @@ export default function DataBadge() {
   if (!isMockMode()) return null;
   const tip = t('common.demoBadgeTip');
   return (
-    <span className="chip chip-warn data-badge" title={tip} role="note" aria-label={`${t('common.demoBadge')}. ${tip}`}>
+    <span className="chip chip-warn data-badge" title={tip} tabIndex={0} role="note" aria-label={`${t('common.demoBadge')}. ${tip}`}>
       {t('common.demoBadge')}
     </span>
   );

@@ -84,17 +84,6 @@
   stroke-width: 1.5;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .canal-water {
-    animation: canalFlow 3s linear infinite;
-  }
-}
-
-@keyframes canalFlow {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 0.65; }
-}
-
 .canal-flow-arrow {
   font-size: 28px;
   fill: var(--surface);

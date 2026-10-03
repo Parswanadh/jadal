@@ -120,8 +120,8 @@ export default function LedgerAudit({ ledger, audit }: Props) {
             <details className="disclosure">
               <summary>{t("coord.acc.findings")}</summary>
               <ul className="findings">
-                {audit.findings.map((x) => (
-                  <li key={`${x.severity}-${x.text}`}>
+                {audit.findings.map((x, i) => (
+                  <li key={i}>
                     <span className={`pill ${SEVERITY_PILL[x.severity]}`}>{t(`coord.acc.severity.${x.severity}`)}</span> {x.text}
                   </li>
                 ))}

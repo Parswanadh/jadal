@@ -54,7 +54,6 @@
 
 .demo__step.now {
   border-left-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent-subtle), var(--shadow-md);
 }
 
 .demo__step.done {

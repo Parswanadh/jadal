@@ -135,7 +135,7 @@ describe("speech is user-initiated only", () => {
     for (const relative of ["phone/AgentCall.tsx", "phone/SimulatedPhone.tsx"]) {
       const text = readFileSync(join(root, relative), "utf8");
       // A speak call inside a useEffect body means it can fire without a gesture.
-      const effectBodies = [...text.matchAll(/useEffect\(([\s\S]*?)\n {2}\}, \[/g)].map((m) => m[1] ?? "");
+      const effectBodies = [...text.matchAll(/useEffect\(([\s\S]*?)\n  \}, \[/g)].map((m) => m[1] ?? "");
       for (const body of effectBodies) {
         expect(body.includes("speechSynthesis.speak"), `${relative} speaks from an effect`).toBe(false);
       }

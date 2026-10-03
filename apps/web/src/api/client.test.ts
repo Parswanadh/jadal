@@ -41,6 +41,7 @@ const calls: Record<RouteKey, () => Promise<unknown>> = {
   releaseWindows: () => client.releaseWindows(),
   proposeRoster: () => client.proposeRoster({ release_window_id: "rw1", mode: "equal_water" }),
   approveRoster: () => client.approveRoster("r-rw1-equal_water"),
+  alerts: () => client.sendAlert({ farmer_id: "f1", channel: "call", severity: "info" }),
   raiseRequest: () =>
     client.raiseRequest({ farmer_id: "f1", type: "urgent", volume_m3: 200, reason: "test", channel: "voice" }),
   listRequests: () => client.listRequests(),
@@ -53,7 +54,6 @@ const calls: Record<RouteKey, () => Promise<unknown>> = {
   audit: () => client.audit(),
   demoReset: () => client.demoReset(),
   demoAdvance: () => client.demoAdvance({ hours: 6 }),
-  alerts: () => client.sendAlert({ farmer_id: "f1", channel: "call", severity: "info" }),
 };
 
 describe("api client covers every contract route", () => {

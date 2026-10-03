@@ -25,7 +25,6 @@ export default function App() {
         <Route
           path="/farmer/*"
           element={
-            // biome-ignore lint/a11y/useValidAriaRole: `role` is a RequireRole component prop, not an ARIA attribute
             <RequireRole role="farmer">
               <FarmerPortal />
             </RequireRole>
@@ -34,7 +33,6 @@ export default function App() {
         <Route
           path="/coordinator/*"
           element={
-            // biome-ignore lint/a11y/useValidAriaRole: `role` is a RequireRole component prop, not an ARIA attribute
             <RequireRole role="coordinator">
               <CoordinatorConsole />
             </RequireRole>

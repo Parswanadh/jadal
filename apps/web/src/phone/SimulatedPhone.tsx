@@ -81,9 +81,9 @@ export default function SimulatedPhone() {
     return fetched;
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: contacts load once; `t` changes with language and must not refetch
   useEffect(() => {
     load().catch(() => setError(t("common.loadError")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
 
   const acceptCall = async (): Promise<void> => {
@@ -115,11 +115,11 @@ export default function SimulatedPhone() {
 
   // A `?contact=` link (for example from an urgent request) answers the call
   // straight away, so the agent's reply is on screen without another tap.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `acceptCall` is redefined each render; adding it would re-run on every render
   useEffect(() => {
     if (!wantedContact || autoAccepted.current || contacts.length === 0) return;
     autoAccepted.current = true;
     void acceptCall();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wantedContact, contacts.length]);
 
   // Speech is user-initiated only. The committee's message is on screen as a

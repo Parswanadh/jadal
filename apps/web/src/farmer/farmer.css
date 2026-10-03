@@ -35,19 +35,6 @@
   background: var(--water-subtle);
   border-color: transparent;
   border-left: 4px solid var(--water);
-  position: relative;
-  overflow: hidden;
-}
-
-.turn-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--water), transparent);
-  opacity: 0.5;
 }
 
 .turn-line {
@@ -57,7 +44,6 @@
   font-weight: 600;
   line-height: 1.2;
   text-wrap: balance;
-  color: var(--water);
 }
 
 .turn-status {
@@ -135,16 +121,6 @@
 .form-section {
   margin: 1.5rem 0 0.25rem;
   font-size: var(--text-lg);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.form-section::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--rule);
 }
 
 .crop-row {

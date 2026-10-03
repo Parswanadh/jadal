@@ -11,14 +11,13 @@
 //                          -> calls the real backend over HTTP.
 
 import { ApiError, routes } from "@jadal/contracts";
-import type { z } from "zod";
+import { z } from "zod";
 import type { ZodTypeAny } from "zod";
 import {
   alertResponseSchema,
-  harvestResponseSchema,
   updateTurnResponseSchema,
 } from "./extra";
-import type { AlertBody, AlertResponse, HarvestBody, HarvestResponse, UpdateTurnBody, UpdateTurnResponse } from "./extra";
+import type { AlertBody, AlertResponse, UpdateTurnBody, UpdateTurnResponse } from "./extra";
 import { ApiClientError } from "./errors";
 import {
   mockApproveEntitlements,
@@ -30,7 +29,6 @@ import {
   mockDemoAdvance,
   mockDemoReset,
   mockEvents,
-  mockHarvest,
   mockHealth,
   mockIntake,
   mockLedger,
@@ -254,16 +252,8 @@ export function sendAlert(body: AlertBody): Promise<AlertResponse> {
   return request<AlertResponse>("/api/alerts", "POST", alertResponseSchema, body);
 }
 
-export const alerts = (body: AlertBody): Promise<AlertResponse> => sendAlert(body);
-
-/**
- * Harvest a farmer's crop, freeing the remaining quota to the shared buffer.
- * POST /api/canal/harvest -> { ok, farmer_id, crop_plan_id, remaining_m3, buffer_m3 }
- */
-export function harvest(body: HarvestBody): Promise<HarvestResponse> {
-  if (isMockMode()) return mockHarvest(body);
-  return request<HarvestResponse>("/api/canal/harvest", "POST", harvestResponseSchema, body);
-}
+/** The `alerts` route under its contract key name. */
+export const alerts = sendAlert;
 
 /** All client functions in one object, keyed exactly by route name. */
 export const api = {
@@ -283,10 +273,10 @@ export const api = {
   ledger,
   events,
   contacts,
+  alerts: sendAlert,
   phoneReply,
   intake,
   audit,
   demoReset,
   demoAdvance,
-  alerts: () => sendAlert({ farmer_id: "f1", channel: "call", severity: "info" }),
 };
