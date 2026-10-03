@@ -53,6 +53,7 @@ const calls: Record<RouteKey, () => Promise<unknown>> = {
   audit: () => client.audit(),
   demoReset: () => client.demoReset(),
   demoAdvance: () => client.demoAdvance({ hours: 6 }),
+  alerts: () => client.sendAlert({ farmer_id: "f1", channel: "call", severity: "info" }),
 };
 
 describe("api client covers every contract route", () => {

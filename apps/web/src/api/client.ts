@@ -254,6 +254,8 @@ export function sendAlert(body: AlertBody): Promise<AlertResponse> {
   return request<AlertResponse>("/api/alerts", "POST", alertResponseSchema, body);
 }
 
+export const alerts = (body: AlertBody): Promise<AlertResponse> => sendAlert(body);
+
 /**
  * Harvest a farmer's crop, freeing the remaining quota to the shared buffer.
  * POST /api/canal/harvest -> { ok, farmer_id, crop_plan_id, remaining_m3, buffer_m3 }
@@ -286,4 +288,5 @@ export const api = {
   audit,
   demoReset,
   demoAdvance,
+  alerts: () => sendAlert({ farmer_id: "f1", channel: "call", severity: "info" }),
 };
